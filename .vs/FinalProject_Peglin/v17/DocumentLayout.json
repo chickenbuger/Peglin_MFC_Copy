@@ -7,16 +7,16 @@
       "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\Parent_ball.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Background.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\Background.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Enemy.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\Enemy.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\FinalProject_Peglin.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\FinalProject_Peglin.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Background.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\Background.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Player.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -38,7 +38,7 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "Enemy.cpp",
               "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Enemy.cpp",
               "RelativeDocumentMoniker": "FinalProject_Peglin\\Enemy.cpp",
@@ -51,20 +51,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 2,
               "Title": "FinalProject_Peglin.cpp",
               "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\FinalProject_Peglin.cpp",
               "RelativeDocumentMoniker": "FinalProject_Peglin\\FinalProject_Peglin.cpp",
               "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\FinalProject_Peglin.cpp",
               "RelativeToolTip": "FinalProject_Peglin\\FinalProject_Peglin.cpp",
-              "ViewState": "AgIAAGkAAAAAAAAAAAAAAHUAAAAHAAAAAAAAAA==",
+              "ViewState": "AgIAAGwAAAAAAAAAAAAAAHUAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-03-24T16:28:12.289Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "Background.cpp",
               "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Background.cpp",
               "RelativeDocumentMoniker": "FinalProject_Peglin\\Background.cpp",
@@ -83,7 +83,7 @@
               "RelativeDocumentMoniker": "FinalProject_Peglin\\Parent_ball.cpp",
               "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.cpp",
               "RelativeToolTip": "FinalProject_Peglin\\Parent_ball.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAABEAAAAAAAAAAAAawCUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-03-24T16:27:47.991Z",
               "EditorCaption": ""
@@ -98,8 +98,7 @@
               "RelativeToolTip": "FinalProject_Peglin\\Player.cpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAATAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-03-24T16:27:47.036Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-24T16:27:47.036Z"
             },
             {
               "$type": "Document",
@@ -111,8 +110,7 @@
               "RelativeToolTip": "FinalProject_Peglin\\TargetBall.cpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-03-24T16:27:44.574Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-24T16:27:44.574Z"
             }
           ]
         }
