@@ -1,5 +1,4 @@
-﻿
-// MainFrm.cpp: CMainFrame 클래스의 구현
+﻿// MainFrm.cpp: CMainFrame 클래스의 구현
 //
 
 #include "pch.h"
@@ -65,28 +64,29 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("상태 표시줄을 만들지 못했습니다.\n");
 		return -1;      // 만들지 못했습니다.
 	}
-	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
+	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators) / sizeof(UINT));
 
-	// TODO: 도구 모음을 도킹할 수 없게 하려면 이 세 줄을 삭제하십시오.
+	// 도구 모음 도킹 활성화
 	m_wndToolBar.EnableDocking(CBRS_ALIGN_ANY);
 	EnableDocking(CBRS_ALIGN_ANY);
 	DockControlBar(&m_wndToolBar);
-
 
 	return 0;
 }
 
 BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 {
-	if( !CFrameWnd::PreCreateWindow(cs) )
+	if (!CFrameWnd::PreCreateWindow(cs))
 		return FALSE;
-	cs.cx = 1000;
-	cs.cx = 800;
-	// TODO: CREATESTRUCT cs를 수정하여 여기에서
-	//  Window 클래스 또는 스타일을 수정합니다.
 
+	// 윈도우 크기 설정 수정
+	cs.cx = 1000;
+	cs.cy = 800;
+
+	// 불필요한 클라이언트 엣지 제거
 	cs.dwExStyle &= ~WS_EX_CLIENTEDGE;
 	cs.lpszClass = AfxRegisterWndClass(0);
+
 	return TRUE;
 }
 
@@ -103,7 +103,6 @@ void CMainFrame::Dump(CDumpContext& dc) const
 	CFrameWnd::Dump(dc);
 }
 #endif //_DEBUG
-
 
 // CMainFrame 메시지 처리기
 
@@ -123,11 +122,9 @@ BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO*
 	return CFrameWnd::OnCmdMsg(nID, nCode, pExtra, pHandlerInfo);
 }
 
-
-
 void CMainFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	// 최소 및 최대 창 크기 설정
 	lpMMI->ptMinTrackSize.x = 1000;
 	lpMMI->ptMinTrackSize.y = 800;
 	lpMMI->ptMaxTrackSize.x = 1000;
