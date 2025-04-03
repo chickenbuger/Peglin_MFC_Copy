@@ -6,13 +6,15 @@ public:
 	~Enemy() {}
 private:
 	int count = 0;
+	float damage = 20.0f;
 	float hp = 20.0f;
 	float Init_x = 710.0f;
 	float x = 710.0f;
 public:
 	//setter
-	void SetCount(int count)	{ this->count = count; }
-	void SetHp(float hp)		{ this->hp = hp; }
+	void SetDamage(float InDamage) { this->damage = InDamage; }
+	void SetCount(int InCount)	{ this->count = InCount; }
+	void SetHp(float InHp)		{ this->hp = InHp; }
 	void SetX(float x)			{ this->x = x; }
 
 	//getter

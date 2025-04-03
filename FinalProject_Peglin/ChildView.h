@@ -35,13 +35,16 @@ public:
 	float Dir_y = 1;
 	float test1 = 0;
 	float test = 0;
+
 public:
 	void gameclear();
 	void gameover();
-	void Init_ball();
 	void restart();
-// 작업입니다.
-public:
+
+private:
+	void ResetGameState();
+	void Init_ball();
+	void Collision();
 
 // 재정의입니다.
 	protected:

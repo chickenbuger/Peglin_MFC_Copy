@@ -28,7 +28,10 @@
 #include <afxcontrolbars.h>     // MFC의 리본 및 컨트롤 막대 지원
 
 
-
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#pragma comment(linker,"/entry:WinMainCRTStartup /subsystem:console")
+#endif
 
 
 

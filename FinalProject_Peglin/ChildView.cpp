@@ -6,6 +6,7 @@
 #include "framework.h"
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
+#include <iostream>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -43,28 +44,22 @@ END_MESSAGE_MAP()
 
 void CChildView::gameclear()
 {
-	if (check == false)
+	if (!check)
 	{
 		check = true;
 		AfxMessageBox(_T("Game Clear!!"));
 	}
-	_ball.Init();
-	_player.Init();
-	_enemy.Init();
-	Init_ball();
+	ResetGameState();
 }
 
 void CChildView::gameover()
 {
-	if (check == false)
+	if (!check)
 	{
 		check = true;
 		AfxMessageBox(_T("Game Over!!"));
 	}
-	_ball.Init();
-	_player.Init();
-	_enemy.Init();
-	Init_ball();
+	ResetGameState();
 }
 
 void CChildView::Init_ball()
@@ -81,13 +76,61 @@ void CChildView::Init_ball()
 	}
 }
 
+void CChildView::Collision()
+{
+	auto pos = _targetBallList._targetBallList.GetHeadPosition();
+	while (pos != nullptr)
+	{
+		auto cur = pos;
+		auto& _target = _targetBallList._targetBallList.GetNext(pos);
+		const float ball_x = _ball.GetPos()[0];
+		const float ball_y = _ball.GetPos()[1];
+		const float rx = ball_x - _target.x;
+		const float ry = ball_y - _target.y;
+
+		float distanceSquared = rx * rx + ry * ry;
+
+		if (pow(rx, 2) + pow(ry, 2) <= pow((_ball.GetSize() + _target.size),2)) //충돌시
+		{
+			std::cout << "충돌\n";
+
+			float distance = sqrt(distanceSquared);
+			float normalX = rx / distance;
+			float normalY = ry / distance;
+
+			// 2️ 현재 속도 벡터 가져오기
+			float velocityX = _ball.GetForceX();
+			float velocityY = _ball.GetForceY();
+
+			// 3️ 벡터 반사 공식 적용: V' = V - 2 (V · N) N
+			float dotProduct = (velocityX * normalX) + (velocityY * normalY);
+			float reflectX = velocityX - 2 * dotProduct * normalX;
+			float reflectY = velocityY - 2 * dotProduct * normalY;
+
+			// 4️ 감속 적용 (충돌 후 점차 속도가 줄어들도록)
+			float reboundFactor = 0.8f;  // 반사 후 속도 감소율
+			_ball.SetForceX(reflectX * reboundFactor);
+			_ball.SetForceY(reflectY * reboundFactor);
+
+			// 5️ targetBall 제거
+			_targetBallList._targetBallList.RemoveAt(cur);
+			ball_DMG += 1.0f;
+		}
+	}
+}
+
 void CChildView::restart()
 {
+	ResetGameState();
+}
+
+void CChildView::ResetGameState()
+{
+	check = false;
 	_ball.Init();
 	_player.Init();
 	_enemy.Init();
 	Init_ball();
-	check = false;
 }
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
@@ -116,7 +159,7 @@ void CChildView::OnPaint()
 	CBitmap  bitmap;
 	bitmap.CreateCompatibleBitmap(&dc, rect.right, rect.bottom);
 	memDc.SelectObject(&bitmap);
-
+	
 	_background.draw(&memDc);
 
 	//player
@@ -173,46 +216,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nIDEvent == 0)
 	{
-		auto pos = _targetBallList._targetBallList.GetHeadPosition();
-		while (pos != nullptr)
-		{
-			auto cur = pos;
-			auto& _target = _targetBallList._targetBallList.GetNext(pos);
-			const float ball_x = _ball.GetPos()[0];
-			const float ball_y = _ball.GetPos()[1];
-			const float rx = ball_x - _target.x;
-			const float ry = ball_y - _target.y;
-			if (sqrt(pow(rx, 2) + pow(ry, 2)) <= (_ball.GetSize() + _target.size)) //충돌시
-			{
-				float gradient = ((_target.y - ball_y) / (_target.x - ball_x)) * -1; // 좌표계 y축이 반대
-				gradient = -1.0f / gradient;
-				
-				float index = 0.1;
-				while (true)
-				{
-					if (tan(index * 3.141592 / 180) >= gradient)
-					{
-						break;
-					}
-					index += 0.1;
-				}
-
-				float DtoR = index * 3.141592 / 180; //degree to radian
-				double thetaX = cos(DtoR);
-				if ((cos(DtoR) >= 0.0f) && (cos(DtoR) <= 0.5f)) { thetaX = 0.5f; }
-				if ((cos(DtoR) < 0.0f) && (cos(DtoR) > -0.5f)) { thetaX = -0.5f; }
-				double thetaY = sin(DtoR);
-				if ((sin(DtoR) > 0.0f) && (sin(DtoR) < 0.2f)) { thetaY = 0.2f; }
-
-				_ball.SetForceX(_ball.GetForceX() * thetaX * 1.0f * Dir_x);
-				_ball.SetForceY(_ball.GetForceY() * thetaY * -1.0f * Dir_y);
-				
-				_ball.SetGMUL(0.06f);
-
-				_targetBallList._targetBallList.RemoveAt(cur);
-				ball_DMG += 1.0f;
-			}
-		}
+		//Collision();
 	}
 	if (nIDEvent == 1)
 	{
@@ -237,7 +241,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 		{
 			gameover();
 		}
-		if (_enemy.GetHp() <= 0)
+		else if (_enemy.GetHp() <= 0)
 		{
 			gameclear();
 		}

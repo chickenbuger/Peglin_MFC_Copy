@@ -2,6 +2,10 @@
 #include "Parent_ball.h"
 #include <stdlib.h>
 
+constexpr int MAX_WIDTH = 970;
+constexpr int MIN_WIDTH = 40;
+constexpr int CEILING_HEIGHT = 205;
+
 Parent_ball::Parent_ball()
 {
 	pos[0] = 490.0f;
@@ -34,36 +38,42 @@ void Parent_ball::draw(CDC* pDC)
 	
 	CPen pen(PS_SOLID, 4, RGB(255.0f, 255.0f, 255.0f));
 	pDC->SelectObject(pen);
-	if (!IsActive)
+
+	if (IsActive) return;
+
+	if (IsClick)
 	{
-		if (IsClick)
+		float r = sqrt(pow(Fpos[0] - CheckPos[0], 2) + pow(Fpos[1] - CheckPos[1], 2));
+		float dx = (CheckPos[0] - Fpos[0]) / r * 5.3f;
+		float dy = (CheckPos[1] - Fpos[1]) / r * 5.3f;
+
+		// 조준선 시작 위치
+		float x1 = pos[0];
+		float y1 = pos[1];
+		float x2 = x1 - dx;
+		float y2 = y1 - dy + (_gravity * (_gravity_mul * 1.1)) / 15.0f;
+
+		// 벽 충돌 감지 방향 변수
+		_line_x = 1;
+		_line_y = 1;
+
+		CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
+		pDC->SelectObject(pen);
+
+		//라인 그리기
+		for (int i = 1; i < 20; i++)
 		{
-			float r = sqrt(pow((Fpos[0] - CheckPos[0]), 2) + pow((Fpos[1] - CheckPos[1]), 2));
-			float x1 = pos[0];
-			float y1 = pos[1];
-			float x2 = x1 - ((CheckPos[0] - Fpos[0]) / r * 5.3f);
-			float y2 = y1 - ((CheckPos[1] - Fpos[1]) / r * 5.3f) + (_gravity * (_gravity_mul * 1.1)) / 15.0f;
+			pDC->MoveTo(x1, y1);
 
-			_line_x = 1;
-			_line_y = 1;
+			// 벽 충돌 감지 후 방향 반전
+			if ((x2 < MIN_WIDTH) || (x2 > MAX_WIDTH)) _line_x *= -1;
+			if (y2 < CEILING_HEIGHT) _line_y *= -1;
 
-			for (int i = 1; i < 20; i++)
-			{
-				pDC->MoveTo(x1, y1);
-				if ((x2 < 40) || (x2 > 970))
-				{
-					_line_x *= -1;
-				}
-				if (y2 < 205)
-				{
-					_line_y *= -1;
-				}
-				pDC->LineTo(x2, y2);
-				x1 = x2;
-				y1 = y2;
-				x2 = x1 - ((CheckPos[0] - Fpos[0]) / r * 5.3f) * _line_x; //5.3
-				y2 = y1 - ((CheckPos[1] - Fpos[1]) / r * 5.3f) * _line_y + (_gravity * (_gravity_mul * 1.1 * i)) / 15.0f;
-			}
+			pDC->LineTo(x2, y2);
+			x1 = x2;
+			y1 = y2;
+			x2 = x1 - dx * _line_x;
+			y2 = y1 - dy * _line_y + (_gravity * (_gravity_mul * 1.1 * i)) / 15.0f;
 		}
 	}
 }

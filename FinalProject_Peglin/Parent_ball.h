@@ -62,6 +62,7 @@ public:
 public:
 	void shooting();
 public:
+	//º® °Ë»ç
 	void draw(CDC* pDC);
 	void update(float delta);
 	void Init();
