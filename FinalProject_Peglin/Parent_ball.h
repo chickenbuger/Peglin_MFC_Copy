@@ -6,68 +6,72 @@ class Parent_ball
 public:
 	Parent_ball();
 	~Parent_ball() {}
-private:
-	float	pos[2]; //x,y
-	float	_size;
 
-	float	Fpos[2];
-	float	Spos[2];
-	float	CheckPos[2];
+public:
+	//setter
+	void SetPos(float x, float y)				{ pos[0] = x; pos[1] = y; }
+	void SetStartDragPos(float x, float y)		{ StartDragPos[0] = x; StartDragPos[1] = y; }
+	void SetEndDragPos(float x, float y)		{ EndDragPos[0] = x; EndDragPos[1] = y; }
+
+	void SetTraceDragPos(float x, float y)		{ TraceDragPos[0] = x; TraceDragPos[1] = y; }
+	void SetSize(float size)					{ _size = size; }
+	void SetForce(float force)					{ _force = force; }
+	void SetVelocityX(float vx)					{ _velocity_x = vx; }
+	void SetVelocityY(float vy)					{ _velocity_x = vy; }
+	void SetClick(bool click)					{ IsClick = click; }
+	void SetCrash(bool Crash)					{ IsCrashToTargetball = Crash; }
+
+	//getter
+	float*	GetPos()				{ return pos; }
+
+	float*	GetStartDragPos()		{ return StartDragPos; }
+	float*	GetTraceDragPos()		{ return TraceDragPos; }
+	float*	GetEndDragPos()			{ return EndDragPos; }
+
+	float	GetSize()				{ return _size; }
+	float	GetForce()				{ return _force; }
+	float	GetVelocityX()			{ return _velocity_x; }
+	float	GetVelocityY()			{ return _velocity_y; }
+	float	GetGravity()			{ return _gravity; }
+	bool	GetActive()				{ return IsActive; }
+	bool	GetClick()				{ return IsClick; }
+	bool	GetCrash()				{ return IsCrashToTargetball; }
+public:
+	void shooting();
+	void collision();
+
+public:
+	//벽 검사
+	void draw(CDC* pDC);
+	void update();
+	void Init();
 	
-	float	_force;
-	float	_force_x;
-	float	_force_y;
+public:
+	bool stop=false;
+
+private:
+	void drawline(CDC* pDC);
+	void movement();
+
+private:
+	float	pos[2] = { 490.f,250.f };
+	float	_size = { 10.f };
+
+	//Drag 시작 위치
+	float	StartDragPos[2];
+	//Drag 중 라인 위치
+	float	TraceDragPos[2];
+	//Drag 마지막 위치
+	float	EndDragPos[2];
+
+	float	_force = 0;
+	float	_velocity_x = 0;
+	float	_velocity_y = 0;
+
 	float	_gravity;
-	float	_gravity_mul;
-
-	float	_line_x;
-	float	_line_y;
-
-	float	_Current_Dir_x;
-	float	_Current_Dir_y;
 
 	bool	IsActive;
 	bool	IsClick;
 
 	bool	IsCrashToTargetball;
-public:
-	//setter
-	void SetPos(float x, float y)		{ pos[0] = x; pos[1] = y; }
-	void SetFPos(float x, float y)		{ Fpos[0] = x; Fpos[1] = y; }
-	void SetSPos(float x, float y)		{ Spos[0] = x; Spos[1] = y; }
-	void SetCheckPos(float x, float y)	{ CheckPos[0] = x; CheckPos[1] = y; }
-	void SetSize(float size)			{ _size = size; }
-	void SetGMUL(float mul)				{ _gravity_mul = mul; }
-	void SetForce(float force)			{ _force = force; }
-	void SetForceX(float forceX)		{ _force_x = forceX; }
-	void SetForceY(float forceY)		{ _force_y = forceY; }
-	void SetClick(bool click)			{ IsClick = click; }
-	void SetCrash(bool Crash)			{ IsCrashToTargetball = Crash; }
-
-	//getter
-	float*	GetPos()		{ return pos; }
-	float*	GetFPos()		{ return Fpos; }
-	float*	GetSPos()		{ return Spos; }
-	float*	GetCheckPos()	{ return CheckPos; }
-	float	GetSize()		{ return _size; }
-	float	GetForce()		{ return _force; }
-	float	GetForceX()		{ return _force_x; }
-	float	GetForceY()		{ return _force_y; }
-	float	GetGravity()	{ return _gravity; }
-	float	GetDirX()		{ return _Current_Dir_x; }
-	float	GetDirY()		{ return _Current_Dir_y; }
-	bool	GetActive()		{ return IsActive; }
-	bool	GetClick()		{ return IsClick; }
-	bool	GetCrash()		{ return IsCrashToTargetball; }
-public:
-	void shooting();
-public:
-	//벽 검사
-	void draw(CDC* pDC);
-	void update(float delta);
-	void Init();
-	void collision();
-	
-public:
-	bool stop=false;
 };

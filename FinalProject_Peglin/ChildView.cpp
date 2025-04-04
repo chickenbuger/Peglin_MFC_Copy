@@ -18,7 +18,6 @@
 CChildView::CChildView()
 {
 	Init_ball();
-	//hdc = ::GetDC(this->m_hWnd);
 }
 
 CChildView::~CChildView()
@@ -94,13 +93,14 @@ void CChildView::Collision()
 		{
 			std::cout << "충돌\n";
 
+			/*
 			float distance = sqrt(distanceSquared);
 			float normalX = rx / distance;
 			float normalY = ry / distance;
 
 			// 2️ 현재 속도 벡터 가져오기
-			float velocityX = _ball.GetForceX();
-			float velocityY = _ball.GetForceY();
+			float velocityX = _ball.GetVelocityX();
+			float velocityY = _ball.GetVelocityY();
 
 			// 3️ 벡터 반사 공식 적용: V' = V - 2 (V · N) N
 			float dotProduct = (velocityX * normalX) + (velocityY * normalY);
@@ -111,6 +111,8 @@ void CChildView::Collision()
 			float reboundFactor = 0.8f;  // 반사 후 속도 감소율
 			_ball.SetForceX(reflectX * reboundFactor);
 			_ball.SetForceY(reflectY * reboundFactor);
+
+			*/
 
 			// 5️ targetBall 제거
 			_targetBallList._targetBallList.RemoveAt(cur);
@@ -204,8 +206,8 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 
 	// TODO:  여기에 특수화된 작성 코드를 추가합니다.
-	SetTimer(0, 1, NULL);
-	SetTimer(1, 20, NULL);
+	SetTimer(0, 10, NULL);
+	SetTimer(1, 10, NULL);
 
 	return 0;
 }
@@ -220,7 +222,8 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 	}
 	if (nIDEvent == 1)
 	{
-		_ball.update(0.1f);
+		_ball.update();
+		
 		if (_ball.GetPos()[1] > 800.0f)
 		{
 			if (_enemy.GetCount() < 8)
@@ -236,7 +239,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 			ball_DMG = 0.0f;
 			_ball.Init();
 		}
-
+		
 		if (_player.GetHp() <= 0)
 		{
 			gameover();
@@ -245,6 +248,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 		{
 			gameclear();
 		}
+		
 	}
 	Invalidate();
 
@@ -256,7 +260,7 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	if (_ball.GetActive() == false)
 	{
-		_ball.SetFPos(point.x, point.y);
+		_ball.SetStartDragPos(point.x, point.y);
 		_ball.SetClick(true);
 	}
 	CWnd::OnLButtonDown(nFlags, point);
@@ -267,7 +271,7 @@ void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	if (_ball.GetActive() == false)
 	{
-		_ball.SetSPos(point.x, point.y);
+		_ball.SetEndDragPos(point.x, point.y);
 		_ball.SetClick(false);
 		_ball.shooting();
 	}
@@ -288,7 +292,7 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (_ball.GetClick() == true)
 	{
-		_ball.SetCheckPos(point.x, point.y);
+		_ball.SetTraceDragPos(point.x, point.y);
 		Invalidate();
 	}
 
@@ -301,8 +305,8 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nChar == VK_SPACE)
 	{
-		if (_ball.stop == false) _ball.stop = true;
-		else _ball.stop = false;
+		_ball.stop = !_ball.stop;
+
 		Invalidate();
 	}
 	if (nChar == VK_F5)
