@@ -1,45 +1,30 @@
-﻿  Parent_ball.cpp
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(31,18): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+﻿  ChildView.cpp
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(72,34): warning C4244: '인수': 'int'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(33,21): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(72,20): warning C4244: '인수': 'int'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(34,21): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(211,31): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(51,70): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(280,39): warning C4244: '인수': 'LONG'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(51,54): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(280,30): warning C4244: '인수': 'LONG'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(51,38): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(291,37): warning C4244: '인수': 'LONG'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(51,22): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(291,28): warning C4244: '인수': 'LONG'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(101,18): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(325,39): warning C4244: '인수': 'LONG'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(105,15): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
-  
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(106,15): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
-  
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(138,19): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
-  
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(138,15): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
-  
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(139,19): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
-  
-D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\Parent_ball.cpp(139,15): warning C4244: '인수': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-  (소스 파일 '/Parent_ball.cpp'을(를) 컴파일하는 중)
+D:\Project\MFC\Peglin_MFC_Copy\FinalProject_Peglin\ChildView.cpp(325,30): warning C4244: '인수': 'LONG'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 '/ChildView.cpp'을(를) 컴파일하는 중)
   
 Background.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.
 ball_liner.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.

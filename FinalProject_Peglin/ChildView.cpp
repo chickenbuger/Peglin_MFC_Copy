@@ -89,30 +89,47 @@ void CChildView::Collision()
 
 		float distanceSquared = rx * rx + ry * ry;
 
-		if (pow(rx, 2) + pow(ry, 2) <= pow((_ball.GetSize() + _target.size),2)) //충돌시
+		if (distanceSquared <= pow((_ball.GetSize() + _target.size),2)) //충돌시
 		{
 			std::cout << "충돌\n";
 
-			/*
 			float distance = sqrt(distanceSquared);
-			float normalX = rx / distance;
-			float normalY = ry / distance;
+			if (distance == 0.0f) distance = 0.01f; // 0으로 나누는 오류 방지
 
-			// 2️ 현재 속도 벡터 가져오기
-			float velocityX = _ball.GetVelocityX();
-			float velocityY = _ball.GetVelocityY();
+			//충돌
 
-			// 3️ 벡터 반사 공식 적용: V' = V - 2 (V · N) N
-			float dotProduct = (velocityX * normalX) + (velocityY * normalY);
-			float reflectX = velocityX - 2 * dotProduct * normalX;
-			float reflectY = velocityY - 2 * dotProduct * normalY;
 
-			// 4️ 감속 적용 (충돌 후 점차 속도가 줄어들도록)
-			float reboundFactor = 0.8f;  // 반사 후 속도 감소율
-			_ball.SetForceX(reflectX * reboundFactor);
-			_ball.SetForceY(reflectY * reboundFactor);
+			// 1. 법선 벡터 구하기 (단위 벡터)
+			float nx = rx / distance;
+			float ny = ry / distance;
 
-			*/
+			// 2. 수직 벡터 구하기
+			float tx = -ny;
+			float ty = nx;
+
+			// 3. A(메인 볼) 속도 가져오기
+			float ball_vx = _ball.GetVelocityX();
+			float ball_vy = _ball.GetVelocityY();
+
+			// 4. B(타겟 볼) 속도 가져오기 (지금은 가만히 있다고 했지만, 일반화를 위해 추가)
+			float target_vx = 0.0f;
+			float target_vy = 0.0f;
+
+			// 5. 속도를 법선/수직 방향으로 분해
+			float ball_vn = ball_vx * nx + ball_vy * ny;
+			float ball_vt = ball_vx * tx + ball_vy * ty;
+
+			float target_vn = target_vx * nx + target_vy * ny;
+			float target_vt = target_vx * tx + target_vy * ty;
+
+			// 6. 질량이 같으면 법선 성분만 서로 교환
+			float ball_vn_after = target_vn;
+			float target_vn_after = ball_vn;
+
+			// 7. 분해된 성분을 다시 합쳐서 실제 x, y 속도로 복원
+			_ball.SetVelocityX(ball_vn_after * nx + ball_vt * tx);
+			_ball.SetVelocityY(ball_vn_after * ny + ball_vt * ty);
+
 
 			// 5️ targetBall 제거
 			_targetBallList._targetBallList.RemoveAt(cur);
@@ -218,7 +235,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nIDEvent == 0)
 	{
-		//Collision();
+		Collision();
 	}
 	if (nIDEvent == 1)
 	{
@@ -289,7 +306,20 @@ BOOL CChildView::OnEraseBkgnd(CDC* pDC)
 
 void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	CRect clientRect;
+	GetClientRect(&clientRect);
+
+	ClientToScreen(&clientRect); // 클라이언트 좌표를 화면 좌표로 변환
+
+	POINT cursorPos;
+	GetCursorPos(&cursorPos); // 현재 마우스 위치 가져오기
+
+	if (cursorPos.x < clientRect.left || cursorPos.x > clientRect.right || cursorPos.y < clientRect.top || cursorPos.y > clientRect.bottom)
+	{
+		RestrictMouseToWindow(); // 창 내부로 제한
+	}
+
+	//드래그 처리
 	if (_ball.GetClick() == true)
 	{
 		_ball.SetTraceDragPos(point.x, point.y);
@@ -318,9 +348,33 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
+void CChildView::OnSetFocus(CWnd* pOldWnd)
+{
+	CWnd::OnSetFocus(pOldWnd);
+	RestrictMouseToWindow();
+}
+
+void CChildView::OnKillFocus(CWnd* pNewWnd)
+{
+	CWnd::OnKillFocus(pNewWnd);
+	KillMouse();
+}
+
 
 void CChildView::On32771()
 {
 	// TODO: 여기에 명령 처리기 코드를 추가합니다.
 	restart();
+}
+
+void CChildView::RestrictMouseToWindow()
+{
+	CRect rect;
+	GetWindowRect(&rect);
+	ClipCursor(&rect);
+}
+
+void CChildView::KillMouse()
+{
+	ClipCursor(NULL);
 }

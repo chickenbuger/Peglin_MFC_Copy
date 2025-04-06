@@ -125,7 +125,7 @@ void Parent_ball::drawline(CDC* pDC)
 
 	for (int i = 0; i < (int)magnitude; i++)
 	{
-		ratioY += _gravity;
+		ratioY -= _gravity;
 
 		float x2 = x1 - ratioX * magnitude * line_x;
 		float y2 = y1 - ratioY * magnitude * line_y;
@@ -148,4 +148,6 @@ void Parent_ball::movement()
 	_velocity_y += _gravity;
 	pos[0] = pos[0] + _velocity_x * _force;
 	pos[1] = pos[1] + _velocity_y * _force;
+
+	std::cout << "공의 속도 X : " << _velocity_x << " , Y : " << _velocity_y << "\n";
 }

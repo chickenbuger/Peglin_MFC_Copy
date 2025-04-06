@@ -18,6 +18,7 @@ class CChildView : public CWnd
 // 생성입니다.
 public:
 	CChildView();
+	virtual ~CChildView();
 
 // 특성입니다.
 public:
@@ -31,41 +32,36 @@ public:
 
 	bool check = false;
 
-	float Dir_x = 1;
-	float Dir_y = 1;
-	float test1 = 0;
-	float test = 0;
-
 public:
 	void gameclear();
 	void gameover();
 	void restart();
 
-private:
-	void ResetGameState();
-	void Init_ball();
-	void Collision();
-
-// 재정의입니다.
-	protected:
+protected:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 
-// 구현입니다.
-public:
-	virtual ~CChildView();
-
-	// 생성된 메시지 맵 함수
 protected:
 	afx_msg void OnPaint();
 	DECLARE_MESSAGE_MAP()
-public:
-	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+
+protected:
+	afx_msg int	OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg void OnSetFocus(CWnd* pOldWnd);
+	afx_msg void OnKillFocus(CWnd* pNewWnd);
 	afx_msg void On32771();
+
+	void RestrictMouseToWindow();
+	void KillMouse();
+
+private:
+	void ResetGameState();
+	void Init_ball();
+	void Collision();
 };
 

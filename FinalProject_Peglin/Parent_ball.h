@@ -17,7 +17,7 @@ public:
 	void SetSize(float size)					{ _size = size; }
 	void SetForce(float force)					{ _force = force; }
 	void SetVelocityX(float vx)					{ _velocity_x = vx; }
-	void SetVelocityY(float vy)					{ _velocity_x = vy; }
+	void SetVelocityY(float vy)					{ _velocity_y = vy; }
 	void SetClick(bool click)					{ IsClick = click; }
 	void SetCrash(bool Crash)					{ IsCrashToTargetball = Crash; }
 
@@ -64,9 +64,11 @@ private:
 	//Drag 마지막 위치
 	float	EndDragPos[2];
 
-	float	_force = 0;
-	float	_velocity_x = 0;
-	float	_velocity_y = 0;
+	float	_force = 0.0f;
+	float	_velocity_x = 0.0f;
+	float	_velocity_y = 0.0f;
+
+	float	_mass = 1.0f;
 
 	float	_gravity;
 

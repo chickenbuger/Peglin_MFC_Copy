@@ -3,6 +3,16 @@
   "WorkspaceRootPath": "D:\\Project\\MFC\\Peglin_MFC_Copy\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\ChildView.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\include\\algorithm||{3B902123-F8A7-4915-9F01-361F908088D0}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\atlmfc\\include\\afxwin.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\Parent_ball.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -11,15 +21,8 @@
       "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\Parent_ball.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\ChildView.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{44F3B8D7-8262-43B7-ACB9-DB831D4012F7}|FinalProject_Peglin\\FinalProject_Peglin.vcxproj|solutionrelative:FinalProject_Peglin\\ChildView.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\include\\algorithm||{3B902123-F8A7-4915-9F01-361F908088D0}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -29,73 +32,86 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "Parent_ball.cpp",
               "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.cpp",
               "RelativeDocumentMoniker": "FinalProject_Peglin\\Parent_ball.cpp",
               "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.cpp",
               "RelativeToolTip": "FinalProject_Peglin\\Parent_ball.cpp",
-              "ViewState": "AgIAAGEAAAAAAAAAAAAAAIkAAAAWAAAAAAAAAA==",
+              "ViewState": "AgIAAGAAAAAAAAAAAAAAAGoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-04-03T06:47:57.811Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "ChildView.h",
-              "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.h",
-              "RelativeDocumentMoniker": "FinalProject_Peglin\\ChildView.h",
-              "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.h",
-              "RelativeToolTip": "FinalProject_Peglin\\ChildView.h",
-              "ViewState": "AgIAABgAAAAAAAAAAAAAACUAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-04-03T06:47:54.831Z"
-            }
-          ]
-        },
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Parent_ball.h",
-              "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.h",
-              "RelativeDocumentMoniker": "FinalProject_Peglin\\Parent_ball.h",
-              "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.h",
-              "RelativeToolTip": "FinalProject_Peglin\\Parent_ball.h",
-              "ViewState": "AgIAACQAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-04-03T06:47:58.802Z",
+              "DocumentIndex": 0,
+              "Title": "ChildView.cpp",
+              "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.cpp",
+              "RelativeDocumentMoniker": "FinalProject_Peglin\\ChildView.cpp",
+              "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.cpp*",
+              "RelativeToolTip": "FinalProject_Peglin\\ChildView.cpp*",
+              "ViewState": "AgIAAGsAAAAAAAAAAAAqwIQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-04-03T06:47:56.033Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 1,
               "Title": "algorithm",
               "DocumentMoniker": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\include\\algorithm",
               "ToolTip": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\include\\algorithm",
               "ViewState": "AgIAAIQqAAAAAAAAAAAwwJcqAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-04-03T09:17:10.416Z"
+              "WhenOpened": "2025-04-03T09:17:10.416Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "ChildView.cpp",
-              "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.cpp",
-              "RelativeDocumentMoniker": "FinalProject_Peglin\\ChildView.cpp",
-              "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.cpp",
-              "RelativeToolTip": "FinalProject_Peglin\\ChildView.cpp",
-              "ViewState": "AgIAADoAAAAAAAAAAADgv28AAAAPAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-04-03T06:47:56.033Z",
+              "Title": "afxwin.h",
+              "DocumentMoniker": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\atlmfc\\include\\afxwin.h",
+              "ToolTip": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.43.34808\\atlmfc\\include\\afxwin.h",
+              "ViewState": "AgIAAJMIAAAAAAAAAAAtwKEIAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-04-04T17:53:28.39Z",
+              "EditorCaption": ""
+            }
+          ]
+        },
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ChildView.h",
+              "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.h",
+              "RelativeDocumentMoniker": "FinalProject_Peglin\\ChildView.h",
+              "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\ChildView.h",
+              "RelativeToolTip": "FinalProject_Peglin\\ChildView.h",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAlwBoAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-04-03T06:47:54.831Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Parent_ball.h",
+              "DocumentMoniker": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.h",
+              "RelativeDocumentMoniker": "FinalProject_Peglin\\Parent_ball.h",
+              "ToolTip": "D:\\Project\\MFC\\Peglin_MFC_Copy\\FinalProject_Peglin\\Parent_ball.h",
+              "RelativeToolTip": "FinalProject_Peglin\\Parent_ball.h",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAAnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-04-03T06:47:58.802Z",
               "EditorCaption": ""
             }
           ]
