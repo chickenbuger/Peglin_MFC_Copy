@@ -11,7 +11,9 @@
   - 구성요소 ID: `Microsoft.VisualStudio.Component.VC.14.44.17.14.MFC`
 - Windows 10/11 SDK
   - 현재 PC 설치 버전: `10.0.19041.0`, `10.0.22621.0`, `10.0.26100.0`
-  - 프로젝트는 현재 `WindowsTargetPlatformVersion=10.0`으로 설치된 최신 SDK를 선택한다.
+  - 프로젝트 요구 버전: `10.0.26100.0`
+  - 설치 확인 경로: `C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0`
+  - 프로젝트가 이 정확한 버전을 사용하므로 새 개발 PC에도 같은 SDK를 설치해야 한다.
 - C++ 언어 표준: C++20 (`/std:c++20`), 모든 구성에 동일 적용
 
 Visual Studio Installer의 **개별 구성 요소** 탭에서 위 MFC 구성요소를 검색해 설치한다. 현재 확인된 MFC 라이브러리 위치는 다음과 같다.
@@ -50,4 +52,4 @@ $msbuild = 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Curr
 
 ## 현재 검증 상태
 
-2026-08-29 기준 네 구성 모두 오류 없이 실행 파일을 생성한다. 다만 `C4244`, `C4305`, `LNK4258` 경고가 남아 있으므로 Sprint 0의 경고 0개 빌드 게이트는 아직 통과하지 않았다.
+2026-08-29 기준 Windows SDK `10.0.26100.0`을 사용해 네 구성 모두 오류 없이 실행 파일을 생성한다. 다만 `C4244`, `C4305`, `LNK4258` 경고가 남아 있으므로 Sprint 0의 경고 0개 빌드 게이트는 아직 통과하지 않았다.

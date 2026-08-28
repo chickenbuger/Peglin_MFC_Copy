@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 0 |
-| 현재 버전 | Version 0.10 |
+| 현재 버전 | Version 0.11 |
 | 스프린트 목표 | 현재 프로젝트 분석 및 재현 가능한 빌드·실행 환경 확립 |
-| 상태 | 진행 중 — 화면 내부 12×4 페그 배치 완료. 빌드 환경 고정 예정 |
+| 상태 | 진행 중 — Windows SDK 10.0.26100.0 고정 완료. 디버그 엔트리 정리 예정 |
 
 ## 문서
 
@@ -32,6 +32,7 @@
 - [Version 0.8 — 단일 고정 시간 간격 게임 루프](./Version_0.8.md)
 - [Version 0.9 — 포커스와 마우스 캡처 안전 처리](./Version_0.9.md)
 - [Version 0.10 — 화면 내부 12×4 페그 배치](./Version_0.10.md)
+- [Version 0.11 — 검증된 Windows SDK 고정](./Version_0.11.md)
 - [Next Version Plan 0 — Sprint 0 개선 계획](./Next_Version_Plan_0.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
