@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 0 |
-| 현재 버전 | Version 0.14 |
+| 현재 스프린트 | Sprint 0 완료 — Sprint 1 착수 대기 |
+| 현재 버전 | Version 0.15 |
 | 스프린트 목표 | 현재 프로젝트 분석 및 재현 가능한 빌드·실행 환경 확립 |
-| 상태 | 진행 중 — 네 구성 `/W4` 오류·경고 0개 달성. Sprint 0 최종 검증 예정 |
+| 상태 | 완료 — 네 구성 빌드, 전체 플레이 흐름 및 10분 GDI 안정성 검증 통과 |
 
 ## 문서
 
@@ -36,7 +36,9 @@
 - [Version 0.12 — 충돌하는 콘솔 엔트리 제거](./Version_0.12.md)
 - [Version 0.13 — 미사용 프로토타입 상태 제거](./Version_0.13.md)
 - [Version 0.14 — `/W4` 경고 0개 기준선](./Version_0.14.md)
-- [Next Version Plan 0 — Sprint 0 개선 계획](./Next_Version_Plan_0.md)
+- [Version 0.15 — Sprint 0 실행·안정성 검증 완료](./Version_0.15.md)
+- [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
+- [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차

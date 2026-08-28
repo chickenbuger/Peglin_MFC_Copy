@@ -53,4 +53,4 @@ $msbuild = 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Curr
 
 ## 현재 검증 상태
 
-2026-08-29 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. 최종 Sprint 0 완료 판정은 Version 0.15의 전체 실행·GDI 안정성 검증 후 확정한다.
+2026-08-29 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. Version 0.15에서 전체 플레이 흐름과 10분 GDI 안정성 검증(기준 31개, 마지막 34개, 증가 3개, 후반 지속 상승 없음)을 통과했으며 Sprint 0 빌드·실행 기준선을 확정했다.
