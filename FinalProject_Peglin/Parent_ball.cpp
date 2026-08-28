@@ -54,20 +54,22 @@ bool Parent_ball::shooting()
 
 void Parent_ball::draw(CDC* pDC)
 {
+	const int savedDc = pDC->SaveDC();
+
 	CBrush brush(RGB(200.0f, 200.0f, 200.0f));
-	pDC->SelectObject(brush);
+	pDC->SelectObject(&brush);
 	pDC->SelectObject(GetStockObject(NULL_PEN));
 	pDC->Ellipse(pos[0] - _size, pos[1] - _size, pos[0] + _size, pos[1] + _size);
 	
 	CPen pen(PS_SOLID, 4, RGB(255.0f, 255.0f, 255.0f));
 	pDC->SelectObject(pen);
 
-	if (IsActive) return;
-
-	if (IsClick)
+	if (!IsActive && IsClick)
 	{
 		drawline(pDC);
 	}
+
+	pDC->RestoreDC(savedDc);
 }
 
 void Parent_ball::update()

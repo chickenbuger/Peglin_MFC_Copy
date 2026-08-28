@@ -177,7 +177,7 @@ void CChildView::OnPaint()
 	memDc.CreateCompatibleDC(&dc);
 	CBitmap  bitmap;
 	bitmap.CreateCompatibleBitmap(&dc, rect.right, rect.bottom);
-	memDc.SelectObject(&bitmap);
+	CBitmap* previousBitmap = memDc.SelectObject(&bitmap);
 	
 	_background.draw(&memDc);
 
@@ -212,6 +212,7 @@ void CChildView::OnPaint()
 	}
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+	memDc.SelectObject(previousBitmap);
 	// 그리기 메시지에 대해서는 CWnd::OnPaint()를 호출하지 마십시오.
 }
 

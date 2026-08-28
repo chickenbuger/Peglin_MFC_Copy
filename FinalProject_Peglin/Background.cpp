@@ -3,11 +3,13 @@
 
 void Background::draw(CDC* pDC)
 {
+	const int savedDc = pDC->SaveDC();
+
 	CBitmap bmp;
 	bmp.LoadBitmap(311);
 
 	CBrush brush(&bmp);
-	pDC->SelectObject(brush);
+	pDC->SelectObject(&brush);
 	pDC->Rectangle(0, 0, 980, 200);
 
 	CPen pen(PS_SOLID, 4, RGB(255.0f, 255.0f, 255.0f));
@@ -23,8 +25,10 @@ void Background::draw(CDC* pDC)
 	pDC->LineTo(x2, y2);
 	
 	CBrush brush1(RGB(255.0, 255.0, 255.0));
-	pDC->SelectObject(brush1);
+	pDC->SelectObject(&brush1);
 
 	pDC->Rectangle(0, y1, x1, y2);
 	pDC->Rectangle(x2, y1, 1000, y2);
+
+	pDC->RestoreDC(savedDc);
 }
