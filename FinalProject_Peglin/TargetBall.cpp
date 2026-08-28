@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "TargetBall.h"
+#include <cmath>
 
 void TargetBall::draw(CDC* pDC)
 {
@@ -8,7 +9,11 @@ void TargetBall::draw(CDC* pDC)
 	CBrush brush(RGB(255, 0, 0));
 	pDC->SelectObject(&brush);
 	pDC->SelectObject(GetStockObject(NULL_PEN));
-	pDC->Ellipse(x - size, y - size, x + size, y + size);
+	pDC->Ellipse(
+		static_cast<int>(std::lround(x - size)),
+		static_cast<int>(std::lround(y - size)),
+		static_cast<int>(std::lround(x + size)),
+		static_cast<int>(std::lround(y + size)));
 
 	pDC->RestoreDC(savedDc);
 }

@@ -14,7 +14,7 @@ private:
 //함수 입니다.
 public:
 	//setter
-	void SetHp(float hp) { this->hp = hp; }
+	void SetHp(float newHp) { hp = newHp; }
 	
 	//getter
 	float GetHp() { return hp; }

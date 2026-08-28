@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Enemy.h"
+#include <cmath>
 
 void Enemy::draw(CDC* pDC)
 {
@@ -13,7 +14,8 @@ void Enemy::draw(CDC* pDC)
 		CBrush brush(&bmp);
 		pDC->SelectObject(&brush);
 		pDC->SelectObject(GetStockObject(NULL_PEN));
-		pDC->Rectangle(x, 130, x + 60, 190);
+		const int enemyX = static_cast<int>(std::lround(x));
+		pDC->Rectangle(enemyX, 130, enemyX + 60, 190);
 	}
 
 	pDC->RestoreDC(savedDc);

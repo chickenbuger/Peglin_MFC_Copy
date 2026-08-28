@@ -17,6 +17,14 @@ constexpr float CONVERT_MAX_POWER = 10.0f;
 constexpr float MIN_DRAG_DISTANCE = 0.001f;
 constexpr float BASE_TIMESTEP_SECONDS = 0.01f;
 
+namespace
+{
+	int RoundToPixel(float value)
+	{
+		return static_cast<int>(std::lround(value));
+	}
+}
+
 Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 {
 	_size = 10;
@@ -57,13 +65,17 @@ void Parent_ball::draw(CDC* pDC)
 {
 	const int savedDc = pDC->SaveDC();
 
-	CBrush brush(RGB(200.0f, 200.0f, 200.0f));
+	CBrush brush(RGB(200, 200, 200));
 	pDC->SelectObject(&brush);
 	pDC->SelectObject(GetStockObject(NULL_PEN));
-	pDC->Ellipse(pos[0] - _size, pos[1] - _size, pos[0] + _size, pos[1] + _size);
+	pDC->Ellipse(
+		RoundToPixel(pos[0] - _size),
+		RoundToPixel(pos[1] - _size),
+		RoundToPixel(pos[0] + _size),
+		RoundToPixel(pos[1] + _size));
 	
-	CPen pen(PS_SOLID, 4, RGB(255.0f, 255.0f, 255.0f));
-	pDC->SelectObject(pen);
+	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
+	pDC->SelectObject(&pen);
 
 	if (!IsActive && IsClick)
 	{
@@ -120,14 +132,14 @@ void Parent_ball::collision()
 
 void Parent_ball::drawline(CDC* pDC)
 {
-	double dirx = TraceDragPos[0] - StartDragPos[0];
-	double diry = TraceDragPos[1] - StartDragPos[1];
+	const float dirx = TraceDragPos[0] - StartDragPos[0];
+	const float diry = TraceDragPos[1] - StartDragPos[1];
 
-	float magnitude = sqrt(dirx * dirx + diry * diry);
+	float magnitude = std::sqrt(dirx * dirx + diry * diry);
 
 	if (magnitude == 0) return;
 
-	float ratioX = dirx / magnitude;
+	const float ratioX = dirx / magnitude;
 	float ratioY = diry / magnitude;
 
 	//힘의 값을 MinPower ~ MaxPower 사이로 조정
@@ -146,7 +158,7 @@ void Parent_ball::drawline(CDC* pDC)
 
 	//펜 선택
 	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
-	pDC->SelectObject(pen);
+	pDC->SelectObject(&pen);
 
 	for (int i = 0; i < (int)magnitude; i++)
 	{
@@ -160,8 +172,8 @@ void Parent_ball::drawline(CDC* pDC)
 		//천장에 닿으면 y축이 반대로
 		if (y2 < CEILING_HEIGHT) line_y *= -1;
 
-		pDC->MoveTo(x1, y1);
-		pDC->LineTo(x2, y2);
+		pDC->MoveTo(RoundToPixel(x1), RoundToPixel(y1));
+		pDC->LineTo(RoundToPixel(x2), RoundToPixel(y2));
 
 		//new->old
 		x1 = x2; y1 = y2;

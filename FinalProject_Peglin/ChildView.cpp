@@ -7,6 +7,7 @@
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
 #include <algorithm>
+#include <cmath>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -102,11 +103,12 @@ void CChildView::Collision()
 		const float rx = ball_x - _target.x;
 		const float ry = ball_y - _target.y;
 
-		float distanceSquared = rx * rx + ry * ry;
+		const float distanceSquared = rx * rx + ry * ry;
+		const float collisionRadius = _ball.GetSize() + _target.size;
 
-		if (distanceSquared <= pow((_ball.GetSize() + _target.size),2)) //충돌시
+		if (distanceSquared <= collisionRadius * collisionRadius) //충돌시
 		{
-			float distance = sqrt(distanceSquared);
+			float distance = std::sqrt(distanceSquared);
 			if (distance == 0.0f) distance = 0.01f; // 0으로 나누는 오류 방지
 
 			//충돌
@@ -124,24 +126,12 @@ void CChildView::Collision()
 			float ball_vx = _ball.GetVelocityX();
 			float ball_vy = _ball.GetVelocityY();
 
-			// 4. B(타겟 볼) 속도 가져오기 (지금은 가만히 있다고 했지만, 일반화를 위해 추가)
-			float target_vx = 0.0f;
-			float target_vy = 0.0f;
+			// 4. 고정된 페그와 충돌한 공의 접선 성분만 유지
+			const float ball_vt = ball_vx * tx + ball_vy * ty;
 
-			// 5. 속도를 법선/수직 방향으로 분해
-			float ball_vn = ball_vx * nx + ball_vy * ny;
-			float ball_vt = ball_vx * tx + ball_vy * ty;
-
-			float target_vn = target_vx * nx + target_vy * ny;
-			float target_vt = target_vx * tx + target_vy * ty;
-
-			// 6. 질량이 같으면 법선 성분만 서로 교환
-			float ball_vn_after = target_vn;
-			float target_vn_after = ball_vn;
-
-			// 7. 분해된 성분을 다시 합쳐서 실제 x, y 속도로 복원
-			_ball.SetVelocityX(ball_vn_after * nx + ball_vt * tx);
-			_ball.SetVelocityY(ball_vn_after * ny + ball_vt * ty);
+			// 5. 접선 성분을 실제 x, y 속도로 복원
+			_ball.SetVelocityX(ball_vt * tx);
+			_ball.SetVelocityY(ball_vt * ty);
 
 
 			// 5️ targetBall 제거
@@ -221,7 +211,7 @@ void CChildView::OnPaint()
 	{
 		CString Text1;
 		Text1.Format(_T("몬스터 체력 : %d"), static_cast<int>(_enemy.GetHp()));
-		memDc.TextOut(_enemy.GetX() - 30.0f, 90, Text1);
+		memDc.TextOut(static_cast<int>(std::lround(_enemy.GetX() - 30.0f)), 90, Text1);
 	}
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
@@ -327,8 +317,8 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 	{
 		SetFocus();
 		SetCapture();
-		_ball.SetStartDragPos(point.x, point.y);
-		_ball.SetTraceDragPos(point.x, point.y);
+		_ball.SetStartDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
+		_ball.SetTraceDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
 		_ball.SetClick(true);
 	}
 	CWnd::OnLButtonDown(nFlags, point);
@@ -341,7 +331,7 @@ void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 	{
 		if (_ball.GetActive() == false)
 		{
-			_ball.SetEndDragPos(point.x, point.y);
+			_ball.SetEndDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
 			_ball.shooting();
 		}
 		_ball.SetClick(false);
@@ -353,9 +343,9 @@ void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 
 BOOL CChildView::OnEraseBkgnd(CDC* pDC)
 {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	UNREFERENCED_PARAMETER(pDC);
 
-	return true;
+	return TRUE;
 }
 
 
@@ -364,7 +354,7 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 	//드래그 처리
 	if (_ball.GetClick() == true)
 	{
-		_ball.SetTraceDragPos(point.x, point.y);
+		_ball.SetTraceDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
 		Invalidate();
 	}
 

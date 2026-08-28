@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 0 |
-| 현재 버전 | Version 0.13 |
+| 현재 버전 | Version 0.14 |
 | 스프린트 목표 | 현재 프로젝트 분석 및 재현 가능한 빌드·실행 환경 확립 |
-| 상태 | 진행 중 — 미사용 프로토타입 상태·API 제거 완료. 경고 기준선 강화 예정 |
+| 상태 | 진행 중 — 네 구성 `/W4` 오류·경고 0개 달성. Sprint 0 최종 검증 예정 |
 
 ## 문서
 
@@ -35,6 +35,7 @@
 - [Version 0.11 — 검증된 Windows SDK 고정](./Version_0.11.md)
 - [Version 0.12 — 충돌하는 콘솔 엔트리 제거](./Version_0.12.md)
 - [Version 0.13 — 미사용 프로토타입 상태 제거](./Version_0.13.md)
+- [Version 0.14 — `/W4` 경고 0개 기준선](./Version_0.14.md)
 - [Next Version Plan 0 — Sprint 0 개선 계획](./Next_Version_Plan_0.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 

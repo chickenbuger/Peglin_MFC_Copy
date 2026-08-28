@@ -13,7 +13,7 @@ public:
 	//setter
 	void SetCount(int InCount)	{ this->count = InCount; }
 	void SetHp(float InHp)		{ this->hp = InHp; }
-	void SetX(float x)			{ this->x = x; }
+	void SetX(float newX)		{ x = newX; }
 
 	//getter
 	int		GetCount()	{ return count; }

@@ -1,5 +1,14 @@
 #include "pch.h"
 #include "Background.h"
+#include <cmath>
+
+namespace
+{
+	int RoundToPixel(float value)
+	{
+		return static_cast<int>(std::lround(value));
+	}
+}
 
 void Background::draw(CDC* pDC)
 {
@@ -12,23 +21,28 @@ void Background::draw(CDC* pDC)
 	pDC->SelectObject(&brush);
 	pDC->Rectangle(0, 0, 980, 200);
 
-	CPen pen(PS_SOLID, 4, RGB(255.0f, 255.0f, 255.0f));
-	pDC->SelectObject(pen);
+	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
+	pDC->SelectObject(&pen);
 
-	pDC->MoveTo(x1, y1);
-	pDC->LineTo(x2, y1);
+	const int left = RoundToPixel(x1);
+	const int top = RoundToPixel(y1);
+	const int right = RoundToPixel(x2);
+	const int bottom = RoundToPixel(y2);
 
-	pDC->MoveTo(x1, y1);
-	pDC->LineTo(x1, y2);
+	pDC->MoveTo(left, top);
+	pDC->LineTo(right, top);
+
+	pDC->MoveTo(left, top);
+	pDC->LineTo(left, bottom);
 	
-	pDC->MoveTo(x2, y1);
-	pDC->LineTo(x2, y2);
+	pDC->MoveTo(right, top);
+	pDC->LineTo(right, bottom);
 	
-	CBrush brush1(RGB(255.0, 255.0, 255.0));
+	CBrush brush1(RGB(255, 255, 255));
 	pDC->SelectObject(&brush1);
 
-	pDC->Rectangle(0, y1, x1, y2);
-	pDC->Rectangle(x2, y1, 1000, y2);
+	pDC->Rectangle(0, top, left, bottom);
+	pDC->Rectangle(right, top, 1000, bottom);
 
 	pDC->RestoreDC(savedDc);
 }

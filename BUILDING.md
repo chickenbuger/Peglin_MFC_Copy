@@ -15,6 +15,7 @@
   - 설치 확인 경로: `C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0`
   - 프로젝트가 이 정확한 버전을 사용하므로 새 개발 PC에도 같은 SDK를 설치해야 한다.
 - C++ 언어 표준: C++20 (`/std:c++20`), 모든 구성에 동일 적용
+- 컴파일러 경고 수준: `/W4`, 모든 구성에 동일 적용
 
 Visual Studio Installer의 **개별 구성 요소** 탭에서 위 MFC 구성요소를 검색해 설치한다. 현재 확인된 MFC 라이브러리 위치는 다음과 같다.
 
@@ -52,4 +53,4 @@ $msbuild = 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Curr
 
 ## 현재 검증 상태
 
-2026-08-29 기준 Windows SDK `10.0.26100.0`을 사용해 네 구성 모두 오류 없이 실행 파일을 생성한다. 다만 `C4244`, `C4305`, `LNK4258` 경고가 남아 있으므로 Sprint 0의 경고 0개 빌드 게이트는 아직 통과하지 않았다.
+2026-08-29 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. 최종 Sprint 0 완료 판정은 Version 0.15의 전체 실행·GDI 안정성 검증 후 확정한다.
