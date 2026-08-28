@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 0 |
-| 현재 버전 | Version 0.11 |
+| 현재 버전 | Version 0.12 |
 | 스프린트 목표 | 현재 프로젝트 분석 및 재현 가능한 빌드·실행 환경 확립 |
-| 상태 | 진행 중 — Windows SDK 10.0.26100.0 고정 완료. 디버그 엔트리 정리 예정 |
+| 상태 | 진행 중 — 충돌하는 콘솔 엔트리와 출력 제거 완료. 미사용 코드 정리 예정 |
 
 ## 문서
 
@@ -33,6 +33,7 @@
 - [Version 0.9 — 포커스와 마우스 캡처 안전 처리](./Version_0.9.md)
 - [Version 0.10 — 화면 내부 12×4 페그 배치](./Version_0.10.md)
 - [Version 0.11 — 검증된 Windows SDK 고정](./Version_0.11.md)
+- [Version 0.12 — 충돌하는 콘솔 엔트리 제거](./Version_0.12.md)
 - [Next Version Plan 0 — Sprint 0 개선 계획](./Next_Version_Plan_0.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 

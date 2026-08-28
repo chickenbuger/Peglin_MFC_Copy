@@ -7,7 +7,6 @@
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
 #include <algorithm>
-#include <iostream>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -107,8 +106,6 @@ void CChildView::Collision()
 
 		if (distanceSquared <= pow((_ball.GetSize() + _target.size),2)) //충돌시
 		{
-			std::cout << "충돌\n";
-
 			float distance = sqrt(distanceSquared);
 			if (distance == 0.0f) distance = 0.01f; // 0으로 나누는 오류 방지
 

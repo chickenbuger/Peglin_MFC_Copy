@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Parent_ball.h"
 #include <algorithm>
-#include <iostream>
+#include <cmath>
 
 constexpr int MAX_WIDTH = 970;
 constexpr int MIN_WIDTH = 40;
@@ -175,5 +175,4 @@ void Parent_ball::movement(float timeScale)
 	pos[0] = pos[0] + _velocity_x * _force * timeScale;
 	pos[1] = pos[1] + _velocity_y * _force * timeScale;
 
-	std::cout << "공의 속도 X : " << _velocity_x << " , Y : " << _velocity_y << "\n";
 }

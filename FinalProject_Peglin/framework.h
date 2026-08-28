@@ -30,7 +30,6 @@
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
-#pragma comment(linker,"/entry:WinMainCRTStartup /subsystem:console")
 #endif
 
 
