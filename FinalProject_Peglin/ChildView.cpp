@@ -13,6 +13,15 @@
 #define new DEBUG_NEW
 #endif
 
+namespace
+{
+	constexpr int PEG_COLUMNS = 12;
+	constexpr int PEG_ROWS = 4;
+	constexpr float PEG_START_X = 50.0f;
+	constexpr float PEG_START_Y = 400.0f;
+	constexpr float PEG_SPACING = 80.0f;
+}
+
 
 // CChildView
 
@@ -69,12 +78,14 @@ void CChildView::gameover()
 void CChildView::Init_ball()
 {
 	_targetBallList._targetBallList.RemoveAll();
-	for (int x = 0; x < (930 - 30) / 40; x++)
+	for (int column = 0; column < PEG_COLUMNS; ++column)
 	{
-		for (int y = 0; y < (650 - 400) / 60; y++)
+		for (int row = 0; row < PEG_ROWS; ++row)
 		{
 			TargetBall ball;
-			ball.setting(50 + x * 80, 400 + y * 80);
+			ball.setting(
+				PEG_START_X + static_cast<float>(column) * PEG_SPACING,
+				PEG_START_Y + static_cast<float>(row) * PEG_SPACING);
 			_targetBallList.add(ball);
 		}
 	}
