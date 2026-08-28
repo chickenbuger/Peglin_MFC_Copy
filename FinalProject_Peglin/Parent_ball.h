@@ -37,7 +37,7 @@ public:
 	bool	GetClick()				{ return IsClick; }
 	bool	GetCrash()				{ return IsCrashToTargetball; }
 public:
-	void shooting();
+	bool shooting();
 	void collision();
 
 public:

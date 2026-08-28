@@ -286,7 +286,7 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	if (_ball.GetActive() == false)
+	if (_ball.GetActive() == false && _ball.GetClick())
 	{
 		_ball.SetEndDragPos(point.x, point.y);
 		_ball.SetClick(false);

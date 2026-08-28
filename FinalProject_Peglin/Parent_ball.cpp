@@ -12,6 +12,7 @@ constexpr float MAX_POWER = 400.0f;
 
 constexpr float CONVERT_MIN_POWER = 1.0f;
 constexpr float CONVERT_MAX_POWER = 10.0f;
+constexpr float MIN_DRAG_DISTANCE = 0.001f;
 
 Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 {
@@ -22,13 +23,21 @@ Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 	IsCrashToTargetball = false;
 }
 
-void Parent_ball::shooting()
+bool Parent_ball::shooting()
 {
 	//힘에 대한 계산
-	double dirx = StartDragPos[0] - EndDragPos[0];
-	double diry = StartDragPos[1] - EndDragPos[1];
+	const float dirx = StartDragPos[0] - EndDragPos[0];
+	const float diry = StartDragPos[1] - EndDragPos[1];
 
-	float magnitude = sqrt(dirx * dirx + diry * diry);
+	float magnitude = std::sqrt(dirx * dirx + diry * diry);
+	if (magnitude <= MIN_DRAG_DISTANCE)
+	{
+		_velocity_x = 0.0f;
+		_velocity_y = 0.0f;
+		_force = 0.0f;
+		IsActive = false;
+		return false;
+	}
 
 	_velocity_x = dirx / magnitude;
 	_velocity_y = diry / magnitude;
@@ -41,6 +50,7 @@ void Parent_ball::shooting()
 	_force = std::clamp(magnitude, CONVERT_MIN_POWER, CONVERT_MAX_POWER);
 
 	IsActive = true;
+	return true;
 }
 
 void Parent_ball::draw(CDC* pDC)
