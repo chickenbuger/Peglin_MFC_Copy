@@ -36,6 +36,9 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
 	ON_WM_ERASEBKGND()
 	ON_WM_MOUSEMOVE()
 	ON_WM_KEYDOWN()
+	ON_WM_SETFOCUS()
+	ON_WM_KILLFOCUS()
+	ON_WM_CAPTURECHANGED()
 	ON_COMMAND(ID_32771, &CChildView::On32771)
 END_MESSAGE_MAP()
 
@@ -240,6 +243,8 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 void CChildView::OnDestroy()
 {
+	ReleaseMouseInput(true);
+
 	if (_gameTimerId != 0)
 	{
 		KillTimer(_gameTimerId);
@@ -312,7 +317,10 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	if (_ball.GetActive() == false)
 	{
+		SetFocus();
+		SetCapture();
 		_ball.SetStartDragPos(point.x, point.y);
+		_ball.SetTraceDragPos(point.x, point.y);
 		_ball.SetClick(true);
 	}
 	CWnd::OnLButtonDown(nFlags, point);
@@ -321,12 +329,16 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	if (_ball.GetActive() == false && _ball.GetClick())
+	if (_ball.GetClick())
 	{
-		_ball.SetEndDragPos(point.x, point.y);
+		if (_ball.GetActive() == false)
+		{
+			_ball.SetEndDragPos(point.x, point.y);
+			_ball.shooting();
+		}
 		_ball.SetClick(false);
-		_ball.shooting();
 	}
+	ReleaseMouseInput(false);
 	CWnd::OnLButtonUp(nFlags, point);
 }
 
@@ -341,19 +353,6 @@ BOOL CChildView::OnEraseBkgnd(CDC* pDC)
 
 void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 {
-	CRect clientRect;
-	GetClientRect(&clientRect);
-
-	ClientToScreen(&clientRect); // 클라이언트 좌표를 화면 좌표로 변환
-
-	POINT cursorPos;
-	GetCursorPos(&cursorPos); // 현재 마우스 위치 가져오기
-
-	if (cursorPos.x < clientRect.left || cursorPos.x > clientRect.right || cursorPos.y < clientRect.top || cursorPos.y > clientRect.bottom)
-	{
-		RestrictMouseToWindow(); // 창 내부로 제한
-	}
-
 	//드래그 처리
 	if (_ball.GetClick() == true)
 	{
@@ -386,15 +385,24 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 void CChildView::OnSetFocus(CWnd* pOldWnd)
 {
 	CWnd::OnSetFocus(pOldWnd);
-	RestrictMouseToWindow();
 }
 
 void CChildView::OnKillFocus(CWnd* pNewWnd)
 {
+	ReleaseMouseInput(true);
 	CWnd::OnKillFocus(pNewWnd);
-	KillMouse();
 }
 
+void CChildView::OnCaptureChanged(CWnd* pWnd)
+{
+	if (GetCapture() != this)
+	{
+		_ball.SetClick(false);
+		::ClipCursor(nullptr);
+	}
+
+	CWnd::OnCaptureChanged(pWnd);
+}
 
 void CChildView::On32771()
 {
@@ -402,14 +410,17 @@ void CChildView::On32771()
 	restart();
 }
 
-void CChildView::RestrictMouseToWindow()
+void CChildView::ReleaseMouseInput(bool cancelDrag)
 {
-	CRect rect;
-	GetWindowRect(&rect);
-	ClipCursor(&rect);
-}
+	if (cancelDrag)
+	{
+		_ball.SetClick(false);
+	}
 
-void CChildView::KillMouse()
-{
-	ClipCursor(NULL);
+	if (GetCapture() == this)
+	{
+		ReleaseCapture();
+	}
+
+	::ClipCursor(nullptr);
 }

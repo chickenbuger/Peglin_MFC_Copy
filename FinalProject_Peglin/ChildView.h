@@ -57,12 +57,11 @@ protected:
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnSetFocus(CWnd* pOldWnd);
 	afx_msg void OnKillFocus(CWnd* pNewWnd);
+	afx_msg void OnCaptureChanged(CWnd* pWnd);
 	afx_msg void On32771();
 
-	void RestrictMouseToWindow();
-	void KillMouse();
-
 private:
+	void ReleaseMouseInput(bool cancelDrag);
 	void ResetGameState();
 	void Init_ball();
 	void Collision();
