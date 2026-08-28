@@ -6,6 +6,8 @@
 constexpr int MAX_WIDTH = 970;
 constexpr int MIN_WIDTH = 40;
 constexpr int CEILING_HEIGHT = 205;
+constexpr float INITIAL_X = 490.0f;
+constexpr float INITIAL_Y = 250.0f;
 
 constexpr float MIN_POWER = 1.0f;
 constexpr float MAX_POWER = 400.0f;
@@ -16,11 +18,8 @@ constexpr float MIN_DRAG_DISTANCE = 0.001f;
 
 Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 {
-	pos[0] = 490.0f;
-	pos[1] = 250.0f;
 	_size = 10;
-
-	IsCrashToTargetball = false;
+	Init();
 }
 
 bool Parent_ball::shooting()
@@ -84,10 +83,23 @@ void Parent_ball::update()
 
 void Parent_ball::Init()
 {
-	pos[0] = 490.0f;
-	pos[1] = 250.0f;
+	pos[0] = INITIAL_X;
+	pos[1] = INITIAL_Y;
+
+	StartDragPos[0] = INITIAL_X;
+	StartDragPos[1] = INITIAL_Y;
+	TraceDragPos[0] = INITIAL_X;
+	TraceDragPos[1] = INITIAL_Y;
+	EndDragPos[0] = INITIAL_X;
+	EndDragPos[1] = INITIAL_Y;
+
+	_force = 0.0f;
+	_velocity_x = 0.0f;
+	_velocity_y = 0.0f;
 
 	IsActive = false;
+	IsClick = false;
+	IsCrashToTargetball = false;
 	stop = false;
 }
 

@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 0 |
-| 현재 버전 | Version 0.5 |
+| 현재 버전 | Version 0.6 |
 | 스프린트 목표 | 현재 프로젝트 분석 및 재현 가능한 빌드·실행 환경 확립 |
-| 상태 | 진행 중 — 0 길이 드래그 발사 취소 완료. 공 상태 초기화 및 렌더링 안정성 개선 예정 |
+| 상태 | 진행 중 — 공 상태 완전 초기화 완료. GDI 렌더링 안정성 개선 예정 |
 
 ## 문서
 
@@ -27,6 +27,7 @@
 - [Version 0.3 — 실제 실행 및 기본 입력 검증](./Version_0.3.md)
 - [Version 0.4 — Visual Studio 생성물 추적 정리](./Version_0.4.md)
 - [Version 0.5 — 0 길이 드래그 발사 취소](./Version_0.5.md)
+- [Version 0.6 — 공 상태 완전 초기화](./Version_0.6.md)
 - [Next Version Plan 0 — Sprint 0 개선 계획](./Next_Version_Plan_0.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
