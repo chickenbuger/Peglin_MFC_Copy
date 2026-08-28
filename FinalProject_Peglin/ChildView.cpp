@@ -6,6 +6,7 @@
 #include "framework.h"
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
+#include <algorithm>
 #include <iostream>
 
 #ifdef _DEBUG
@@ -28,6 +29,7 @@ CChildView::~CChildView()
 BEGIN_MESSAGE_MAP(CChildView, CWnd)
 	ON_WM_PAINT()
 	ON_WM_CREATE()
+	ON_WM_DESTROY()
 	ON_WM_TIMER()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
@@ -223,54 +225,86 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	// TODO:  여기에 특수화된 작성 코드를 추가합니다.
-	SetTimer(0, 10, NULL);
-	SetTimer(1, 10, NULL);
+	constexpr UINT GAME_TIMER_INTERVAL_MS = 10;
+	_gameTimerId = SetTimer(1, GAME_TIMER_INTERVAL_MS, nullptr);
+	if (_gameTimerId == 0)
+	{
+		return -1;
+	}
+
+	_lastFrameTime = std::chrono::steady_clock::now();
+	_accumulatedTimeSeconds = 0.0;
 
 	return 0;
 }
 
+void CChildView::OnDestroy()
+{
+	if (_gameTimerId != 0)
+	{
+		KillTimer(_gameTimerId);
+		_gameTimerId = 0;
+	}
+
+	CWnd::OnDestroy();
+}
 
 void CChildView::OnTimer(UINT_PTR nIDEvent)
 {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-	if (nIDEvent == 0)
+	if (nIDEvent != _gameTimerId || _gameTimerId == 0)
 	{
-		Collision();
+		CWnd::OnTimer(nIDEvent);
+		return;
 	}
-	if (nIDEvent == 1)
+
+	constexpr double FIXED_TIMESTEP_SECONDS = 0.01;
+	constexpr double MAX_FRAME_TIME_SECONDS = 0.1;
+
+	const auto now = std::chrono::steady_clock::now();
+	const double elapsedSeconds = std::chrono::duration<double>(now - _lastFrameTime).count();
+	_lastFrameTime = now;
+	_accumulatedTimeSeconds += std::clamp(elapsedSeconds, 0.0, MAX_FRAME_TIME_SECONDS);
+
+	while (_accumulatedTimeSeconds >= FIXED_TIMESTEP_SECONDS)
 	{
-		_ball.update();
-		
-		if (_ball.GetPos()[1] > 800.0f)
-		{
-			if (_enemy.GetCount() < 8)
-			{
-				_enemy.SetX(_enemy.GetX() - 64);
-			}
-			else
-			{
-				_player.SetHp(_player.GetHp() - 20.0f);
-			}
-			_enemy.SetCount(_enemy.GetCount() + 1);
-			_enemy.SetHp(_enemy.GetHp() - ball_DMG);
-			ball_DMG = 0.0f;
-			_ball.Init();
-		}
-		
-		if (_player.GetHp() <= 0)
-		{
-			gameover();
-		}
-		else if (_enemy.GetHp() <= 0)
-		{
-			gameclear();
-		}
-		
+		UpdateGameStep(static_cast<float>(FIXED_TIMESTEP_SECONDS));
+		_accumulatedTimeSeconds -= FIXED_TIMESTEP_SECONDS;
 	}
-	Invalidate();
+
+	Invalidate(FALSE);
 
 	CWnd::OnTimer(nIDEvent);
+}
+
+void CChildView::UpdateGameStep(float deltaSeconds)
+{
+	Collision();
+	_ball.update(deltaSeconds);
+
+	if (_ball.GetPos()[1] > 800.0f)
+	{
+		if (_enemy.GetCount() < 8)
+		{
+			_enemy.SetX(_enemy.GetX() - 64);
+		}
+		else
+		{
+			_player.SetHp(_player.GetHp() - 20.0f);
+		}
+		_enemy.SetCount(_enemy.GetCount() + 1);
+		_enemy.SetHp(_enemy.GetHp() - ball_DMG);
+		ball_DMG = 0.0f;
+		_ball.Init();
+	}
+
+	if (_player.GetHp() <= 0)
+	{
+		gameover();
+	}
+	else if (_enemy.GetHp() <= 0)
+	{
+		gameclear();
+	}
 }
 
 

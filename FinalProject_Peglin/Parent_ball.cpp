@@ -15,6 +15,7 @@ constexpr float MAX_POWER = 400.0f;
 constexpr float CONVERT_MIN_POWER = 1.0f;
 constexpr float CONVERT_MAX_POWER = 10.0f;
 constexpr float MIN_DRAG_DISTANCE = 0.001f;
+constexpr float BASE_TIMESTEP_SECONDS = 0.01f;
 
 Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 {
@@ -72,12 +73,13 @@ void Parent_ball::draw(CDC* pDC)
 	pDC->RestoreDC(savedDc);
 }
 
-void Parent_ball::update()
+void Parent_ball::update(float deltaSeconds)
 {
 	if (IsActive && !stop)
 	{
+		const float timeScale = deltaSeconds / BASE_TIMESTEP_SECONDS;
 		//공의 움직임
-		movement();
+		movement(timeScale);
 		//공의 충돌 확인
 		collision();
 	}
@@ -167,11 +169,11 @@ void Parent_ball::drawline(CDC* pDC)
 	}
 }
 
-void Parent_ball::movement()
+void Parent_ball::movement(float timeScale)
 {
-	_velocity_y += _gravity;
-	pos[0] = pos[0] + _velocity_x * _force;
-	pos[1] = pos[1] + _velocity_y * _force;
+	_velocity_y += _gravity * timeScale;
+	pos[0] = pos[0] + _velocity_x * _force * timeScale;
+	pos[1] = pos[1] + _velocity_y * _force * timeScale;
 
 	std::cout << "공의 속도 X : " << _velocity_x << " , Y : " << _velocity_y << "\n";
 }

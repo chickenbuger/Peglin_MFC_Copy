@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <chrono>
+
 #include "Player.h"
 #include "Enemy.h"
 #include "Parent_ball.h"
@@ -46,6 +48,7 @@ protected:
 
 protected:
 	afx_msg int	OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnDestroy();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
@@ -63,5 +66,10 @@ private:
 	void ResetGameState();
 	void Init_ball();
 	void Collision();
+	void UpdateGameStep(float deltaSeconds);
+
+	UINT_PTR _gameTimerId = 0;
+	std::chrono::steady_clock::time_point _lastFrameTime{};
+	double _accumulatedTimeSeconds = 0.0;
 };
 

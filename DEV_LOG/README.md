@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 0 |
-| 현재 버전 | Version 0.7 |
+| 현재 버전 | Version 0.8 |
 | 스프린트 목표 | 현재 프로젝트 분석 및 재현 가능한 빌드·실행 환경 확립 |
-| 상태 | 진행 중 — GDI 객체 선택 상태 복원 완료. 게임 루프 안정화 예정 |
+| 상태 | 진행 중 — 단일 10ms 고정 시간 간격 게임 루프 적용 완료. 입력 캡처 안정화 예정 |
 
 ## 문서
 
@@ -29,6 +29,7 @@
 - [Version 0.5 — 0 길이 드래그 발사 취소](./Version_0.5.md)
 - [Version 0.6 — 공 상태 완전 초기화](./Version_0.6.md)
 - [Version 0.7 — GDI 객체 수명 안정화](./Version_0.7.md)
+- [Version 0.8 — 단일 고정 시간 간격 게임 루프](./Version_0.8.md)
 - [Next Version Plan 0 — Sprint 0 개선 계획](./Next_Version_Plan_0.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 

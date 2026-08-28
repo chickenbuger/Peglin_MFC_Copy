@@ -43,7 +43,7 @@ public:
 public:
 	//º® °Ë»ç
 	void draw(CDC* pDC);
-	void update();
+	void update(float deltaSeconds);
 	void Init();
 	
 public:
@@ -51,7 +51,7 @@ public:
 
 private:
 	void drawline(CDC* pDC);
-	void movement();
+	void movement(float timeScale);
 
 private:
 	float	pos[2] = { 490.f,250.f };
