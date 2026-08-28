@@ -30,3 +30,26 @@
 *.exe
 *.out
 *.app
+
+# Visual Studio user state and caches
+.vs/
+*.suo
+*.user
+*.aps
+
+# Visual C++ build output directories
+[Dd]ebug/
+[Rr]elease/
+x64/
+
+# Visual C++ intermediate and diagnostic files
+*.pdb
+*.idb
+*.ilk
+*.tlog
+*.recipe
+*.lastbuildstate
+*.FileListAbsolute.txt
+*.Build.CppClean.log
+*.log
+*.res
