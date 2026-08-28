@@ -42,9 +42,6 @@
     <ClInclude Include="Parent_ball.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="ball_liner.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Background.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -72,9 +69,6 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Parent_ball.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="ball_liner.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Background.cpp">

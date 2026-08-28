@@ -103,7 +103,6 @@ void Parent_ball::Init()
 
 	IsActive = false;
 	IsClick = false;
-	IsCrashToTargetball = false;
 	stop = false;
 }
 

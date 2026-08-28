@@ -189,7 +189,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Background.h" />
-    <ClInclude Include="ball_liner.h" />
     <ClInclude Include="ChildView.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="FinalProject_Peglin.h" />
@@ -204,7 +203,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Background.cpp" />
-    <ClCompile Include="ball_liner.cpp" />
     <ClCompile Include="ChildView.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="FinalProject_Peglin.cpp" />
