@@ -512,6 +512,166 @@ namespace
 		Check(Near(world.GetEnemy().GetHp(), 9.0f), "stage reset restores configured enemy health");
 		Check(Near(world.GetPegRestitution(), 0.5f), "stage reset restores configured restitution");
 	}
+
+	void TestScoreCancellationAndContinuation()
+	{
+		GameWorld world;
+		std::vector<Vector2> pegPositions;
+		auto scan = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (scan != nullptr && pegPositions.size() < 2)
+		{
+			const TargetBall& target = world.GetTargets()._targetBallList.GetNext(scan);
+			if (target.type == PegType::Normal && target.position.x > 200.0f)
+			{
+				pegPositions.push_back(target.position);
+			}
+		}
+		Check(pegPositions.size() == 2, "score cancellation test finds two normal pegs");
+
+		Launch(world);
+		world.GetBall().SetPosition(pegPositions[0] + Vector2{ -15.0f, 0.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetScore().currentShot == 100, "cancelled shot first records pending score");
+		world.ResetBallToAiming();
+		Check(world.GetScore().currentShot == 0, "F5 discards pending shot score");
+		Check(world.GetScore().currentCombo == 0, "F5 discards current combo");
+		Check(world.GetScore().total == 0, "F5 does not commit discarded score");
+		Check(world.GetScore().bestCombo == 1, "F5 preserves achieved best combo");
+
+		Launch(world);
+		world.GetBall().SetPosition(pegPositions[1] + Vector2{ -15.0f, 0.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetScore().currentCombo == 1, "shot after F5 restarts combo at one");
+		Check(world.GetScore().currentShot == 100, "shot after F5 starts a fresh score");
+	}
+
+	void TestBombDoesNotChainSecondaryEffects()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{ { 500.0f, 500.0f }, PegType::Bomb },
+			{ { 580.0f, 500.0f }, PegType::Bomb },
+			{ { 660.0f, 500.0f }, PegType::Normal }
+		};
+		GameWorld world(layout);
+		Launch(world);
+		world.GetBall().SetPosition({ 485.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+
+		Check(world.GetTargets()._targetBallList.GetCount() == 1, "bomb removes nearby bomb without chaining it");
+		const auto remaining = world.GetTargets()._targetBallList.GetHeadPosition();
+		const TargetBall& target = world.GetTargets()._targetBallList.GetAt(remaining);
+		Check(target.type == PegType::Normal && Near(target.position.x, 660.0f), "non-chained bomb leaves second-radius peg active");
+		Check(world.GetFeedback().currentShotPegHits == 2, "non-chained bomb counts two removed pegs");
+		Check(world.GetScore().currentShot == 300, "non-chained bomb keeps deterministic combo score");
+	}
+
+	void TestRefreshDoesNotDuplicateActivePegs()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{ { 300.0f, 500.0f }, PegType::Normal },
+			{ { 500.0f, 500.0f }, PegType::Refresh },
+			{ { 600.0f, 500.0f }, PegType::Refresh }
+		};
+		GameWorld world(layout);
+		Launch(world);
+		world.GetBall().SetPosition({ 485.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetTargets()._targetBallList.GetCount() == 2, "first refresh leaves two unique active pegs");
+
+		world.GetBall().SetPosition({ 585.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetTargets()._targetBallList.GetCount() == 2, "second refresh restores only missing pegs");
+
+		int normalCount = 0;
+		int refreshCount = 0;
+		auto position = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (position != nullptr)
+		{
+			const TargetBall& active = world.GetTargets()._targetBallList.GetNext(position);
+			normalCount += active.type == PegType::Normal ? 1 : 0;
+			refreshCount += active.type == PegType::Refresh ? 1 : 0;
+		}
+		Check(normalCount == 1 && refreshCount == 1, "refresh cycle preserves one peg per original definition");
+	}
+
+	void TestStageValidationMatrix()
+	{
+		StageDefinition invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs.resize(257, invalid.pegLayout.pegs.front());
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::TooManyPegs, "stage peg limit is enforced before duplicate scan");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs[0].type = static_cast<PegType>(999);
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPegType, "unknown peg enum value is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.rules.playerHealth = 0.0f;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPlayerHealth, "non-positive player health is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.rules.playerDamage = 0.0f;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPlayerDamage, "non-positive player damage is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.rules.enemyStep = 0.0f;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyStep, "non-positive enemy step is rejected");
+
+		const StageLoadResult first = LoadStageDefinition("stage-2");
+		const StageLoadResult repeated = LoadStageDefinition("stage-2");
+		bool deterministic = first.IsSuccess()
+			&& repeated.IsSuccess()
+			&& first.stage->pegLayout.pegs.size() == repeated.stage->pegLayout.pegs.size();
+		for (std::size_t index = 0; deterministic && index < first.stage->pegLayout.pegs.size(); ++index)
+		{
+			deterministic = first.stage->pegLayout.pegs[index].type == repeated.stage->pegLayout.pegs[index].type
+				&& Near(first.stage->pegLayout.pegs[index].position.x, repeated.stage->pegLayout.pegs[index].position.x)
+				&& Near(first.stage->pegLayout.pegs[index].position.y, repeated.stage->pegLayout.pegs[index].position.y);
+		}
+		Check(deterministic, "repeated stage-2 loads are deterministic");
+	}
+
+	void TestStageVictoryAndDefeatRegression()
+	{
+		StageDefinition victoryStage = CreateDefaultStageDefinition();
+		victoryStage.id = "victory-stage";
+		victoryStage.pegLayout.pegs = { { { 500.0f, 500.0f }, PegType::Critical } };
+		victoryStage.rules.playerHealth = 50.0f;
+		victoryStage.rules.enemyHealth = 2.0f;
+		victoryStage.rules.playerDamage = 10.0f;
+		victoryStage.rules.enemyStepsBeforeAttack = 1;
+		Check(ValidateStageDefinition(victoryStage).IsValid(), "victory regression stage validates");
+
+		GameWorld victoryWorld(victoryStage);
+		Launch(victoryWorld);
+		victoryWorld.GetBall().SetPosition({ 485.0f, 500.0f });
+		victoryWorld.GetBall().SetVelocity({ 2.0f, 0.0f });
+		victoryWorld.Update(0.0f);
+		victoryWorld.GetBall().SetPosition({ 500.0f, 801.0f });
+		victoryWorld.Update(0.0f);
+		Check(victoryWorld.Update(0.0f) == GameUpdateResult::Victory, "stage critical damage triggers Victory");
+		Check(victoryWorld.GetState() == GameState::Victory, "stage victory enters terminal state");
+		Check(victoryWorld.Update(0.0f) == GameUpdateResult::None, "stage victory result remains single-shot");
+
+		StageDefinition defeatStage = victoryStage;
+		defeatStage.id = "defeat-stage";
+		defeatStage.rules.playerHealth = 10.0f;
+		defeatStage.rules.enemyHealth = 20.0f;
+		GameWorld defeatWorld(defeatStage);
+		defeatWorld.GetEnemy().SetCount(1);
+		Launch(defeatWorld);
+		defeatWorld.GetBall().SetPosition({ 500.0f, 801.0f });
+		defeatWorld.Update(0.0f);
+		Check(defeatWorld.Update(0.0f) == GameUpdateResult::Defeat, "stage attack damage triggers Defeat");
+		Check(defeatWorld.GetState() == GameState::Defeat, "stage defeat enters terminal state");
+		Check(defeatWorld.Update(0.0f) == GameUpdateResult::None, "stage defeat result remains single-shot");
+	}
 }
 
 int main()
@@ -533,6 +693,11 @@ int main()
 	TestRefreshPegEffect();
 	TestStageCatalogAndValidation();
 	TestStageRulesConfigureWorld();
+	TestScoreCancellationAndContinuation();
+	TestBombDoesNotChainSecondaryEffects();
+	TestRefreshDoesNotDuplicateActivePegs();
+	TestStageValidationMatrix();
+	TestStageVictoryAndDefeatRegression();
 
 	if (failures == 0)
 	{

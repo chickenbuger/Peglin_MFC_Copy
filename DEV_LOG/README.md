@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 2 |
-| 현재 버전 | Version 2.3 |
+| 현재 버전 | Version 2.4 |
 | 스프린트 목표 | 플레이 결과의 의미 강화와 데이터 기반 콘텐츠·로딩 경로 확장 |
-| 상태 | Sprint 2 진행 중 — 점수·콤보, 페그 효과와 스테이지 로딩 완료 |
+| 상태 | Sprint 2 P0 구현 완료 — 최종 실행·GDI 검증 진행 예정 |
 
 ## 문서
 
@@ -50,6 +50,7 @@
 - [Version 2.1 — 점수와 콤보 규칙](./Version_2.1.md)
 - [Version 2.2 — 데이터 기반 페그 종류와 효과](./Version_2.2.md)
 - [Version 2.3 — 검증된 스테이지 정의와 로딩](./Version_2.3.md)
+- [Version 2.4 — Sprint 2 규칙 회귀 테스트 확장](./Version_2.4.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 계획(미착수)](./Next_Version_Plan_2.md)
