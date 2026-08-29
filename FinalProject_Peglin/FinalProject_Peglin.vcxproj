@@ -197,6 +197,7 @@
     <ClInclude Include="GameWorld.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Parent_ball.h" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Resource.h" />

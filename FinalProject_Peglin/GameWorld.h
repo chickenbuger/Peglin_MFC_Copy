@@ -27,6 +27,8 @@ public:
 	bool ReleaseShot(Vector2 position);
 	void CancelAim();
 	bool TogglePause();
+	void SetPegRestitution(float restitution) noexcept;
+	float GetPegRestitution() const noexcept { return _pegRestitution; }
 
 	Player& GetPlayer() noexcept { return _player; }
 	Enemy& GetEnemy() noexcept { return _enemy; }
@@ -45,6 +47,7 @@ private:
 	Parent_ball _ball;
 	TargetBallList _targetBallList;
 	float _pendingDamage = 0.0f;
+	float _pegRestitution = 0.85f;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 };

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "GameWorld.h"
+#include "Physics.h"
 
 #include <cmath>
 
@@ -14,6 +15,7 @@ namespace
 	constexpr float ENEMY_STEP = 64.0f;
 	constexpr int ENEMY_STEPS_BEFORE_ATTACK = 8;
 	constexpr float PLAYER_DAMAGE = 20.0f;
+	constexpr float COLLISION_EPSILON = 0.001f;
 }
 
 GameWorld::GameWorld()
@@ -140,6 +142,11 @@ bool GameWorld::TogglePause()
 	return false;
 }
 
+void GameWorld::SetPegRestitution(float restitution) noexcept
+{
+	_pegRestitution = ClampRestitution(restitution);
+}
+
 void GameWorld::InitializeTargets()
 {
 	_targetBallList._targetBallList.RemoveAll();
@@ -169,17 +176,26 @@ void GameWorld::HandlePegCollisions()
 
 		if (distanceSquared <= collisionRadius * collisionRadius)
 		{
-			float distance = std::sqrt(distanceSquared);
-			if (distance == 0.0f)
+			const float distance = std::sqrt(distanceSquared);
+			Vector2 normal;
+			if (distance <= COLLISION_EPSILON)
 			{
-				distance = 0.01f;
+				normal = (_ball.GetVelocity() * -1.0f).Normalized();
+				if (normal.LengthSquared() == 0.0f)
+				{
+					normal = { 0.0f, -1.0f };
+				}
+			}
+			else
+			{
+				normal = offset / distance;
 			}
 
-			const Vector2 normal = offset / distance;
-			const Vector2 tangent{ -normal.y, normal.x };
-			const float tangentVelocity = Dot(_ball.GetVelocity(), tangent);
-
-			_ball.SetVelocity(tangent * tangentVelocity);
+			const float penetration = collisionRadius - distance;
+			_ball.SetPosition(
+				_ball.GetPosition() + normal * (penetration + COLLISION_EPSILON));
+			_ball.SetVelocity(
+				ReflectVelocity(_ball.GetVelocity(), normal, _pegRestitution));
 			_targetBallList._targetBallList.RemoveAt(current);
 			_pendingDamage += 1.0f;
 		}

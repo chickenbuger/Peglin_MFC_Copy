@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Parent_ball.h"
+#include "Physics.h"
 #include <algorithm>
 #include <cmath>
 
@@ -16,6 +17,10 @@ constexpr float CONVERT_MIN_POWER = 1.0f;
 constexpr float CONVERT_MAX_POWER = 10.0f;
 constexpr float MIN_DRAG_DISTANCE = 0.001f;
 constexpr float BASE_TIMESTEP_SECONDS = 0.01f;
+constexpr float WALL_RESTITUTION = 1.0f;
+constexpr float LEFT_BOUNDARY = 35.0f;
+constexpr float RIGHT_BOUNDARY = 945.0f;
+constexpr float TOP_BOUNDARY = 215.0f;
 
 namespace
 {
@@ -110,13 +115,20 @@ void Parent_ball::Init()
 
 void Parent_ball::collision()
 {
-	if ((_position.x < 35.0f) || (_position.x > 945.0f))
+	if (_position.x < LEFT_BOUNDARY)
 	{
-		_velocity.x *= -1.0f;
+		_position.x = LEFT_BOUNDARY;
+		_velocity = ReflectVelocity(_velocity, { 1.0f, 0.0f }, WALL_RESTITUTION);
 	}
-	if (_position.y < 215.0f)
+	else if (_position.x > RIGHT_BOUNDARY)
 	{
-		_velocity.y *= -1.0f;
+		_position.x = RIGHT_BOUNDARY;
+		_velocity = ReflectVelocity(_velocity, { -1.0f, 0.0f }, WALL_RESTITUTION);
+	}
+	if (_position.y < TOP_BOUNDARY)
+	{
+		_position.y = TOP_BOUNDARY;
+		_velocity = ReflectVelocity(_velocity, { 0.0f, 1.0f }, WALL_RESTITUTION);
 	}
 }
 
