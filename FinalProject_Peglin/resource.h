@@ -9,13 +9,14 @@
 #define IDB_BITMAP1                     312
 #define IDB_BITMAP3                     313
 #define IDB_BITMAP4                     314
+#define IDB_UI_ADVENTURE_FRAME          315
 #define ID_32771                        32771
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        315
+#define _APS_NEXT_RESOURCE_VALUE        316
 #define _APS_NEXT_COMMAND_VALUE         32772
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310

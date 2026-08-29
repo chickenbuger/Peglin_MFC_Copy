@@ -15,6 +15,7 @@
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GameWorld.h"
+#include "UiRenderer.h"
 
 // CChildView 창
 
@@ -57,6 +58,7 @@ private:
 	enum class ScreenMode
 	{
 		StageSelection,
+		Loadout,
 		Options,
 		Playing,
 		Result
@@ -78,10 +80,14 @@ private:
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
 	void DrawStageSelection(CDC* deviceContext);
+	void DrawLoadoutScreen(CDC* deviceContext);
 	void DrawOptions(CDC* deviceContext);
 	void DrawResultScreen(CDC* deviceContext);
+	void DrawMenuBackdrop(CDC* deviceContext);
+	void DrawPlayingLoadout(CDC* deviceContext);
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
+	bool StartSelectedStage();
 	void SaveOptions();
 	void RecordResult(bool cleared);
 
@@ -96,6 +102,10 @@ private:
 	GameRecordStore _recordStore;
 	GameRecordBook _records;
 	ContentLoadResult _contentCatalog;
+	CBitmap _uiBackground;
+	bool _uiBackgroundLoaded = false;
+	std::size_t _selectedStageIndex = 0;
+	CString _loadoutNotice;
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
 	ScreenMode _screenMode = ScreenMode::StageSelection;
