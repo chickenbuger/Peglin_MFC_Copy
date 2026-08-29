@@ -194,6 +194,7 @@
     <ClInclude Include="FinalProject_Peglin.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameState.h" />
+    <ClInclude Include="GameWorld.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Parent_ball.h" />
     <ClInclude Include="pch.h" />
@@ -207,6 +208,7 @@
     <ClCompile Include="ChildView.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="FinalProject_Peglin.cpp" />
+    <ClCompile Include="GameWorld.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="Parent_ball.cpp" />
     <ClCompile Include="pch.cpp">

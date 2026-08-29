@@ -13,21 +13,10 @@
 #define new DEBUG_NEW
 #endif
 
-namespace
-{
-	constexpr int PEG_COLUMNS = 12;
-	constexpr int PEG_ROWS = 4;
-	constexpr float PEG_START_X = 50.0f;
-	constexpr float PEG_START_Y = 400.0f;
-	constexpr float PEG_SPACING = 80.0f;
-}
-
-
 // CChildView
 
 CChildView::CChildView()
 {
-	Init_ball();
 }
 
 CChildView::~CChildView()
@@ -58,95 +47,18 @@ END_MESSAGE_MAP()
 void CChildView::gameclear()
 {
 	AfxMessageBox(_T("Game Clear!!"));
-	ResetGameState();
+	_game.ResetGame();
 }
 
 void CChildView::gameover()
 {
 	AfxMessageBox(_T("Game Over!!"));
-	ResetGameState();
-}
-
-void CChildView::Init_ball()
-{
-	_targetBallList._targetBallList.RemoveAll();
-	for (int column = 0; column < PEG_COLUMNS; ++column)
-	{
-		for (int row = 0; row < PEG_ROWS; ++row)
-		{
-			TargetBall ball;
-			ball.setting(
-				PEG_START_X + static_cast<float>(column) * PEG_SPACING,
-				PEG_START_Y + static_cast<float>(row) * PEG_SPACING);
-			_targetBallList.add(ball);
-		}
-	}
-}
-
-void CChildView::Collision()
-{
-	auto pos = _targetBallList._targetBallList.GetHeadPosition();
-	while (pos != nullptr)
-	{
-		auto cur = pos;
-		auto& _target = _targetBallList._targetBallList.GetNext(pos);
-		const float ball_x = _ball.GetPos()[0];
-		const float ball_y = _ball.GetPos()[1];
-		const float rx = ball_x - _target.x;
-		const float ry = ball_y - _target.y;
-
-		const float distanceSquared = rx * rx + ry * ry;
-		const float collisionRadius = _ball.GetSize() + _target.size;
-
-		if (distanceSquared <= collisionRadius * collisionRadius) //충돌시
-		{
-			float distance = std::sqrt(distanceSquared);
-			if (distance == 0.0f) distance = 0.01f; // 0으로 나누는 오류 방지
-
-			//충돌
-
-
-			// 1. 법선 벡터 구하기 (단위 벡터)
-			float nx = rx / distance;
-			float ny = ry / distance;
-
-			// 2. 수직 벡터 구하기
-			float tx = -ny;
-			float ty = nx;
-
-			// 3. A(메인 볼) 속도 가져오기
-			float ball_vx = _ball.GetVelocityX();
-			float ball_vy = _ball.GetVelocityY();
-
-			// 4. 고정된 페그와 충돌한 공의 접선 성분만 유지
-			const float ball_vt = ball_vx * tx + ball_vy * ty;
-
-			// 5. 접선 성분을 실제 x, y 속도로 복원
-			_ball.SetVelocityX(ball_vt * tx);
-			_ball.SetVelocityY(ball_vt * ty);
-
-
-			// 5️ targetBall 제거
-			_targetBallList._targetBallList.RemoveAt(cur);
-			_pendingDamage += 1.0f;
-		}
-	}
+	_game.ResetGame();
 }
 
 void CChildView::restart()
 {
-	ResetGameState();
-}
-
-void CChildView::ResetGameState()
-{
-	_gameState = GameState::Aiming;
-	_stateBeforePause = GameState::Aiming;
-	_pendingDamage = 0.0f;
-	_ball.Init();
-	_player.Init();
-	_enemy.Init();
-	Init_ball();
+	_game.ResetGame();
 }
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
@@ -179,33 +91,34 @@ void CChildView::OnPaint()
 	_background.draw(&memDc);
 
 	//player
-	_player.draw(&memDc);
+	_game.GetPlayer().draw(&memDc);
 
 	//enemy
-	_enemy.draw(&memDc);
+	_game.GetEnemy().draw(&memDc);
 
 	//ball
-	_ball.draw(&memDc);
+	_game.GetBall().draw(&memDc);
 	
 	//targetball
-	auto pos = _targetBallList._targetBallList.GetHeadPosition();
+	auto& targets = _game.GetTargets()._targetBallList;
+	auto pos = targets.GetHeadPosition();
 	while (pos != nullptr)
 	{
-		auto& _target = _targetBallList._targetBallList.GetNext(pos);
+		auto& _target = targets.GetNext(pos);
 		_target.draw(&memDc);
 	}
 
-	if (_player.GetHp() > 0.0f)
+	if (_game.GetPlayer().GetHp() > 0.0f)
 	{
 		CString Text;
-		Text.Format(_T("플레이어 체력 : %d "), static_cast<int>(_player.GetHp()));
+		Text.Format(_T("플레이어 체력 : %d "), static_cast<int>(_game.GetPlayer().GetHp()));
 		memDc.TextOut(100, 70, Text);
 	}
-	if (_enemy.GetHp() > 0.0f)
+	if (_game.GetEnemy().GetHp() > 0.0f)
 	{
 		CString Text1;
-		Text1.Format(_T("몬스터 체력 : %d"), static_cast<int>(_enemy.GetHp()));
-		memDc.TextOut(static_cast<int>(std::lround(_enemy.GetX() - 30.0f)), 90, Text1);
+		Text1.Format(_T("몬스터 체력 : %d"), static_cast<int>(_game.GetEnemy().GetHp()));
+		memDc.TextOut(static_cast<int>(std::lround(_game.GetEnemy().GetX() - 30.0f)), 90, Text1);
 	}
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
@@ -275,82 +188,26 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
-	switch (_gameState)
+	switch (_game.Update(deltaSeconds))
 	{
-	case GameState::Aiming:
-	case GameState::Paused:
+	case GameUpdateResult::None:
 		break;
-	case GameState::BallInFlight:
-		Collision();
-		_ball.update(deltaSeconds);
-		if (_ball.GetPos()[1] > 800.0f)
-		{
-			TransitionTo(GameState::ResolvingTurn);
-		}
-		break;
-	case GameState::ResolvingTurn:
-		ResolveTurn();
-		break;
-	case GameState::Victory:
+	case GameUpdateResult::Victory:
 		gameclear();
 		break;
-	case GameState::Defeat:
+	case GameUpdateResult::Defeat:
 		gameover();
 		break;
 	}
 }
 
-void CChildView::ResolveTurn()
-{
-	if (_enemy.GetCount() < 8)
-	{
-		_enemy.SetX(_enemy.GetX() - 64.0f);
-	}
-	else
-	{
-		_player.SetHp(_player.GetHp() - 20.0f);
-	}
-
-	_enemy.SetCount(_enemy.GetCount() + 1);
-	_enemy.SetHp(_enemy.GetHp() - _pendingDamage);
-	_pendingDamage = 0.0f;
-	_ball.Init();
-
-	if (_player.GetHp() <= 0.0f)
-	{
-		TransitionTo(GameState::Defeat);
-	}
-	else if (_enemy.GetHp() <= 0.0f)
-	{
-		TransitionTo(GameState::Victory);
-	}
-	else
-	{
-		TransitionTo(GameState::Aiming);
-	}
-}
-
-bool CChildView::TransitionTo(GameState nextState)
-{
-	if (!CanTransitionTo(_gameState, nextState))
-	{
-		return false;
-	}
-
-	_gameState = nextState;
-	return true;
-}
-
 
 void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
-	if (_gameState == GameState::Aiming && _ball.GetActive() == false)
+	if (_game.BeginAim(static_cast<float>(point.x), static_cast<float>(point.y)))
 	{
 		SetFocus();
 		SetCapture();
-		_ball.SetStartDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
-		_ball.SetTraceDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
-		_ball.SetClick(true);
 	}
 	CWnd::OnLButtonDown(nFlags, point);
 }
@@ -358,18 +215,7 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	if (_gameState == GameState::Aiming && _ball.GetClick())
-	{
-		if (_ball.GetActive() == false)
-		{
-			_ball.SetEndDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
-			if (_ball.shooting())
-			{
-				TransitionTo(GameState::BallInFlight);
-			}
-		}
-		_ball.SetClick(false);
-	}
+	_game.ReleaseShot(static_cast<float>(point.x), static_cast<float>(point.y));
 	ReleaseMouseInput(false);
 	CWnd::OnLButtonUp(nFlags, point);
 }
@@ -386,9 +232,9 @@ BOOL CChildView::OnEraseBkgnd(CDC* pDC)
 void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 {
 	//드래그 처리
-	if (_ball.GetClick() == true)
+	if (_game.GetBall().GetClick())
 	{
-		_ball.SetTraceDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
+		_game.UpdateAim(static_cast<float>(point.x), static_cast<float>(point.y));
 		Invalidate();
 	}
 
@@ -401,25 +247,13 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nChar == VK_SPACE)
 	{
-		if (_gameState == GameState::Paused)
-		{
-			_ball.stop = false;
-			TransitionTo(_stateBeforePause);
-		}
-		else if (_gameState == GameState::Aiming || _gameState == GameState::BallInFlight)
-		{
-			_stateBeforePause = _gameState;
-			_ball.stop = true;
-			TransitionTo(GameState::Paused);
-		}
+		_game.TogglePause();
 
 		Invalidate();
 	}
 	if (nChar == VK_F5)
 	{
-		_ball.Init();
-		_pendingDamage = 0.0f;
-		TransitionTo(GameState::Aiming);
+		_game.ResetBallToAiming();
 		Invalidate();
 	}
 
@@ -441,7 +275,7 @@ void CChildView::OnCaptureChanged(CWnd* pWnd)
 {
 	if (GetCapture() != this)
 	{
-		_ball.SetClick(false);
+		_game.CancelAim();
 		::ClipCursor(nullptr);
 	}
 
@@ -458,7 +292,7 @@ void CChildView::ReleaseMouseInput(bool cancelDrag)
 {
 	if (cancelDrag)
 	{
-		_ball.SetClick(false);
+		_game.CancelAim();
 	}
 
 	if (GetCapture() == this)

@@ -7,12 +7,8 @@
 
 #include <chrono>
 
-#include "Player.h"
-#include "Enemy.h"
-#include "Parent_ball.h"
 #include "Background.h"
-#include "TargetBall.h"
-#include "GameState.h"
+#include "GameWorld.h"
 
 // CChildView 창
 
@@ -25,17 +21,10 @@ public:
 
 // 특성입니다.
 public:
-	Player			_player;
-	Enemy			_enemy;
-	Parent_ball		_ball;
-	Background		_background;
-	TargetBallList	_targetBallList;
-
-public:
 	void gameclear();
 	void gameover();
 	void restart();
-	GameState GetGameState() const noexcept { return _gameState; }
+	GameState GetGameState() const noexcept { return _game.GetState(); }
 
 protected:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
@@ -60,18 +49,12 @@ protected:
 
 private:
 	void ReleaseMouseInput(bool cancelDrag);
-	void ResetGameState();
-	void Init_ball();
-	void Collision();
 	void UpdateGameStep(float deltaSeconds);
-	void ResolveTurn();
-	bool TransitionTo(GameState nextState);
 
+	Background _background;
+	GameWorld _game;
 	UINT_PTR _gameTimerId = 0;
 	std::chrono::steady_clock::time_point _lastFrameTime{};
 	double _accumulatedTimeSeconds = 0.0;
-	float _pendingDamage = 0.0f;
-	GameState _gameState = GameState::Aiming;
-	GameState _stateBeforePause = GameState::Aiming;
 };
 
