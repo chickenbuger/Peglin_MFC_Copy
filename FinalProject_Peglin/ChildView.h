@@ -54,6 +54,7 @@ private:
 	enum class ScreenMode
 	{
 		StageSelection,
+		Options,
 		Playing,
 		Result
 	};
@@ -74,6 +75,7 @@ private:
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
 	void DrawStageSelection(CDC* deviceContext);
+	void DrawOptions(CDC* deviceContext);
 	void DrawResultScreen(CDC* deviceContext);
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
@@ -84,7 +86,7 @@ private:
 	std::chrono::steady_clock::time_point _lastFrameTime{};
 	double _accumulatedTimeSeconds = 0.0;
 	std::vector<FeedbackAnimation> _feedbackAnimations;
-	bool _soundEnabled = true;
+	GameOptions _options;
 	ScreenMode _screenMode = ScreenMode::StageSelection;
 	std::optional<GameResultSummary> _resultSummary;
 };

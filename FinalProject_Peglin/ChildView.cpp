@@ -76,8 +76,19 @@ namespace
 		return text;
 	}
 
-	COLORREF PegEffectColor(PegType type)
+	COLORREF PegEffectColor(PegType type, PegColorMode colorMode)
 	{
+		if (colorMode == PegColorMode::HighContrast)
+		{
+			switch (type)
+			{
+			case PegType::Normal: return RGB(30, 130, 255);
+			case PegType::Critical: return RGB(255, 220, 0);
+			case PegType::Bomb: return RGB(245, 245, 245);
+			case PegType::Refresh: return RGB(0, 255, 180);
+			}
+		}
+
 		switch (type)
 		{
 		case PegType::Normal: return RGB(255, 80, 80);
@@ -101,6 +112,25 @@ namespace
 		}
 
 		return _T("Unknown Stage");
+	}
+
+	CString DifficultyText(GameDifficulty difficulty)
+	{
+		switch (difficulty)
+		{
+		case GameDifficulty::Easy: return _T("쉬움");
+		case GameDifficulty::Normal: return _T("보통");
+		case GameDifficulty::Hard: return _T("어려움");
+		}
+
+		return _T("보통");
+	}
+
+	CString PegColorModeText(PegColorMode colorMode)
+	{
+		return colorMode == PegColorMode::HighContrast
+			? _T("고대비 + 모양")
+			: _T("표준 색상");
 	}
 }
 
@@ -195,6 +225,13 @@ void CChildView::OnPaint()
 		memDc.SelectObject(previousBitmap);
 		return;
 	}
+	if (_screenMode == ScreenMode::Options)
+	{
+		DrawOptions(&memDc);
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+		memDc.SelectObject(previousBitmap);
+		return;
+	}
 	if (_screenMode == ScreenMode::Result)
 	{
 		DrawResultScreen(&memDc);
@@ -218,7 +255,7 @@ void CChildView::OnPaint()
 	while (pos != nullptr)
 	{
 		auto& _target = targets.GetNext(pos);
-		_target.draw(&memDc);
+		_target.draw(&memDc, _options.pegColorMode);
 	}
 
 	DrawAimPreview(&memDc);
@@ -253,10 +290,16 @@ void CChildView::OnPaint()
 		static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
 		static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
 		FeedbackText(_game.GetFeedback(), _game.GetScore()));
+	CString optionsText;
+	optionsText.Format(
+		_T("%s · %s (M) · %s"),
+		DifficultyText(_game.GetDifficulty()).GetString(),
+		_options.soundEnabled ? _T("소리") : _T("음소거"),
+		_options.pegColorMode == PegColorMode::HighContrast ? _T("고대비") : _T("표준"));
 	memDc.TextOut(
 		static_cast<int>(std::lround(GameLayout::OptionsText.x)),
 		static_cast<int>(std::lround(GameLayout::OptionsText.y)),
-		_soundEnabled ? _T("사운드: 켜짐 (M)") : _T("사운드: 꺼짐 (M)"));
+		optionsText);
 	memDc.RestoreDC(textState);
 
 	DrawFeedbackAnimations(&memDc);
@@ -357,7 +400,7 @@ void CChildView::ConsumeGameEvents()
 	{
 		FeedbackAnimation animation;
 		animation.position = event.position;
-		animation.color = PegEffectColor(event.pegType);
+		animation.color = PegEffectColor(event.pegType, _options.pegColorMode);
 
 		switch (event.type)
 		{
@@ -523,16 +566,88 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	deviceContext->SelectObject(&bodyFont);
 	deviceContext->SetTextColor(RGB(235, 235, 245));
 	deviceContext->TextOut(490, 285, _T("[1] Forgotten Forest"));
-	deviceContext->TextOut(490, 355, _T("48 Pegs · Enemy HP 20 · 8 Steps"));
+	const StageDefinition stageOne = ApplyDifficulty(
+		CreateDefaultStageDefinition(),
+		_options.difficulty);
+	CString stageOneText;
+	stageOneText.Format(
+		_T("48 Pegs · Enemy HP %d · %d Steps"),
+		static_cast<int>(std::lround(stageOne.rules.enemyHealth)),
+		stageOne.rules.enemyStepsBeforeAttack);
+	deviceContext->TextOut(490, 355, stageOneText);
 	deviceContext->SetTextColor(RGB(170, 210, 255));
 	deviceContext->TextOut(490, 455, _T("[2] Dense Cavern"));
-	deviceContext->TextOut(490, 525, _T("40 Pegs · Enemy HP 30 · 6 Steps"));
+	const StageDefinition stageTwo = ApplyDifficulty(
+		CreateChallengeStageDefinition(),
+		_options.difficulty);
+	CString stageTwoText;
+	stageTwoText.Format(
+		_T("40 Pegs · Enemy HP %d · %d Steps"),
+		static_cast<int>(std::lround(stageTwo.rules.enemyHealth)),
+		stageTwo.rules.enemyStepsBeforeAttack);
+	deviceContext->TextOut(490, 525, stageTwoText);
 
 	CFont guideFont;
 	guideFont.CreatePointFont(130, _T("맑은 고딕"));
 	deviceContext->SelectObject(&guideFont);
 	deviceContext->SetTextColor(RGB(160, 165, 180));
-	deviceContext->TextOut(490, 650, _T("숫자 키 1 또는 2로 시작"));
+	CString currentOptions;
+	currentOptions.Format(
+		_T("난이도 %s · 사운드 %s · %s"),
+		DifficultyText(_options.difficulty).GetString(),
+		_options.soundEnabled ? _T("켜짐") : _T("꺼짐"),
+		PegColorModeText(_options.pegColorMode).GetString());
+	deviceContext->TextOut(490, 615, currentOptions);
+	deviceContext->TextOut(490, 670, _T("[1]/[2] 시작    [O] 옵션"));
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawOptions(CDC* deviceContext)
+{
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->FillSolidRect(
+		0,
+		0,
+		static_cast<int>(std::lround(GameLayout::SceneWidth)),
+		static_cast<int>(std::lround(GameLayout::WindowHeight)),
+		RGB(18, 22, 32));
+	deviceContext->SetBkMode(TRANSPARENT);
+	deviceContext->SetTextAlign(TA_CENTER);
+
+	CFont titleFont;
+	titleFont.CreatePointFont(280, _T("맑은 고딕"));
+	deviceContext->SelectObject(&titleFont);
+	deviceContext->SetTextColor(RGB(255, 215, 80));
+	deviceContext->TextOut(490, 135, _T("OPTIONS"));
+
+	CFont bodyFont;
+	bodyFont.CreatePointFont(180, _T("맑은 고딕"));
+	deviceContext->SelectObject(&bodyFont);
+	deviceContext->SetTextColor(RGB(235, 235, 245));
+	CString difficulty;
+	difficulty.Format(
+		_T("[D] 난이도    %s"),
+		DifficultyText(_options.difficulty).GetString());
+	deviceContext->TextOut(490, 285, difficulty);
+	CString sound;
+	sound.Format(
+		_T("[M] 사운드    %s"),
+		_options.soundEnabled ? _T("켜짐") : _T("꺼짐"));
+	deviceContext->TextOut(490, 385, sound);
+	CString colorMode;
+	colorMode.Format(
+		_T("[C] 페그 구분    %s"),
+		PegColorModeText(_options.pegColorMode).GetString());
+	deviceContext->TextOut(490, 485, colorMode);
+
+	CFont guideFont;
+	guideFont.CreatePointFont(135, _T("맑은 고딕"));
+	deviceContext->SelectObject(&guideFont);
+	deviceContext->SetTextColor(RGB(160, 165, 180));
+	deviceContext->TextOut(490, 610, _T("쉬움: 적 체력 80% · 피해 75% · 이동 +2"));
+	deviceContext->TextOut(490, 650, _T("어려움: 적 체력 150% · 피해 125% · 이동 -2"));
+	deviceContext->SetTextColor(RGB(170, 210, 255));
+	deviceContext->TextOut(490, 710, _T("[B] 또는 ESC로 돌아가기"));
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -584,7 +699,7 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 
 bool CChildView::StartStage(std::string_view stageId)
 {
-	if (!_game.LoadStage(stageId))
+	if (!_game.LoadStage(stageId, _options.difficulty))
 	{
 		return false;
 	}
@@ -598,7 +713,7 @@ bool CChildView::StartStage(std::string_view stageId)
 
 void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 {
-	if (!_soundEnabled)
+	if (!_options.soundEnabled)
 	{
 		return;
 	}
@@ -691,6 +806,33 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		{
 			StartStage("stage-2");
 		}
+		else if (nChar == 'O')
+		{
+			_screenMode = ScreenMode::Options;
+		}
+		Invalidate();
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+
+	if (_screenMode == ScreenMode::Options)
+	{
+		if (nChar == 'D')
+		{
+			_options.CycleDifficulty();
+		}
+		else if (nChar == 'M')
+		{
+			_options.ToggleSound();
+		}
+		else if (nChar == 'C')
+		{
+			_options.TogglePegColorMode();
+		}
+		else if (nChar == 'B' || nChar == VK_ESCAPE)
+		{
+			_screenMode = ScreenMode::StageSelection;
+		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 		return;
@@ -728,7 +870,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	}
 	if (nChar == 'M')
 	{
-		_soundEnabled = !_soundEnabled;
+		_options.ToggleSound();
 		Invalidate();
 	}
 	if (nChar == 'S' && _game.GetState() == GameState::Aiming)

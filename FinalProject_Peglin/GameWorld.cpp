@@ -135,7 +135,7 @@ void GameWorld::ResetBallToAiming()
 	TransitionTo(GameState::Aiming);
 }
 
-bool GameWorld::LoadStage(std::string_view stageId)
+bool GameWorld::LoadStage(std::string_view stageId, GameDifficulty difficulty)
 {
 	StageLoadResult result = LoadStageDefinition(stageId);
 	if (!result.IsSuccess())
@@ -143,7 +143,14 @@ bool GameWorld::LoadStage(std::string_view stageId)
 		return false;
 	}
 
-	_stage = std::move(*result.stage);
+	StageDefinition configuredStage = ApplyDifficulty(*result.stage, difficulty);
+	if (!ValidateStageDefinition(configuredStage).IsValid())
+	{
+		return false;
+	}
+
+	_stage = std::move(configuredStage);
+	_difficulty = difficulty;
 	ResetGame();
 	return true;
 }

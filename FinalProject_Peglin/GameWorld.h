@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Enemy.h"
+#include "GameOptions.h"
 #include "GameState.h"
 #include "Parent_ball.h"
 #include "PegLayout.h"
@@ -104,7 +105,9 @@ public:
 	GameUpdateResult Update(float deltaSeconds);
 	void ResetGame();
 	void ResetBallToAiming();
-	bool LoadStage(std::string_view stageId);
+	bool LoadStage(
+		std::string_view stageId,
+		GameDifficulty difficulty = GameDifficulty::Normal);
 
 	bool BeginAim(Vector2 position);
 	void UpdateAim(Vector2 position);
@@ -121,6 +124,7 @@ public:
 	TargetBallList& GetTargets() noexcept { return _targetBallList; }
 	const PegLayoutDefinition& GetPegLayout() const noexcept { return _stage.pegLayout; }
 	const StageDefinition& GetStage() const noexcept { return _stage; }
+	GameDifficulty GetDifficulty() const noexcept { return _difficulty; }
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 	const GameScore& GetScore() const noexcept { return _score; }
@@ -142,6 +146,7 @@ private:
 	Parent_ball _ball;
 	TargetBallList _targetBallList;
 	StageDefinition _stage;
+	GameDifficulty _difficulty = GameDifficulty::Normal;
 	float _pendingDamage = 0.0f;
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;

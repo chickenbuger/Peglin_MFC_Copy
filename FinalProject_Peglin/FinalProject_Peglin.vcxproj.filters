@@ -66,6 +66,9 @@
     <ClInclude Include="GameLayout.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+	<ClInclude Include="GameOptions.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
 	<ClInclude Include="PegLayout.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>

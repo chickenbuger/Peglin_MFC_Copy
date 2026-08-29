@@ -195,6 +195,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameState.h" />
     <ClInclude Include="GameLayout.h" />
+	<ClInclude Include="GameOptions.h" />
     <ClInclude Include="GameWorld.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Parent_ball.h" />

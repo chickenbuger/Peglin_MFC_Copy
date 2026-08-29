@@ -511,6 +511,50 @@ namespace
 		Check(resultWorld.Update(0.0f) == GameUpdateResult::None, "result screen source remains single-shot");
 	}
 
+	void TestGameOptionsAndDifficulty()
+	{
+		GameOptions options;
+		Check(options.difficulty == GameDifficulty::Normal, "options default to normal difficulty");
+		Check(options.soundEnabled, "options default to sound enabled");
+		Check(options.pegColorMode == PegColorMode::Standard, "options default to standard peg colors");
+		options.CycleDifficulty();
+		Check(options.difficulty == GameDifficulty::Hard, "difficulty cycles from normal to hard");
+		options.CycleDifficulty();
+		Check(options.difficulty == GameDifficulty::Easy, "difficulty cycles from hard to easy");
+		options.CycleDifficulty();
+		Check(options.difficulty == GameDifficulty::Normal, "difficulty cycles from easy to normal");
+		options.ToggleSound();
+		Check(!options.soundEnabled, "sound option toggles off");
+		options.ToggleSound();
+		Check(options.soundEnabled, "sound option toggles back on");
+		options.TogglePegColorMode();
+		Check(options.pegColorMode == PegColorMode::HighContrast, "peg colors toggle to high contrast");
+		options.TogglePegColorMode();
+		Check(options.pegColorMode == PegColorMode::Standard, "peg colors toggle back to standard");
+
+		const StageDefinition base = CreateDefaultStageDefinition();
+		const StageDefinition easy = ApplyDifficulty(base, GameDifficulty::Easy);
+		Check(Near(easy.rules.enemyHealth, 16.0f), "easy difficulty reduces enemy health to eighty percent");
+		Check(Near(easy.rules.playerDamage, 15.0f), "easy difficulty reduces player damage to seventy-five percent");
+		Check(easy.rules.enemyStepsBeforeAttack == 10, "easy difficulty adds two movement turns");
+		Check(ValidateStageDefinition(easy).IsValid(), "easy stage remains valid");
+
+		const StageDefinition hard = ApplyDifficulty(base, GameDifficulty::Hard);
+		Check(Near(hard.rules.enemyHealth, 30.0f), "hard difficulty raises enemy health to one hundred fifty percent");
+		Check(Near(hard.rules.playerDamage, 25.0f), "hard difficulty raises player damage to one hundred twenty-five percent");
+		Check(hard.rules.enemyStepsBeforeAttack == 6, "hard difficulty removes two movement turns");
+		Check(ValidateStageDefinition(hard).IsValid(), "hard stage remains valid");
+
+		GameWorld world;
+		Check(world.LoadStage("stage-1", GameDifficulty::Hard), "world loads stage with selected difficulty");
+		Check(world.GetDifficulty() == GameDifficulty::Hard, "world retains selected difficulty");
+		Check(Near(world.GetEnemy().GetHp(), 30.0f), "hard world applies tuned enemy health");
+		world.ResetGame();
+		Check(world.GetDifficulty() == GameDifficulty::Hard && Near(world.GetEnemy().GetHp(), 30.0f), "retry preserves difficulty tuning");
+		Check(world.LoadStage("stage-1", GameDifficulty::Normal), "world can return to normal difficulty");
+		Check(Near(world.GetEnemy().GetHp(), 20.0f), "normal reload restores base stage rules");
+	}
+
 	void TestStageRulesConfigureWorld()
 	{
 		StageDefinition stage = CreateDefaultStageDefinition();
@@ -827,6 +871,7 @@ int main()
 	TestRefreshPegEffect();
 	TestStageCatalogAndValidation();
 	TestStageSelectionAndResultSummary();
+	TestGameOptionsAndDifficulty();
 	TestStageRulesConfigureWorld();
 	TestScoreCancellationAndContinuation();
 	TestBombDoesNotChainSecondaryEffects();
