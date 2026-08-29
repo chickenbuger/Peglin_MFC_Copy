@@ -6,7 +6,8 @@ void TargetBall::draw(CDC* pDC)
 {
 	const int savedDc = pDC->SaveDC();
 
-	CBrush brush(RGB(255, 0, 0));
+	const PegVisualStyle visual = GetPegTypeDefinition(type).visual;
+	CBrush brush(RGB(visual.red, visual.green, visual.blue));
 	pDC->SelectObject(&brush);
 	pDC->SelectObject(GetStockObject(NULL_PEN));
 	pDC->Ellipse(
@@ -18,7 +19,8 @@ void TargetBall::draw(CDC* pDC)
 	pDC->RestoreDC(savedDc);
 }
 
-void TargetBall::setting(Vector2 newPosition)
+void TargetBall::setting(const PegDefinition& definition)
 {
-	position = newPosition;
+	position = definition.position;
+	type = definition.type;
 }

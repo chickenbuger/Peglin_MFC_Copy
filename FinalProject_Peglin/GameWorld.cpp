@@ -167,10 +167,10 @@ void GameWorld::SetPegRestitution(float restitution) noexcept
 void GameWorld::InitializeTargets()
 {
 	_targetBallList._targetBallList.RemoveAll();
-	for (const Vector2 position : _pegLayout.positions)
+	for (const PegDefinition& definition : _pegLayout.pegs)
 	{
 		TargetBall ball;
-		ball.setting(position);
+		ball.setting(definition);
 		_targetBallList.add(ball);
 	}
 }
@@ -208,13 +208,82 @@ void GameWorld::HandlePegCollisions()
 				_ball.GetPosition() + normal * (penetration + COLLISION_EPSILON));
 			_ball.SetVelocity(
 				ReflectVelocity(_ball.GetVelocity(), normal, _pegRestitution));
+			const TargetBall hitTarget = target;
 			_targetBallList._targetBallList.RemoveAt(current);
-			_pendingDamage += 1.0f;
-			++_score.currentCombo;
-			_score.bestCombo = (std::max)(_score.bestCombo, _score.currentCombo);
-			_score.currentShot += SCORE_PER_COMBO_STEP * _score.currentCombo;
-			_feedback.type = GameFeedbackType::PegHit;
-			++_feedback.currentShotPegHits;
+			AwardPeg(hitTarget);
+
+			const PegTypeDefinition& definition = GetPegTypeDefinition(hitTarget.type);
+			if (definition.blastRadius > 0.0f)
+			{
+				ApplyBombEffect(hitTarget);
+			}
+			if (definition.refreshesRemovedPegs)
+			{
+				RestoreRemovedPegs(hitTarget.position);
+			}
+
+			return;
+		}
+	}
+}
+
+void GameWorld::AwardPeg(const TargetBall& target)
+{
+	const PegTypeDefinition& definition = GetPegTypeDefinition(target.type);
+	_pendingDamage += definition.damage;
+	++_score.currentCombo;
+	_score.bestCombo = (std::max)(_score.bestCombo, _score.currentCombo);
+	_score.currentShot += SCORE_PER_COMBO_STEP
+		* _score.currentCombo
+		* definition.scoreMultiplier;
+	_feedback.type = GameFeedbackType::PegHit;
+	++_feedback.currentShotPegHits;
+}
+
+void GameWorld::ApplyBombEffect(const TargetBall& bomb)
+{
+	const float blastRadius = GetPegTypeDefinition(bomb.type).blastRadius;
+	const float blastRadiusSquared = blastRadius * blastRadius;
+	auto position = _targetBallList._targetBallList.GetHeadPosition();
+	while (position != nullptr)
+	{
+		auto current = position;
+		const TargetBall target = _targetBallList._targetBallList.GetNext(position);
+		if ((target.position - bomb.position).LengthSquared() <= blastRadiusSquared)
+		{
+			_targetBallList._targetBallList.RemoveAt(current);
+			AwardPeg(target);
+		}
+	}
+}
+
+void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
+{
+	constexpr float POSITION_EPSILON_SQUARED = 0.0001f;
+	for (const PegDefinition& definition : _pegLayout.pegs)
+	{
+		if ((definition.position - excludedPosition).LengthSquared() <= POSITION_EPSILON_SQUARED)
+		{
+			continue;
+		}
+
+		bool isActive = false;
+		auto activePosition = _targetBallList._targetBallList.GetHeadPosition();
+		while (activePosition != nullptr)
+		{
+			const TargetBall& active = _targetBallList._targetBallList.GetNext(activePosition);
+			if ((active.position - definition.position).LengthSquared() <= POSITION_EPSILON_SQUARED)
+			{
+				isActive = true;
+				break;
+			}
+		}
+
+		if (!isActive)
+		{
+			TargetBall restored;
+			restored.setting(definition);
+			_targetBallList.add(restored);
 		}
 	}
 }

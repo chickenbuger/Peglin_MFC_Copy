@@ -263,19 +263,19 @@ namespace
 			20.0f,
 			54321u);
 
-		Check(first.positions.size() == 48, "seeded layout preserves requested peg count");
-		bool sameSeedMatches = first.positions.size() == repeated.positions.size();
+		Check(first.pegs.size() == 48, "seeded layout preserves requested peg count");
+		bool sameSeedMatches = first.pegs.size() == repeated.pegs.size();
 		bool differentSeedDiffers = false;
 		bool allInsideBoard = true;
-		for (std::size_t index = 0; index < first.positions.size(); ++index)
+		for (std::size_t index = 0; index < first.pegs.size(); ++index)
 		{
-			const Vector2 position = first.positions[index];
+			const Vector2 position = first.pegs[index].position;
 			sameSeedMatches = sameSeedMatches
-				&& Near(position.x, repeated.positions[index].x)
-				&& Near(position.y, repeated.positions[index].y);
+				&& Near(position.x, repeated.pegs[index].position.x)
+				&& Near(position.y, repeated.pegs[index].position.y);
 			differentSeedDiffers = differentSeedDiffers
-				|| !Near(position.x, different.positions[index].x)
-				|| !Near(position.y, different.positions[index].y);
+				|| !Near(position.x, different.pegs[index].position.x)
+				|| !Near(position.y, different.pegs[index].position.y);
 			allInsideBoard = allInsideBoard
 				&& position.x >= GameLayout::BoardLeft + GameLayout::PegRadius
 				&& position.x <= GameLayout::BoardRight - GameLayout::PegRadius
@@ -291,20 +291,135 @@ namespace
 	void TestDataDrivenPegLayout()
 	{
 		PegLayoutDefinition custom;
-		custom.positions = {
-			{ 300.0f, 400.0f },
-			{ 500.0f, 500.0f },
-			{ 700.0f, 600.0f }
+		custom.pegs = {
+			{ { 300.0f, 400.0f }, PegType::Normal },
+			{ { 500.0f, 500.0f }, PegType::Critical },
+			{ { 700.0f, 600.0f }, PegType::Bomb }
 		};
 		GameWorld world(custom);
 
-		Check(world.GetPegLayout().positions.size() == 3, "game world retains custom layout data");
+		Check(world.GetPegLayout().pegs.size() == 3, "game world retains custom layout data");
 		Check(world.GetTargets()._targetBallList.GetCount() == 3, "custom layout controls target count");
 		const auto head = world.GetTargets()._targetBallList.GetHeadPosition();
 		const Vector2 firstPeg = world.GetTargets()._targetBallList.GetAt(head).position;
 		Check(Near(firstPeg.x, 300.0f) && Near(firstPeg.y, 400.0f), "custom layout controls peg positions");
+		Check(world.GetTargets()._targetBallList.GetAt(head).type == PegType::Normal, "custom layout controls peg type");
 		world.ResetGame();
 		Check(world.GetTargets()._targetBallList.GetCount() == 3, "reset rebuilds the configured custom layout");
+	}
+
+	void TestPegTypeDefinitions()
+	{
+		const PegTypeDefinition& normal = GetPegTypeDefinition(PegType::Normal);
+		const PegTypeDefinition& critical = GetPegTypeDefinition(PegType::Critical);
+		const PegTypeDefinition& bomb = GetPegTypeDefinition(PegType::Bomb);
+		const PegTypeDefinition& refresh = GetPegTypeDefinition(PegType::Refresh);
+
+		Check(Near(normal.damage, 1.0f) && normal.scoreMultiplier == 1, "normal peg keeps baseline rewards");
+		Check(Near(critical.damage, 2.0f) && critical.scoreMultiplier == 2, "critical peg doubles damage and score");
+		Check(Near(bomb.blastRadius, 100.0f), "bomb peg defines a data-driven blast radius");
+		Check(refresh.refreshesRemovedPegs, "refresh peg defines board restoration effect");
+		Check(normal.visual.red == 255 && normal.visual.green == 0, "normal peg visual style remains red");
+		Check(critical.visual.red == 255 && critical.visual.green == 215, "critical peg visual style is distinct");
+
+		const PegLayoutDefinition layout = CreateDefaultPegLayout();
+		int normalCount = 0;
+		int criticalCount = 0;
+		int bombCount = 0;
+		int refreshCount = 0;
+		for (const PegDefinition& peg : layout.pegs)
+		{
+			switch (peg.type)
+			{
+			case PegType::Normal: ++normalCount; break;
+			case PegType::Critical: ++criticalCount; break;
+			case PegType::Bomb: ++bombCount; break;
+			case PegType::Refresh: ++refreshCount; break;
+			}
+		}
+		Check(normalCount == 44, "default board contains 44 normal pegs");
+		Check(criticalCount == 2, "default board contains two critical pegs");
+		Check(bombCount == 1, "default board contains one bomb peg");
+		Check(refreshCount == 1, "default board contains one refresh peg");
+	}
+
+	void TestCriticalPegEffect()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = { { { 500.0f, 500.0f }, PegType::Critical } };
+		GameWorld world(layout);
+		Launch(world);
+		world.GetBall().SetPosition({ 485.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+
+		Check(world.GetTargets()._targetBallList.IsEmpty(), "critical collision removes its peg");
+		Check(world.GetScore().currentShot == 200, "critical peg doubles first combo score");
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetEnemy().GetHp(), 18.0f), "critical peg deals two damage");
+		Check(world.GetScore().total == 200, "critical score commits at turn end");
+	}
+
+	void TestBombPegEffect()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{ { 500.0f, 500.0f }, PegType::Bomb },
+			{ { 580.0f, 500.0f }, PegType::Normal },
+			{ { 720.0f, 500.0f }, PegType::Normal }
+		};
+		GameWorld world(layout);
+		Launch(world);
+		world.GetBall().SetPosition({ 485.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+
+		Check(world.GetTargets()._targetBallList.GetCount() == 1, "bomb removes only pegs inside blast radius");
+		Check(world.GetFeedback().currentShotPegHits == 2, "bomb reward counts itself and nearby peg");
+		Check(world.GetScore().currentCombo == 2, "bomb effect advances combo for both pegs");
+		Check(world.GetScore().currentShot == 300, "bomb effect awards combo score for both pegs");
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetEnemy().GetHp(), 18.0f), "bomb and neighbor deal two total damage");
+	}
+
+	void TestRefreshPegEffect()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{ { 300.0f, 500.0f }, PegType::Normal },
+			{ { 500.0f, 500.0f }, PegType::Refresh },
+			{ { 700.0f, 500.0f }, PegType::Normal }
+		};
+		GameWorld world(layout);
+		Launch(world);
+
+		world.GetBall().SetPosition({ 285.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetTargets()._targetBallList.GetCount() == 2, "normal collision removes one peg before refresh");
+
+		world.GetBall().SetPosition({ 485.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetTargets()._targetBallList.GetCount() == 2, "refresh restores removed pegs but excludes itself");
+		Check(world.GetFeedback().currentShotPegHits == 2, "refresh collision counts as one additional hit");
+		Check(world.GetScore().currentShot == 300, "refresh hit preserves normal combo scoring");
+
+		bool restoredNormalFound = false;
+		auto position = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (position != nullptr)
+		{
+			const TargetBall& target = world.GetTargets()._targetBallList.GetNext(position);
+			if (Near(target.position.x, 300.0f) && target.type == PegType::Normal)
+			{
+				restoredNormalFound = true;
+			}
+		}
+		Check(restoredNormalFound, "refresh restores the removed peg with its original type");
 	}
 }
 
@@ -321,6 +436,10 @@ int main()
 	TestLayoutConfiguration();
 	TestSeededPegLayout();
 	TestDataDrivenPegLayout();
+	TestPegTypeDefinitions();
+	TestCriticalPegEffect();
+	TestBombPegEffect();
+	TestRefreshPegEffect();
 
 	if (failures == 0)
 	{

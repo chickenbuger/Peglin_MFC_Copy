@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameLayout.h"
+#include "PegLayout.h"
 class TargetBall
 {
 public:
@@ -9,9 +10,10 @@ public:
 public:
 	Vector2 position;
 	float size = GameLayout::PegRadius;
+	PegType type = PegType::Normal;
 public:
 	void draw(CDC* pDC);
-	void setting(Vector2 newPosition);
+	void setting(const PegDefinition& definition);
 };
 
 class TargetBallList

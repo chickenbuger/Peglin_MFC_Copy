@@ -73,6 +73,9 @@ public:
 private:
 	void InitializeTargets();
 	void HandlePegCollisions();
+	void AwardPeg(const TargetBall& target);
+	void ApplyBombEffect(const TargetBall& bomb);
+	void RestoreRemovedPegs(Vector2 excludedPosition);
 	void ResolveTurn();
 	GameUpdateResult ReportTerminalResult(GameUpdateResult result) noexcept;
 	bool TransitionTo(GameState nextState);
