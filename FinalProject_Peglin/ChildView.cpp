@@ -154,6 +154,21 @@ namespace
 			? _T("고대비 + 모양")
 			: _T("표준 색상");
 	}
+
+	std::filesystem::path GetDefaultContentCatalogPath()
+	{
+		std::vector<wchar_t> modulePath(1024, L'\0');
+		const DWORD length = GetModuleFileNameW(
+			nullptr,
+			modulePath.data(),
+			static_cast<DWORD>(modulePath.size()));
+		if (length == 0 || length >= modulePath.size())
+		{
+			return std::filesystem::path(L"content") / L"stages.v1.ini";
+		}
+		return std::filesystem::path(modulePath.data()).parent_path()
+			/ L"content" / L"stages.v1.ini";
+	}
 }
 
 // CChildView
@@ -174,6 +189,7 @@ CChildView::CChildView()
 	{
 		_recordSaveFailed = !_recordStore.Save(_records);
 	}
+	_contentCatalog = LoadContentCatalog(GetDefaultContentCatalogPath());
 }
 
 CChildView::~CChildView()
@@ -628,8 +644,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	deviceContext->SelectObject(&bodyFont);
 	deviceContext->SetTextColor(RGB(235, 235, 245));
 	deviceContext->TextOut(490, 215, _T("[1] Forgotten Forest"));
+	const StageDefinition* stageOneDefinition = FindContentStage(_contentCatalog.stages, "stage-1");
 	const StageDefinition stageOne = ApplyDifficulty(
-		CreateDefaultStageDefinition(),
+		stageOneDefinition != nullptr ? *stageOneDefinition : CreateDefaultStageDefinition(),
 		_options.difficulty);
 	CString stageOneText;
 	stageOneText.Format(
@@ -639,8 +656,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	deviceContext->TextOut(490, 250, stageOneText);
 	deviceContext->SetTextColor(RGB(170, 210, 255));
 	deviceContext->TextOut(490, 345, _T("[2] Dense Cavern"));
+	const StageDefinition* stageTwoDefinition = FindContentStage(_contentCatalog.stages, "stage-2");
 	const StageDefinition stageTwo = ApplyDifficulty(
-		CreateChallengeStageDefinition(),
+		stageTwoDefinition != nullptr ? *stageTwoDefinition : CreateChallengeStageDefinition(),
 		_options.difficulty);
 	CString stageTwoText;
 	stageTwoText.Format(
@@ -650,8 +668,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	deviceContext->TextOut(490, 380, stageTwoText);
 	deviceContext->SetTextColor(RGB(255, 185, 95));
 	deviceContext->TextOut(490, 475, _T("[3] Rootbound Citadel · BOSS"));
+	const StageDefinition* stageThreeDefinition = FindContentStage(_contentCatalog.stages, "stage-3");
 	const StageDefinition stageThree = ApplyDifficulty(
-		CreateBossStageDefinition(),
+		stageThreeDefinition != nullptr ? *stageThreeDefinition : CreateBossStageDefinition(),
 		_options.difficulty);
 	CString stageThreeText;
 	stageThreeText.Format(
@@ -700,6 +719,11 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		PegColorModeText(_options.pegColorMode).GetString());
 	deviceContext->TextOut(490, 610, currentOptions);
 	deviceContext->TextOut(490, 655, _T("[1]/[2]/[3] 시작    [O] 옵션"));
+	if (!_contentCatalog.UsedExternalContent())
+	{
+		deviceContext->SetTextColor(RGB(255, 170, 95));
+		deviceContext->TextOut(490, 690, _T("외부 콘텐츠를 읽지 못해 검증된 내장 데이터로 실행 중"));
+	}
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -824,7 +848,8 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 
 bool CChildView::StartStage(std::string_view stageId)
 {
-	if (!_game.LoadStage(stageId, _options.difficulty))
+	const StageDefinition* stage = FindContentStage(_contentCatalog.stages, stageId);
+	if (stage == nullptr || !_game.LoadStage(*stage, _options.difficulty))
 	{
 		return false;
 	}

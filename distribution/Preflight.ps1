@@ -45,7 +45,8 @@ $requiredFiles = @(
     'PACKAGE_VERSION.txt',
     'Preflight.ps1',
     'README.txt',
-    'SHA256SUMS.txt'
+    'SHA256SUMS.txt',
+    'content\stages.v1.ini'
 )
 
 if (-not [Environment]::Is64BitOperatingSystem) {

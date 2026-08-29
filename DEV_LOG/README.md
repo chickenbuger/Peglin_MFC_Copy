@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 5 |
-| 현재 버전 | Version 5.2 |
+| 현재 버전 | Version 5.3 |
 | 스프린트 목표 | 오브·유물·적 행동·외부 콘텐츠와 확장 가능한 UI 기반 구축 |
-| 상태 | Sprint 5 진행 중 — P0 2/5 완료 |
+| 상태 | Sprint 5 진행 중 — P0 3/5 완료 |
 
 ## 문서
 
@@ -64,6 +64,7 @@
 - [Version 4.5 — Sprint 4 최종 배포 검증 완료](./Version_4.5.md)
 - [Version 5.1 — 오브·유물 진행 기반](./Version_5.1.md)
 - [Version 5.2 — 예고 가능한 보스 행동 패턴](./Version_5.2.md)
+- [Version 5.3 — 검증된 외부 콘텐츠 카탈로그](./Version_5.3.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

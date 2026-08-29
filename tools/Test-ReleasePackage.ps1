@@ -59,6 +59,7 @@ try {
     $originalRoot = Join-Path $temporaryRoot 'original'
     $tamperedRoot = Join-Path $temporaryRoot 'tampered'
     $missingRoot = Join-Path $temporaryRoot 'missing'
+    $missingContentRoot = Join-Path $temporaryRoot 'missing-content'
     New-Item -ItemType Directory -Path $originalRoot -Force | Out-Null
     Expand-Archive -LiteralPath $resolvedZipPath -DestinationPath $originalRoot
 
@@ -78,8 +79,13 @@ try {
     Remove-Item -LiteralPath (Join-Path $missingRoot 'mfc140u.dll') -Force
     Assert-PreflightFailure -PackageRoot $missingRoot -Scenario 'missing required MFC runtime'
 
+    New-Item -ItemType Directory -Path $missingContentRoot | Out-Null
+    Copy-Item -Path (Join-Path $originalRoot '*') -Destination $missingContentRoot -Recurse
+    Remove-Item -LiteralPath (Join-Path $missingContentRoot 'content\stages.v1.ini') -Force
+    Assert-PreflightFailure -PackageRoot $missingContentRoot -Scenario 'missing versioned stage content'
+
     Write-Output "PACKAGE TEST PASS: $resolvedZipPath"
-    Write-Output 'ZIP path safety, version, normal preflight, tampering, and missing-runtime checks completed.'
+    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, and missing-content checks completed.'
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {

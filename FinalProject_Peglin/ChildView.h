@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Background.h"
+#include "ContentCatalog.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GameWorld.h"
@@ -94,6 +95,7 @@ private:
 	GameSettingsStore _settingsStore;
 	GameRecordStore _recordStore;
 	GameRecordBook _records;
+	ContentLoadResult _contentCatalog;
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
 	ScreenMode _screenMode = ScreenMode::StageSelection;

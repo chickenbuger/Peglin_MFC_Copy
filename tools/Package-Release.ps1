@@ -102,14 +102,24 @@ foreach ($runtime in $runtimeSources.GetEnumerator()) {
     Copy-Item -LiteralPath $runtime.Value -Destination (Join-Path $packageDirectory $runtime.Key)
 }
 
+$contentSource = Join-Path $repositoryRoot 'FinalProject_Peglin\content\stages.v1.ini'
+if (-not (Test-Path -LiteralPath $contentSource -PathType Leaf)) {
+    throw 'The versioned stage content file was not found.'
+}
+$contentDirectory = Join-Path $packageDirectory 'content'
+New-Item -ItemType Directory -Path $contentDirectory | Out-Null
+Copy-Item -LiteralPath $contentSource -Destination (Join-Path $contentDirectory 'stages.v1.ini')
+
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\Preflight.ps1') -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\README.txt') -Destination $packageDirectory
 Set-Content -LiteralPath (Join-Path $packageDirectory 'PACKAGE_VERSION.txt') -Value $Version -Encoding ascii
 
-$hashTargets = Get-ChildItem -LiteralPath $packageDirectory -File | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object Name
+$packageFilePrefix = $packageDirectory.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+$hashTargets = Get-ChildItem -LiteralPath $packageDirectory -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName
 $hashLines = foreach ($file in $hashTargets) {
     $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash
-    "$hash *$($file.Name)"
+    $relativePath = $file.FullName.Substring($packageFilePrefix.Length)
+    "$hash *$relativePath"
 }
 Set-Content -LiteralPath (Join-Path $packageDirectory 'SHA256SUMS.txt') -Value $hashLines -Encoding ascii
 

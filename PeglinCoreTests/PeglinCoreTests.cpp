@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "GameWorld.h"
+#include "ContentCatalog.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -1183,6 +1184,115 @@ namespace
 		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "retry restores the first boss action preview");
 	}
 
+	void TestExternalContentCatalog()
+	{
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		const ContentLoadResult shipped = LoadContentCatalog(
+			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
+		Check(shipped.UsedExternalContent(), "shipped versioned stage catalog validates");
+		Check(shipped.stages.size() == 3, "shipped external catalog exposes three stages");
+		const StageDefinition* shippedBoss = FindContentStage(shipped.stages, "stage-3");
+		Check(shippedBoss != nullptr && shippedBoss->enemyPattern.size() == 4, "shipped external catalog includes the boss pattern");
+
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_ContentCatalogTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path contentPath = testDirectory / "stages.v1.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove_all(testDirectory, cleanupError);
+		std::filesystem::create_directories(testDirectory, cleanupError);
+		Check(!cleanupError, "content test directory is available");
+
+		const std::string validContent =
+			"version=1\n"
+			"[stage]\n"
+			"id=external-stage\n"
+			"name=External Trial\n"
+			"layout=2,2,300,400,80,0,7\n"
+			"peg_type=1,Critical\n"
+			"player_health=90\n"
+			"enemy_health=45\n"
+			"player_damage=12\n"
+			"enemy_steps=3\n"
+			"enemy_step=40\n"
+			"restitution=0.75\n"
+			"boss=true\n"
+			"action=Fortify,3\n"
+			"action=Strike,12\n"
+			"[/stage]\n";
+		auto WriteContent = [&contentPath](std::string_view content)
+		{
+			std::ofstream output(contentPath, std::ios::binary | std::ios::trunc);
+			output.write(content.data(), static_cast<std::streamsize>(content.size()));
+		};
+
+		WriteContent(validContent);
+		const ContentLoadResult valid = LoadContentCatalog(contentPath);
+		Check(valid.UsedExternalContent(), "valid external content replaces built-in catalog");
+		Check(valid.error == ContentLoadError::None, "valid external content has no load error");
+		Check(valid.stages.size() == 1, "external catalog exposes only fully validated stages");
+		const StageDefinition* external = FindContentStage(valid.stages, "external-stage");
+		Check(external != nullptr, "external stage can be found by stable id");
+		Check(external != nullptr && external->pegLayout.pegs.size() == 4, "external grid definition creates its peg board");
+		Check(external != nullptr && external->pegLayout.pegs[1].type == PegType::Critical, "external peg override is applied");
+		Check(external != nullptr && external->enemyPattern.size() == 2, "external enemy actions preserve order");
+		GameWorld externalWorld;
+		Check(external != nullptr && externalWorld.LoadStage(*external, GameDifficulty::Hard), "game world accepts validated external stage data");
+		Check(Near(externalWorld.GetEnemy().GetHp(), 67.5f), "difficulty applies after external stage validation");
+		Check(Near(externalWorld.GetNextEnemyAction().magnitude, 3.0f), "non-strike external action keeps its magnitude");
+
+		const ContentLoadResult missing = LoadContentCatalog(testDirectory / "missing.ini");
+		Check(missing.state == ContentLoadState::BuiltInFallback, "missing content uses built-in fallback");
+		Check(missing.error == ContentLoadError::MissingFile, "missing content reports its cause");
+		Check(missing.stages.size() == 3, "missing content recovers the complete built-in catalog");
+		Check(FindContentStage(missing.stages, "stage-3") != nullptr, "fallback includes the boss stage");
+
+		WriteContent("version=99\n");
+		const ContentLoadResult unsupported = LoadContentCatalog(contentPath);
+		Check(unsupported.error == ContentLoadError::UnsupportedVersion, "unsupported content version is rejected");
+		Check(unsupported.stages.size() == 3, "unsupported version exposes no partial external data");
+
+		WriteContent(validContent + validContent.substr(validContent.find("[stage]")));
+		const ContentLoadResult duplicateId = LoadContentCatalog(contentPath);
+		Check(duplicateId.error == ContentLoadError::DuplicateStageId, "duplicate external stage id is rejected");
+
+		std::string duplicateKey = validContent;
+		duplicateKey.insert(duplicateKey.find("enemy_health="), "player_health=80\n");
+		WriteContent(duplicateKey);
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::DuplicateKey, "duplicate scalar content key is rejected");
+
+		std::string unknownKey = validContent;
+		unknownKey.insert(unknownKey.find("[/stage]"), "mystery=1\n");
+		WriteContent(unknownKey);
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::UnknownKey, "unknown content key is rejected");
+
+		std::string badPegIndex = validContent;
+		badPegIndex.replace(badPegIndex.find("peg_type=1"), 10, "peg_type=99");
+		WriteContent(badPegIndex);
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::InvalidValue, "out-of-range peg override is rejected");
+
+		std::string partial = validContent;
+		partial.erase(partial.find("enemy_health="), std::string("enemy_health=45\n").size());
+		WriteContent(partial);
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::MissingField, "partial stage definition is rejected as a whole");
+
+		WriteContent(validContent.substr(0, validContent.find("[/stage]")));
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::UnexpectedSection, "truncated stage section is rejected");
+
+		std::string invalidUtf8 = validContent;
+		invalidUtf8.insert(invalidUtf8.find("External"), 1, static_cast<char>(0xFF));
+		WriteContent(invalidUtf8);
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::InvalidEncoding, "invalid UTF-8 content is rejected");
+
+		WriteContent(std::string(256 * 1024 + 1, 'x'));
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::FileTooLarge, "oversized content file is rejected before parsing");
+
+		const ContentLoadResult directoryRead = LoadContentCatalog(testDirectory);
+		Check(directoryRead.error == ContentLoadError::IoFailure, "non-file content path fails safely");
+		std::filesystem::remove_all(testDirectory, cleanupError);
+	}
+
 	void TestStageVictoryAndDefeatRegression()
 	{
 		StageDefinition victoryStage = CreateDefaultStageDefinition();
@@ -1327,6 +1437,7 @@ int main()
 	TestStageVictoryAndDefeatRegression();
 	TestOrbAndRelicProgression();
 	TestBossEnemyActionPattern();
+	TestExternalContentCatalog();
 
 	if (failures == 0)
 	{

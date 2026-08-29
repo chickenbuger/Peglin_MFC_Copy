@@ -143,8 +143,17 @@ bool GameWorld::LoadStage(std::string_view stageId, GameDifficulty difficulty)
 	{
 		return false;
 	}
+	return LoadStage(*result.stage, difficulty);
+}
 
-	StageDefinition configuredStage = ApplyDifficulty(*result.stage, difficulty);
+bool GameWorld::LoadStage(const StageDefinition& stage, GameDifficulty difficulty)
+{
+	if (!ValidateStageDefinition(stage).IsValid())
+	{
+		return false;
+	}
+
+	StageDefinition configuredStage = ApplyDifficulty(stage, difficulty);
 	if (!ValidateStageDefinition(configuredStage).IsValid())
 	{
 		return false;
