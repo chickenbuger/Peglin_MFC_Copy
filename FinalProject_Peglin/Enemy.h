@@ -1,4 +1,7 @@
 #pragma once
+
+#include "GameLayout.h"
+
 class Enemy
 {
 public:
@@ -7,8 +10,7 @@ public:
 private:
 	int count = 0;
 	float hp = 20.0f;
-	float Init_x = 710.0f;
-	float x = 710.0f;
+	float x = GameLayout::EnemyInitialPosition.x;
 public:
 	//setter
 	void SetCount(int InCount)	{ this->count = InCount; }

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Background.h"
+#include "GameLayout.h"
 #include <cmath>
 
 namespace
@@ -19,15 +20,15 @@ void Background::draw(CDC* pDC)
 
 	CBrush brush(&bmp);
 	pDC->SelectObject(&brush);
-	pDC->Rectangle(0, 0, 980, 200);
+	pDC->Rectangle(0, 0, RoundToPixel(GameLayout::SceneWidth), RoundToPixel(GameLayout::HeaderHeight));
 
 	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
 	pDC->SelectObject(&pen);
 
-	const int left = RoundToPixel(x1);
-	const int top = RoundToPixel(y1);
-	const int right = RoundToPixel(x2);
-	const int bottom = RoundToPixel(y2);
+	const int left = RoundToPixel(GameLayout::BoardLeft);
+	const int top = RoundToPixel(GameLayout::BoardTop);
+	const int right = RoundToPixel(GameLayout::BoardRight);
+	const int bottom = RoundToPixel(GameLayout::BoardBottom);
 
 	pDC->MoveTo(left, top);
 	pDC->LineTo(right, top);
@@ -42,7 +43,7 @@ void Background::draw(CDC* pDC)
 	pDC->SelectObject(&brush1);
 
 	pDC->Rectangle(0, top, left, bottom);
-	pDC->Rectangle(right, top, 1000, bottom);
+	pDC->Rectangle(right, top, RoundToPixel(GameLayout::WindowWidth), bottom);
 
 	pDC->RestoreDC(savedDc);
 }

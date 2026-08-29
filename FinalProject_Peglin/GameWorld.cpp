@@ -1,19 +1,12 @@
 #include "pch.h"
 #include "GameWorld.h"
+#include "GameLayout.h"
 #include "Physics.h"
 
 #include <cmath>
 
 namespace
 {
-	constexpr int PEG_COLUMNS = 12;
-	constexpr int PEG_ROWS = 4;
-	constexpr float PEG_START_X = 50.0f;
-	constexpr float PEG_START_Y = 400.0f;
-	constexpr float PEG_SPACING = 80.0f;
-	constexpr float PLAYFIELD_BOTTOM = 800.0f;
-	constexpr float ENEMY_STEP = 64.0f;
-	constexpr int ENEMY_STEPS_BEFORE_ATTACK = 8;
 	constexpr float PLAYER_DAMAGE = 20.0f;
 	constexpr float COLLISION_EPSILON = 0.001f;
 }
@@ -33,7 +26,7 @@ GameUpdateResult GameWorld::Update(float deltaSeconds)
 	case GameState::BallInFlight:
 		HandlePegCollisions();
 		_ball.update(deltaSeconds);
-		if (_ball.GetPosition().y > PLAYFIELD_BOTTOM)
+		if (_ball.GetPosition().y > GameLayout::BallExitY)
 		{
 			TransitionTo(GameState::ResolvingTurn);
 		}
@@ -150,14 +143,14 @@ void GameWorld::SetPegRestitution(float restitution) noexcept
 void GameWorld::InitializeTargets()
 {
 	_targetBallList._targetBallList.RemoveAll();
-	for (int column = 0; column < PEG_COLUMNS; ++column)
+	for (int column = 0; column < GameLayout::PegColumns; ++column)
 	{
-		for (int row = 0; row < PEG_ROWS; ++row)
+		for (int row = 0; row < GameLayout::PegRows; ++row)
 		{
 			TargetBall ball;
 			ball.setting({
-				PEG_START_X + static_cast<float>(column) * PEG_SPACING,
-				PEG_START_Y + static_cast<float>(row) * PEG_SPACING });
+				GameLayout::PegStart.x + static_cast<float>(column) * GameLayout::PegSpacing,
+				GameLayout::PegStart.y + static_cast<float>(row) * GameLayout::PegSpacing });
 			_targetBallList.add(ball);
 		}
 	}
@@ -204,9 +197,9 @@ void GameWorld::HandlePegCollisions()
 
 void GameWorld::ResolveTurn()
 {
-	if (_enemy.GetCount() < ENEMY_STEPS_BEFORE_ATTACK)
+	if (_enemy.GetCount() < GameLayout::EnemyStepsBeforeAttack)
 	{
-		_enemy.SetX(_enemy.GetX() - ENEMY_STEP);
+		_enemy.SetX(_enemy.GetX() - GameLayout::EnemyStep);
 	}
 	else
 	{

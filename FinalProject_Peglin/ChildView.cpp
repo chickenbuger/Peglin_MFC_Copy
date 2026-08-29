@@ -6,6 +6,7 @@
 #include "framework.h"
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
+#include "GameLayout.h"
 #include <algorithm>
 #include <cmath>
 
@@ -112,13 +113,19 @@ void CChildView::OnPaint()
 	{
 		CString Text;
 		Text.Format(_T("플레이어 체력 : %d "), static_cast<int>(_game.GetPlayer().GetHp()));
-		memDc.TextOut(100, 70, Text);
+		memDc.TextOut(
+			static_cast<int>(std::lround(GameLayout::PlayerHealthText.x)),
+			static_cast<int>(std::lround(GameLayout::PlayerHealthText.y)),
+			Text);
 	}
 	if (_game.GetEnemy().GetHp() > 0.0f)
 	{
 		CString Text1;
 		Text1.Format(_T("몬스터 체력 : %d"), static_cast<int>(_game.GetEnemy().GetHp()));
-		memDc.TextOut(static_cast<int>(std::lround(_game.GetEnemy().GetX() - 30.0f)), 90, Text1);
+		memDc.TextOut(
+			static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
+			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
+			Text1);
 	}
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);

@@ -42,8 +42,8 @@ private:
 	void movement(float timeScale);
 
 private:
-	Vector2 _position{ 490.0f, 250.0f };
-	float	_size = { 10.f };
+	Vector2 _position;
+	float _size = 0.0f;
 
 	//Drag 시작 위치
 	Vector2 _startDragPosition;

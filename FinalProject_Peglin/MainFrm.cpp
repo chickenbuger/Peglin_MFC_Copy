@@ -6,6 +6,7 @@
 #include "FinalProject_Peglin.h"
 
 #include "MainFrm.h"
+#include "GameLayout.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -125,10 +126,10 @@ BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO*
 void CMainFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
 	// 최소 및 최대 창 크기 설정
-	lpMMI->ptMinTrackSize.x = 1000;
-	lpMMI->ptMinTrackSize.y = 800;
-	lpMMI->ptMaxTrackSize.x = 1000;
-	lpMMI->ptMaxTrackSize.y = 800;
+	lpMMI->ptMinTrackSize.x = static_cast<LONG>(GameLayout::WindowWidth);
+	lpMMI->ptMinTrackSize.y = static_cast<LONG>(GameLayout::WindowHeight);
+	lpMMI->ptMaxTrackSize.x = static_cast<LONG>(GameLayout::WindowWidth);
+	lpMMI->ptMaxTrackSize.y = static_cast<LONG>(GameLayout::WindowHeight);
 
 	CFrameWnd::OnGetMinMaxInfo(lpMMI);
 }

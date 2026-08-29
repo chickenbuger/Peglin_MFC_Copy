@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 1 |
-| 현재 버전 | Version 1.5 |
+| 현재 버전 | Version 1.6 |
 | 스프린트 목표 | 물리·게임 흐름의 구조 분리와 검증 가능한 Peglin형 충돌 개선 |
-| 상태 | 진행 중 — P0 자동화 테스트 완료, P1 착수 예정 |
+| 상태 | 진행 중 — P0 완료, 통합 게임 레이아웃 적용 |
 
 ## 문서
 
@@ -42,6 +42,7 @@
 - [Version 1.3 — 2D 벡터 값 타입 도입](./Version_1.3.md)
 - [Version 1.4 — 반발계수 기반 법선 반사](./Version_1.4.md)
 - [Version 1.5 — 핵심 물리·턴 자동화 테스트](./Version_1.5.md)
+- [Version 1.6 — 통합 게임 레이아웃 설정](./Version_1.6.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [빌드 환경 및 명령](../BUILDING.md)

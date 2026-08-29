@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vector2.h"
+#include "GameLayout.h"
 class TargetBall
 {
 public:
@@ -8,7 +8,7 @@ public:
 	~TargetBall() {}
 public:
 	Vector2 position;
-	float size = 10.0f;
+	float size = GameLayout::PegRadius;
 public:
 	void draw(CDC* pDC);
 	void setting(Vector2 newPosition);

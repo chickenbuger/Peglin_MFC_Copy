@@ -15,7 +15,12 @@ void Enemy::draw(CDC* pDC)
 		pDC->SelectObject(&brush);
 		pDC->SelectObject(GetStockObject(NULL_PEN));
 		const int enemyX = static_cast<int>(std::lround(x));
-		pDC->Rectangle(enemyX, 130, enemyX + 60, 190);
+		const int enemyY = static_cast<int>(std::lround(GameLayout::EnemyInitialPosition.y));
+		pDC->Rectangle(
+			enemyX,
+			enemyY,
+			enemyX + static_cast<int>(std::lround(GameLayout::EnemySize.x)),
+			enemyY + static_cast<int>(std::lround(GameLayout::EnemySize.y)));
 	}
 
 	pDC->RestoreDC(savedDc);
@@ -23,7 +28,7 @@ void Enemy::draw(CDC* pDC)
 
 void Enemy::Init()
 {
-	x = Init_x;
+	x = GameLayout::EnemyInitialPosition.x;
 	hp = 20.0f;
 	count = 0;
 }

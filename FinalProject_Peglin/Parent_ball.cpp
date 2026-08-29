@@ -1,14 +1,9 @@
 #include "pch.h"
 #include "Parent_ball.h"
+#include "GameLayout.h"
 #include "Physics.h"
 #include <algorithm>
 #include <cmath>
-
-constexpr int MAX_WIDTH = 970;
-constexpr int MIN_WIDTH = 40;
-constexpr int CEILING_HEIGHT = 205;
-constexpr float INITIAL_X = 490.0f;
-constexpr float INITIAL_Y = 250.0f;
 
 constexpr float MIN_POWER = 1.0f;
 constexpr float MAX_POWER = 400.0f;
@@ -18,9 +13,6 @@ constexpr float CONVERT_MAX_POWER = 10.0f;
 constexpr float MIN_DRAG_DISTANCE = 0.001f;
 constexpr float BASE_TIMESTEP_SECONDS = 0.01f;
 constexpr float WALL_RESTITUTION = 1.0f;
-constexpr float LEFT_BOUNDARY = 35.0f;
-constexpr float RIGHT_BOUNDARY = 945.0f;
-constexpr float TOP_BOUNDARY = 215.0f;
 
 namespace
 {
@@ -32,7 +24,7 @@ namespace
 
 Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 {
-	_size = 10;
+	_size = GameLayout::BallRadius;
 	Init();
 }
 
@@ -100,7 +92,7 @@ void Parent_ball::update(float deltaSeconds)
 
 void Parent_ball::Init()
 {
-	_position = { INITIAL_X, INITIAL_Y };
+	_position = GameLayout::BallInitialPosition;
 	_startDragPosition = _position;
 	_traceDragPosition = _position;
 	_endDragPosition = _position;
@@ -115,19 +107,19 @@ void Parent_ball::Init()
 
 void Parent_ball::collision()
 {
-	if (_position.x < LEFT_BOUNDARY)
+	if (_position.x < GameLayout::BallLeftBoundary)
 	{
-		_position.x = LEFT_BOUNDARY;
+		_position.x = GameLayout::BallLeftBoundary;
 		_velocity = ReflectVelocity(_velocity, { 1.0f, 0.0f }, WALL_RESTITUTION);
 	}
-	else if (_position.x > RIGHT_BOUNDARY)
+	else if (_position.x > GameLayout::BallRightBoundary)
 	{
-		_position.x = RIGHT_BOUNDARY;
+		_position.x = GameLayout::BallRightBoundary;
 		_velocity = ReflectVelocity(_velocity, { -1.0f, 0.0f }, WALL_RESTITUTION);
 	}
-	if (_position.y < TOP_BOUNDARY)
+	if (_position.y < GameLayout::BallTopBoundary)
 	{
-		_position.y = TOP_BOUNDARY;
+		_position.y = GameLayout::BallTopBoundary;
 		_velocity = ReflectVelocity(_velocity, { 0.0f, 1.0f }, WALL_RESTITUTION);
 	}
 }
@@ -169,9 +161,9 @@ void Parent_ball::drawline(CDC* pDC)
 		float y2 = y1 - ratioY * magnitude * line_y;
 
 		//벽에 닿으면 x축이 반대로
-		if ((x2 < MIN_WIDTH) || (x2 > MAX_WIDTH)) line_x *= -1;
+		if ((x2 < GameLayout::BallLeftBoundary) || (x2 > GameLayout::BallRightBoundary)) line_x *= -1;
 		//천장에 닿으면 y축이 반대로
-		if (y2 < CEILING_HEIGHT) line_y *= -1;
+		if (y2 < GameLayout::BallTopBoundary) line_y *= -1;
 
 		pDC->MoveTo(RoundToPixel(x1), RoundToPixel(y1));
 		pDC->LineTo(RoundToPixel(x2), RoundToPixel(y2));

@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "GameWorld.h"
+#include "GameLayout.h"
 #include "Physics.h"
 
 namespace
@@ -52,14 +53,14 @@ namespace
 		ball.SetPosition({ 34.0f, 300.0f });
 		ball.SetVelocity({ -2.0f, 1.0f });
 		ball.collision();
-		Check(Near(ball.GetPosition().x, 35.0f), "left wall corrects overlap");
+		Check(Near(ball.GetPosition().x, GameLayout::BallLeftBoundary), "left wall corrects overlap");
 		Check(Near(ball.GetVelocity().x, 2.0f), "left wall reflects approaching velocity");
 		Check(Near(ball.GetVelocity().y, 1.0f), "left wall preserves tangent velocity");
 
 		ball.SetPosition({ 500.0f, 214.0f });
 		ball.SetVelocity({ 1.0f, -3.0f });
 		ball.collision();
-		Check(Near(ball.GetPosition().y, 215.0f), "ceiling corrects overlap");
+		Check(Near(ball.GetPosition().y, GameLayout::BallTopBoundary), "ceiling corrects overlap");
 		Check(Near(ball.GetVelocity().y, 3.0f), "ceiling reflects approaching velocity");
 	}
 
@@ -109,7 +110,7 @@ namespace
 		world.Update(0.0f);
 		world.Update(0.0f);
 		Check(world.GetEnemy().GetCount() == 1, "screen exit advances enemy turn count");
-		Check(Near(world.GetEnemy().GetX(), 646.0f), "screen exit advances enemy position");
+		Check(Near(world.GetEnemy().GetX(), GameLayout::EnemyInitialPosition.x - GameLayout::EnemyStep), "screen exit advances enemy position");
 		Check(Near(world.GetEnemy().GetHp(), 20.0f), "turn without pegs deals no enemy damage");
 	}
 
@@ -164,6 +165,18 @@ namespace
 		const Vector2 unchanged = ReflectVelocity({ 2.0f, 3.0f }, { 1.0f, 0.0f }, 0.5f);
 		Check(Near(unchanged.x, 2.0f) && Near(unchanged.y, 3.0f), "separating velocity is not reflected");
 	}
+
+	void TestLayoutConfiguration()
+	{
+		GameWorld world;
+		Check(Near(world.GetBall().GetPosition().x, GameLayout::BallInitialPosition.x), "layout controls initial ball x");
+		Check(Near(world.GetBall().GetPosition().y, GameLayout::BallInitialPosition.y), "layout controls initial ball y");
+		Check(Near(world.GetEnemy().GetX(), GameLayout::EnemyInitialPosition.x), "layout controls initial enemy x");
+		Check(world.GetTargets()._targetBallList.GetCount() == GameLayout::PegColumns * GameLayout::PegRows, "layout controls peg count");
+		const auto head = world.GetTargets()._targetBallList.GetHeadPosition();
+		const Vector2 firstPeg = world.GetTargets()._targetBallList.GetAt(head).position;
+		Check(Near(firstPeg.x, GameLayout::PegStart.x) && Near(firstPeg.y, GameLayout::PegStart.y), "layout controls first peg position");
+	}
 }
 
 int main()
@@ -175,6 +188,7 @@ int main()
 	TestVictoryTransition();
 	TestDefeatTransition();
 	TestStateAndRestitutionRules();
+	TestLayoutConfiguration();
 
 	if (failures == 0)
 	{

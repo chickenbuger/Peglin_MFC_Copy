@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "Player.h"
+#include "GameLayout.h"
+
+#include <cmath>
 
 void Player::draw(CDC* pDC)
 {
@@ -13,7 +16,13 @@ void Player::draw(CDC* pDC)
 		CBrush brush(&bmp);
 		pDC->SelectObject(&brush);
 		pDC->SelectObject(GetStockObject(NULL_PEN));
-		pDC->Rectangle(130, 130, 190, 190);
+		const int left = static_cast<int>(std::lround(GameLayout::PlayerPosition.x));
+		const int top = static_cast<int>(std::lround(GameLayout::PlayerPosition.y));
+		pDC->Rectangle(
+			left,
+			top,
+			left + static_cast<int>(std::lround(GameLayout::PlayerSize.x)),
+			top + static_cast<int>(std::lround(GameLayout::PlayerSize.y)));
 	}
 
 	pDC->RestoreDC(savedDc);
