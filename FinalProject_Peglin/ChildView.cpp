@@ -11,6 +11,8 @@
 #include <cmath>
 #include <utility>
 
+#pragma comment(lib, "Msimg32.lib")
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -265,6 +267,7 @@ void CChildView::gameclear()
 	_screenMode = ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
+	_orbTrail.clear();
 }
 
 void CChildView::gameover()
@@ -274,12 +277,16 @@ void CChildView::gameover()
 	_screenMode = ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
+	_orbTrail.clear();
 }
 
 void CChildView::restart()
 {
 	_game.ResetGame();
 	_feedbackAnimations.clear();
+	_orbTrail.clear();
+	_orbTrailSampleSeconds = 0.0f;
+	_gameplayVisualTimeSeconds = 0.0f;
 	_resultSummary.reset();
 	_screenMode = ScreenMode::Playing;
 }
@@ -311,7 +318,9 @@ void CChildView::OnPaint()
 	bitmap.CreateCompatibleBitmap(&dc, rect.right, rect.bottom);
 	CBitmap* previousBitmap = memDc.SelectObject(&bitmap);
 	
-	_background.draw(&memDc);
+	_background.draw(
+		&memDc,
+		_gameplayBackground.GetSafeHandle() != nullptr ? &_gameplayBackground : nullptr);
 
 	if (_screenMode == ScreenMode::StageSelection)
 	{
@@ -342,15 +351,6 @@ void CChildView::OnPaint()
 		return;
 	}
 
-	//player
-	_game.GetPlayer().draw(&memDc);
-
-	//enemy
-	_game.GetEnemy().draw(&memDc);
-
-	//ball
-	_game.GetBall().draw(&memDc);
-	
 	//targetball
 	auto& targets = _game.GetTargets()._targetBallList;
 	auto pos = targets.GetHeadPosition();
@@ -360,8 +360,36 @@ void CChildView::OnPaint()
 		_target.draw(&memDc, _options.pegColorMode);
 	}
 
+	DrawOrbTrail(&memDc);
+
+	//player
+	_game.GetPlayer().draw(
+		&memDc,
+		_playerSprite.GetSafeHandle() != nullptr ? &_playerSprite : nullptr);
+
+	//enemy
+	_game.GetEnemy().draw(
+		&memDc,
+		_enemySprite.GetSafeHandle() != nullptr ? &_enemySprite : nullptr);
+
+	float orbOffsetY = 0.0f;
+	float orbScale = 1.0f;
+	if (_game.GetState() == GameState::Aiming && !_game.GetBall().GetClick())
+	{
+		orbOffsetY = std::sin(_gameplayVisualTimeSeconds * 3.2f) * 4.0f;
+		orbScale += std::sin(_gameplayVisualTimeSeconds * 4.4f) * 0.055f;
+	}
+	_game.GetBall().draw(
+		&memDc,
+		_orbSprite.GetSafeHandle() != nullptr ? &_orbSprite : nullptr,
+		orbOffsetY,
+		orbScale);
+
 	DrawAimPreview(&memDc);
 
+	const int statusTextState = memDc.SaveDC();
+	memDc.SetBkMode(TRANSPARENT);
+	memDc.SetTextColor(RGB(238, 232, 211));
 	if (_game.GetPlayer().GetHp() > 0.0f)
 	{
 		CString Text;
@@ -394,10 +422,11 @@ void CChildView::OnPaint()
 				shieldText);
 		}
 	}
+	memDc.RestoreDC(statusTextState);
 
 	const int textState = memDc.SaveDC();
 	memDc.SetBkMode(TRANSPARENT);
-	memDc.SetTextColor(RGB(0, 0, 0));
+	memDc.SetTextColor(RGB(238, 232, 211));
 	memDc.TextOut(
 		static_cast<int>(std::lround(GameLayout::StateText.x)),
 		static_cast<int>(std::lround(GameLayout::StateText.y)),
@@ -434,6 +463,10 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 
 	_uiBackgroundLoaded = _uiBackground.LoadBitmap(IDB_UI_ADVENTURE_FRAME) != FALSE;
+	_gameplayBackground.LoadBitmap(IDB_GAMEPLAY_CAVE_V2);
+	_playerSprite.LoadBitmap(IDB_PLAYER_HERO_V2);
+	_enemySprite.LoadBitmap(IDB_ENEMY_CRYSTAL_TOAD_V2);
+	_orbSprite.LoadBitmap(IDB_ORB_AMBER_TEAL_V2);
 
 	constexpr UINT GAME_TIMER_INTERVAL_MS = 10;
 	_gameTimerId = SetTimer(1, GAME_TIMER_INTERVAL_MS, nullptr);
@@ -456,6 +489,22 @@ void CChildView::OnDestroy()
 	{
 		_uiBackground.DeleteObject();
 		_uiBackgroundLoaded = false;
+	}
+	if (_gameplayBackground.GetSafeHandle() != nullptr)
+	{
+		_gameplayBackground.DeleteObject();
+	}
+	if (_playerSprite.GetSafeHandle() != nullptr)
+	{
+		_playerSprite.DeleteObject();
+	}
+	if (_enemySprite.GetSafeHandle() != nullptr)
+	{
+		_enemySprite.DeleteObject();
+	}
+	if (_orbSprite.GetSafeHandle() != nullptr)
+	{
+		_orbSprite.DeleteObject();
 	}
 
 	if (_gameTimerId != 0)
@@ -505,6 +554,7 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 	const GameUpdateResult result = _game.Update(deltaSeconds);
 	ConsumeGameEvents();
 	UpdateFeedbackAnimations(deltaSeconds);
+	UpdateOrbVisuals(deltaSeconds);
 
 	switch (result)
 	{
@@ -603,6 +653,52 @@ void CChildView::UpdateFeedbackAnimations(float deltaSeconds)
 		_feedbackAnimations.end());
 }
 
+void CChildView::UpdateOrbVisuals(float deltaSeconds)
+{
+	_gameplayVisualTimeSeconds += deltaSeconds;
+	for (OrbTrailPoint& point : _orbTrail)
+	{
+		point.ageSeconds += deltaSeconds;
+	}
+	constexpr float TRAIL_LIFETIME_SECONDS = 0.24f;
+	_orbTrail.erase(
+		std::remove_if(
+			_orbTrail.begin(),
+			_orbTrail.end(),
+			[](const OrbTrailPoint& point)
+			{
+				return point.ageSeconds >= TRAIL_LIFETIME_SECONDS;
+			}),
+		_orbTrail.end());
+
+	if (_game.GetState() != GameState::BallInFlight)
+	{
+		_orbTrail.clear();
+		_orbTrailSampleSeconds = 0.0f;
+		return;
+	}
+
+	constexpr float TRAIL_SAMPLE_SECONDS = 0.025f;
+	_orbTrailSampleSeconds += deltaSeconds;
+	if (_orbTrailSampleSeconds < TRAIL_SAMPLE_SECONDS)
+	{
+		return;
+	}
+	_orbTrailSampleSeconds = 0.0f;
+
+	const Vector2 position = _game.GetBall().GetPosition();
+	if (!_orbTrail.empty() && (position - _orbTrail.back().position).Length() < 3.0f)
+	{
+		return;
+	}
+	_orbTrail.push_back({ position, 0.0f });
+	constexpr std::size_t MAX_TRAIL_POINTS = 12;
+	if (_orbTrail.size() > MAX_TRAIL_POINTS)
+	{
+		_orbTrail.erase(_orbTrail.begin());
+	}
+}
+
 void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
 {
 	const int savedDc = deviceContext->SaveDC();
@@ -622,6 +718,40 @@ void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
 			animation.text);
 	}
 
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawOrbTrail(CDC* deviceContext)
+{
+	if (_orbTrail.empty())
+	{
+		return;
+	}
+
+	constexpr float TRAIL_LIFETIME_SECONDS = 0.24f;
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->SelectObject(GetStockObject(NULL_PEN));
+	for (const OrbTrailPoint& point : _orbTrail)
+	{
+		const float strength = std::clamp(
+			1.0f - point.ageSeconds / TRAIL_LIFETIME_SECONDS,
+			0.0f,
+			1.0f);
+		const int radius = static_cast<int>(std::lround(3.0f + strength * 6.0f));
+		const BYTE red = static_cast<BYTE>(std::lround(28.0f + strength * 45.0f));
+		const BYTE green = static_cast<BYTE>(std::lround(80.0f + strength * 145.0f));
+		const BYTE blue = static_cast<BYTE>(std::lround(105.0f + strength * 130.0f));
+		CBrush trailBrush(RGB(red, green, blue));
+		CBrush* previousBrush = deviceContext->SelectObject(&trailBrush);
+		const int centerX = static_cast<int>(std::lround(point.position.x));
+		const int centerY = static_cast<int>(std::lround(point.position.y));
+		deviceContext->Ellipse(
+			centerX - radius,
+			centerY - radius,
+			centerX + radius,
+			centerY + radius);
+		deviceContext->SelectObject(previousBrush);
+	}
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -915,6 +1045,9 @@ bool CChildView::StartStage(std::string_view stageId)
 	}
 
 	_feedbackAnimations.clear();
+	_orbTrail.clear();
+	_orbTrailSampleSeconds = 0.0f;
+	_gameplayVisualTimeSeconds = 0.0f;
 	_resultSummary.reset();
 	_screenMode = ScreenMode::Playing;
 	SetFocus();

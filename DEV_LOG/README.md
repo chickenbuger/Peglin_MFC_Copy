@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 5 |
-| 현재 버전 | Version 5.5 |
-| 스프린트 목표 | 오브·유물·적 행동·외부 콘텐츠와 확장 가능한 UI 기반 구축 |
-| 상태 | Sprint 5 완료 — P0 5/5, 검증 게이트 7/7 통과 · Sprint 6 미착수 |
+| 현재 스프린트 | Sprint 6 |
+| 현재 버전 | Version 6.1 |
+| 스프린트 목표 | 게임플레이 시각 완성도, 런 진행·보상, 외부 콘텐츠와 UI 확장 비용 개선 |
+| 상태 | Sprint 6 진행 중 — P0 1/6 완료 · 다음 작업은 런 진행과 보상 선택 |
 
 ## 문서
 
@@ -67,6 +67,7 @@
 - [Version 5.3 — 검증된 외부 콘텐츠 카탈로그](./Version_5.3.md)
 - [Version 5.4 — ImageGen 기반 공통 UI와 장비 화면](./Version_5.4.md)
 - [Version 5.5 — Sprint 5 결합 회귀·배포 검증 완료](./Version_5.5.md)
+- [Version 6.1 — ImageGen 게임플레이 아트와 공 이동 피드백](./Version_6.1.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

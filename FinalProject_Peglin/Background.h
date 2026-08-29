@@ -5,5 +5,5 @@ public:
 	Background() = default;
 	~Background() {}
 public:
-	void draw(CDC* pDC);
+	void draw(CDC* pDC, CBitmap* gameplayBackground = nullptr);
 };

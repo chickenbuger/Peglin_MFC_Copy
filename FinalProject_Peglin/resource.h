@@ -10,13 +10,17 @@
 #define IDB_BITMAP3                     313
 #define IDB_BITMAP4                     314
 #define IDB_UI_ADVENTURE_FRAME          315
+#define IDB_GAMEPLAY_CAVE_V2            316
+#define IDB_PLAYER_HERO_V2              317
+#define IDB_ENEMY_CRYSTAL_TOAD_V2       318
+#define IDB_ORB_AMBER_TEAL_V2           319
 #define ID_32771                        32771
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        316
+#define _APS_NEXT_RESOURCE_VALUE        320
 #define _APS_NEXT_COMMAND_VALUE         32772
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310

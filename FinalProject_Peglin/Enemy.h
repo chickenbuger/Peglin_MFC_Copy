@@ -22,6 +22,6 @@ public:
 	float	GetHp() const noexcept		{ return hp; }
 	float	GetX() const noexcept		{ return x; }
 public:
-	void draw(CDC* pDC);
+	void draw(CDC* pDC, CBitmap* sprite = nullptr);
 	void Init();
 };

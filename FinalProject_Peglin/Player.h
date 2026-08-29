@@ -1,4 +1,4 @@
-#ifndef __PLAYER_H__
+ï»¿#ifndef __PLAYER_H__
 #define __PLAYER_H__
 
 #pragma once
@@ -7,11 +7,11 @@ class Player
 public:
 	Player() {}
 	~Player() {}
-//º¯¼ö ÀÔ´Ï´Ù.
+//ë³€ìˆ˜ ìž…ë‹ˆë‹¤.
 private:
 	float	hp = 100.0f;
 
-//ÇÔ¼ö ÀÔ´Ï´Ù.
+//í•¨ìˆ˜ ìž…ë‹ˆë‹¤.
 public:
 	//setter
 	void SetHp(float newHp) { hp = newHp; }
@@ -20,7 +20,7 @@ public:
 	float GetHp() { return hp; }
 	 
 public:
-	void draw(CDC* pDC);
+	void draw(CDC* pDC, CBitmap* sprite = nullptr);
 	void Init();
 };
 

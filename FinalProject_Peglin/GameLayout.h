@@ -27,12 +27,12 @@ struct GameLayout
 	inline static constexpr float PegSpacing = 80.0f;
 	inline static constexpr float PegRadius = 10.0f;
 
-	inline static constexpr Vector2 PlayerPosition{ 130.0f, 130.0f };
-	inline static constexpr Vector2 PlayerSize{ 60.0f, 60.0f };
+	inline static constexpr Vector2 PlayerPosition{ 125.0f, 112.0f };
+	inline static constexpr Vector2 PlayerSize{ 104.0f, 108.0f };
 	inline static constexpr Vector2 PlayerHealthText{ 100.0f, 70.0f };
 
-	inline static constexpr Vector2 EnemyInitialPosition{ 710.0f, 130.0f };
-	inline static constexpr Vector2 EnemySize{ 60.0f, 60.0f };
+	inline static constexpr Vector2 EnemyInitialPosition{ 710.0f, 114.0f };
+	inline static constexpr Vector2 EnemySize{ 132.0f, 106.0f };
 	inline static constexpr float EnemyStep = 64.0f;
 	inline static constexpr int EnemyStepsBeforeAttack = 8;
 	inline static constexpr float EnemyHealthTextOffsetX = -30.0f;

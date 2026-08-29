@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 
 #include "Vector2.h"
@@ -29,8 +29,8 @@ public:
 	void collision();
 
 public:
-	//º® °Ë»ç
-	void draw(CDC* pDC);
+	//ë²½ ê²€ì‚¬
+	void draw(CDC* pDC, CBitmap* sprite = nullptr, float visualOffsetY = 0.0f, float visualScale = 1.0f);
 	void update(float deltaSeconds);
 	void Init();
 	
@@ -45,11 +45,11 @@ private:
 	Vector2 _position;
 	float _size = 0.0f;
 
-	//Drag ½ÃÀÛ À§Ä¡
+	//Drag ì‹œì‘ ìœ„ì¹˜
 	Vector2 _startDragPosition;
-	//Drag Áß ¶óÀÎ À§Ä¡
+	//Drag ì¤‘ ë¼ì¸ ìœ„ì¹˜
 	Vector2 _traceDragPosition;
-	//Drag ¸¶Áö¸· À§Ä¡
+	//Drag ë§ˆì§€ë§‰ ìœ„ì¹˜
 	Vector2 _endDragPosition;
 
 	float	_force = 0.0f;

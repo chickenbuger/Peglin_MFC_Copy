@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Parent_ball.h"
 #include "GameLayout.h"
 #include "Physics.h"
@@ -30,7 +30,7 @@ Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 
 bool Parent_ball::shooting()
 {
-	//Èû¿¡ ´ëÇÑ °è»ê
+	//í˜ì— ëŒ€í•œ ê³„ì‚°
 	const Vector2 direction = _startDragPosition - _endDragPosition;
 	float magnitude = direction.Length();
 	if (magnitude <= MIN_DRAG_DISTANCE)
@@ -43,10 +43,10 @@ bool Parent_ball::shooting()
 
 	_velocity = direction / magnitude;
 
-	//ÈûÀÇ °ªÀ» MinPower ~ MaxPower »çÀÌ·Î Á¶Á¤
+	//í˜ì˜ ê°’ì„ MinPower ~ MaxPower ì‚¬ì´ë¡œ ì¡°ì •
 	magnitude = std::clamp(magnitude, MIN_POWER, MAX_POWER);
 
-	//ÈûÀÇ °ªÀ» 1~10»çÀÌ °ªÀ¸·Î °íÁ¤
+	//í˜ì˜ ê°’ì„ 1~10ì‚¬ì´ ê°’ìœ¼ë¡œ ê³ ì •
 	magnitude = magnitude / (MAX_POWER / CONVERT_MAX_POWER);
 	_force = std::clamp(magnitude, CONVERT_MIN_POWER, CONVERT_MAX_POWER);
 
@@ -54,18 +54,45 @@ bool Parent_ball::shooting()
 	return true;
 }
 
-void Parent_ball::draw(CDC* pDC)
+void Parent_ball::draw(CDC* pDC, CBitmap* sprite, float visualOffsetY, float visualScale)
 {
 	const int savedDc = pDC->SaveDC();
+	constexpr float VISUAL_RADIUS = 16.0f;
+	const float visualRadius = VISUAL_RADIUS * visualScale;
+	const float visualCenterY = _position.y + visualOffsetY;
 
-	CBrush brush(RGB(200, 200, 200));
-	pDC->SelectObject(&brush);
-	pDC->SelectObject(GetStockObject(NULL_PEN));
-	pDC->Ellipse(
-		RoundToPixel(_position.x - _size),
-		RoundToPixel(_position.y - _size),
-		RoundToPixel(_position.x + _size),
-		RoundToPixel(_position.y + _size));
+	if (sprite != nullptr && sprite->GetSafeHandle() != nullptr)
+	{
+		CDC spriteDc;
+		spriteDc.CreateCompatibleDC(pDC);
+		CBitmap* previousBitmap = spriteDc.SelectObject(sprite);
+		BITMAP bitmapInfo{};
+		sprite->GetBitmap(&bitmapInfo);
+		::TransparentBlt(
+			pDC->GetSafeHdc(),
+			RoundToPixel(_position.x - visualRadius),
+			RoundToPixel(visualCenterY - visualRadius),
+			RoundToPixel(visualRadius * 2.0f),
+			RoundToPixel(visualRadius * 2.0f),
+			spriteDc.GetSafeHdc(),
+			0,
+			0,
+			bitmapInfo.bmWidth,
+			bitmapInfo.bmHeight,
+			RGB(255, 0, 255));
+		spriteDc.SelectObject(previousBitmap);
+	}
+	else
+	{
+		CBrush brush(RGB(200, 200, 200));
+		pDC->SelectObject(&brush);
+		pDC->SelectObject(GetStockObject(NULL_PEN));
+		pDC->Ellipse(
+			RoundToPixel(_position.x - _size),
+			RoundToPixel(_position.y - _size),
+			RoundToPixel(_position.x + _size),
+			RoundToPixel(_position.y + _size));
+	}
 	
 	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
 	pDC->SelectObject(&pen);
@@ -83,9 +110,9 @@ void Parent_ball::update(float deltaSeconds)
 	if (IsActive && !stop)
 	{
 		const float timeScale = deltaSeconds / BASE_TIMESTEP_SECONDS;
-		//°øÀÇ ¿òÁ÷ÀÓ
+		//ê³µì˜ ì›€ì§ì„
 		movement(timeScale);
-		//°øÀÇ Ãæµ¹ È®ÀÎ
+		//ê³µì˜ ì¶©ëŒ í™•ì¸
 		collision();
 	}
 }
@@ -135,21 +162,21 @@ void Parent_ball::drawline(CDC* pDC)
 	const float ratioX = direction.x;
 	float ratioY = direction.y;
 
-	//ÈûÀÇ °ªÀ» MinPower ~ MaxPower »çÀÌ·Î Á¶Á¤
+	//í˜ì˜ ê°’ì„ MinPower ~ MaxPower ì‚¬ì´ë¡œ ì¡°ì •
 	magnitude = std::clamp(magnitude, MIN_POWER, MAX_POWER);
 
-	//ÈûÀÇ °ªÀ» 1~10»çÀÌ °ªÀ¸·Î °íÁ¤
+	//í˜ì˜ ê°’ì„ 1~10ì‚¬ì´ ê°’ìœ¼ë¡œ ê³ ì •
 	magnitude = magnitude / (MAX_POWER / CONVERT_MAX_POWER);
 	magnitude = std::clamp(magnitude, CONVERT_MIN_POWER, CONVERT_MAX_POWER);
 
-	//¼±ÀÇ ÁÂÇ¥µé
+	//ì„ ì˜ ì¢Œí‘œë“¤
 	float x1 = _position.x;
 	float y1 = _position.y;
 
 	float line_x = 1.0f;
 	float line_y = 1.0f;
 
-	//Ææ ¼±ÅÃ
+	//íœ ì„ íƒ
 	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
 	pDC->SelectObject(&pen);
 
@@ -160,9 +187,9 @@ void Parent_ball::drawline(CDC* pDC)
 		float x2 = x1 - ratioX * magnitude * line_x;
 		float y2 = y1 - ratioY * magnitude * line_y;
 
-		//º®¿¡ ´êÀ¸¸é xÃàÀÌ ¹İ´ë·Î
+		//ë²½ì— ë‹¿ìœ¼ë©´ xì¶•ì´ ë°˜ëŒ€ë¡œ
 		if ((x2 < GameLayout::BallLeftBoundary) || (x2 > GameLayout::BallRightBoundary)) line_x *= -1;
-		//ÃµÀå¿¡ ´êÀ¸¸é yÃàÀÌ ¹İ´ë·Î
+		//ì²œì¥ì— ë‹¿ìœ¼ë©´ yì¶•ì´ ë°˜ëŒ€ë¡œ
 		if (y2 < GameLayout::BallTopBoundary) line_y *= -1;
 
 		pDC->MoveTo(RoundToPixel(x1), RoundToPixel(y1));

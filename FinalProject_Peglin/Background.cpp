@@ -11,9 +11,31 @@ namespace
 	}
 }
 
-void Background::draw(CDC* pDC)
+void Background::draw(CDC* pDC, CBitmap* gameplayBackground)
 {
 	const int savedDc = pDC->SaveDC();
+	if (gameplayBackground != nullptr && gameplayBackground->GetSafeHandle() != nullptr)
+	{
+		CDC sourceDc;
+		sourceDc.CreateCompatibleDC(pDC);
+		CBitmap* previousBitmap = sourceDc.SelectObject(gameplayBackground);
+		BITMAP bitmapInfo{};
+		gameplayBackground->GetBitmap(&bitmapInfo);
+		pDC->StretchBlt(
+			0,
+			0,
+			RoundToPixel(GameLayout::WindowWidth),
+			RoundToPixel(GameLayout::WindowHeight),
+			&sourceDc,
+			0,
+			0,
+			bitmapInfo.bmWidth,
+			bitmapInfo.bmHeight,
+			SRCCOPY);
+		sourceDc.SelectObject(previousBitmap);
+		pDC->RestoreDC(savedDc);
+		return;
+	}
 
 	CBitmap bmp;
 	bmp.LoadBitmap(311);

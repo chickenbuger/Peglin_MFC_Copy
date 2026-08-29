@@ -73,11 +73,19 @@ private:
 		float lifetimeSeconds = 0.9f;
 	};
 
+	struct OrbTrailPoint
+	{
+		Vector2 position;
+		float ageSeconds = 0.0f;
+	};
+
 	void ReleaseMouseInput(bool cancelDrag);
 	void UpdateGameStep(float deltaSeconds);
 	void ConsumeGameEvents();
 	void UpdateFeedbackAnimations(float deltaSeconds);
+	void UpdateOrbVisuals(float deltaSeconds);
 	void DrawFeedbackAnimations(CDC* deviceContext);
+	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
 	void DrawStageSelection(CDC* deviceContext);
 	void DrawLoadoutScreen(CDC* deviceContext);
@@ -97,6 +105,9 @@ private:
 	std::chrono::steady_clock::time_point _lastFrameTime{};
 	double _accumulatedTimeSeconds = 0.0;
 	std::vector<FeedbackAnimation> _feedbackAnimations;
+	std::vector<OrbTrailPoint> _orbTrail;
+	float _gameplayVisualTimeSeconds = 0.0f;
+	float _orbTrailSampleSeconds = 0.0f;
 	GameOptions _options;
 	GameSettingsStore _settingsStore;
 	GameRecordStore _recordStore;
@@ -104,6 +115,10 @@ private:
 	ContentLoadResult _contentCatalog;
 	CBitmap _uiBackground;
 	bool _uiBackgroundLoaded = false;
+	CBitmap _gameplayBackground;
+	CBitmap _playerSprite;
+	CBitmap _enemySprite;
+	CBitmap _orbSprite;
 	std::size_t _selectedStageIndex = 0;
 	CString _loadoutNotice;
 	bool _settingsSaveFailed = false;
