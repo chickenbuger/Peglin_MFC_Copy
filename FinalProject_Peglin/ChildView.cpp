@@ -204,7 +204,7 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 
 void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
-	if (_game.BeginAim(static_cast<float>(point.x), static_cast<float>(point.y)))
+	if (_game.BeginAim({ static_cast<float>(point.x), static_cast<float>(point.y) }))
 	{
 		SetFocus();
 		SetCapture();
@@ -215,7 +215,7 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	_game.ReleaseShot(static_cast<float>(point.x), static_cast<float>(point.y));
+	_game.ReleaseShot({ static_cast<float>(point.x), static_cast<float>(point.y) });
 	ReleaseMouseInput(false);
 	CWnd::OnLButtonUp(nFlags, point);
 }
@@ -234,7 +234,7 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 	//드래그 처리
 	if (_game.GetBall().GetClick())
 	{
-		_game.UpdateAim(static_cast<float>(point.x), static_cast<float>(point.y));
+		_game.UpdateAim({ static_cast<float>(point.x), static_cast<float>(point.y) });
 		Invalidate();
 	}
 

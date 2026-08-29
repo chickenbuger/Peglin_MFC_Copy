@@ -31,7 +31,7 @@ GameUpdateResult GameWorld::Update(float deltaSeconds)
 	case GameState::BallInFlight:
 		HandlePegCollisions();
 		_ball.update(deltaSeconds);
-		if (_ball.GetPos()[1] > PLAYFIELD_BOTTOM)
+		if (_ball.GetPosition().y > PLAYFIELD_BOTTOM)
 		{
 			TransitionTo(GameState::ResolvingTurn);
 		}
@@ -74,28 +74,28 @@ void GameWorld::ResetBallToAiming()
 	TransitionTo(GameState::Aiming);
 }
 
-bool GameWorld::BeginAim(float x, float y)
+bool GameWorld::BeginAim(Vector2 position)
 {
 	if (_gameState != GameState::Aiming || _ball.GetActive())
 	{
 		return false;
 	}
 
-	_ball.SetStartDragPos(x, y);
-	_ball.SetTraceDragPos(x, y);
+	_ball.SetStartDragPos(position);
+	_ball.SetTraceDragPos(position);
 	_ball.SetClick(true);
 	return true;
 }
 
-void GameWorld::UpdateAim(float x, float y)
+void GameWorld::UpdateAim(Vector2 position)
 {
 	if (_gameState == GameState::Aiming && _ball.GetClick())
 	{
-		_ball.SetTraceDragPos(x, y);
+		_ball.SetTraceDragPos(position);
 	}
 }
 
-bool GameWorld::ReleaseShot(float x, float y)
+bool GameWorld::ReleaseShot(Vector2 position)
 {
 	if (_gameState != GameState::Aiming || !_ball.GetClick())
 	{
@@ -105,7 +105,7 @@ bool GameWorld::ReleaseShot(float x, float y)
 	bool launched = false;
 	if (!_ball.GetActive())
 	{
-		_ball.SetEndDragPos(x, y);
+		_ball.SetEndDragPos(position);
 		launched = _ball.shooting();
 		if (launched)
 		{
@@ -148,9 +148,9 @@ void GameWorld::InitializeTargets()
 		for (int row = 0; row < PEG_ROWS; ++row)
 		{
 			TargetBall ball;
-			ball.setting(
+			ball.setting({
 				PEG_START_X + static_cast<float>(column) * PEG_SPACING,
-				PEG_START_Y + static_cast<float>(row) * PEG_SPACING);
+				PEG_START_Y + static_cast<float>(row) * PEG_SPACING });
 			_targetBallList.add(ball);
 		}
 	}
@@ -163,11 +163,8 @@ void GameWorld::HandlePegCollisions()
 	{
 		auto current = position;
 		auto& target = _targetBallList._targetBallList.GetNext(position);
-		const float ballX = _ball.GetPos()[0];
-		const float ballY = _ball.GetPos()[1];
-		const float offsetX = ballX - target.x;
-		const float offsetY = ballY - target.y;
-		const float distanceSquared = offsetX * offsetX + offsetY * offsetY;
+		const Vector2 offset = _ball.GetPosition() - target.position;
+		const float distanceSquared = offset.LengthSquared();
 		const float collisionRadius = _ball.GetSize() + target.size;
 
 		if (distanceSquared <= collisionRadius * collisionRadius)
@@ -178,15 +175,11 @@ void GameWorld::HandlePegCollisions()
 				distance = 0.01f;
 			}
 
-			const float normalX = offsetX / distance;
-			const float normalY = offsetY / distance;
-			const float tangentX = -normalY;
-			const float tangentY = normalX;
-			const float tangentVelocity =
-				_ball.GetVelocityX() * tangentX + _ball.GetVelocityY() * tangentY;
+			const Vector2 normal = offset / distance;
+			const Vector2 tangent{ -normal.y, normal.x };
+			const float tangentVelocity = Dot(_ball.GetVelocity(), tangent);
 
-			_ball.SetVelocityX(tangentVelocity * tangentX);
-			_ball.SetVelocityY(tangentVelocity * tangentY);
+			_ball.SetVelocity(tangent * tangentVelocity);
 			_targetBallList._targetBallList.RemoveAt(current);
 			_pendingDamage += 1.0f;
 		}

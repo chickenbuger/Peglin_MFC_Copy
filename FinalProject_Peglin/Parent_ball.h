@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Vector2.h"
+
 class Parent_ball
 {
 public:
@@ -9,22 +11,18 @@ public:
 
 public:
 	//setter
-	void SetStartDragPos(float x, float y)		{ StartDragPos[0] = x; StartDragPos[1] = y; }
-	void SetEndDragPos(float x, float y)		{ EndDragPos[0] = x; EndDragPos[1] = y; }
-
-	void SetTraceDragPos(float x, float y)		{ TraceDragPos[0] = x; TraceDragPos[1] = y; }
-	void SetVelocityX(float vx)					{ _velocity_x = vx; }
-	void SetVelocityY(float vy)					{ _velocity_y = vy; }
+	void SetStartDragPos(Vector2 position)		{ _startDragPosition = position; }
+	void SetEndDragPos(Vector2 position)		{ _endDragPosition = position; }
+	void SetTraceDragPos(Vector2 position)		{ _traceDragPosition = position; }
+	void SetVelocity(Vector2 velocity)			{ _velocity = velocity; }
 	void SetClick(bool click)					{ IsClick = click; }
 
 	//getter
-	float*	GetPos()				{ return pos; }
-
-	float	GetSize()				{ return _size; }
-	float	GetVelocityX()			{ return _velocity_x; }
-	float	GetVelocityY()			{ return _velocity_y; }
-	bool	GetActive()				{ return IsActive; }
-	bool	GetClick()				{ return IsClick; }
+	const Vector2& GetPosition() const noexcept	{ return _position; }
+	const Vector2& GetVelocity() const noexcept	{ return _velocity; }
+	float GetSize() const noexcept					{ return _size; }
+	bool GetActive() const noexcept					{ return IsActive; }
+	bool GetClick() const noexcept					{ return IsClick; }
 public:
 	bool shooting();
 	void collision();
@@ -43,19 +41,18 @@ private:
 	void movement(float timeScale);
 
 private:
-	float	pos[2] = { 490.f,250.f };
+	Vector2 _position{ 490.0f, 250.0f };
 	float	_size = { 10.f };
 
 	//Drag 시작 위치
-	float	StartDragPos[2];
+	Vector2 _startDragPosition;
 	//Drag 중 라인 위치
-	float	TraceDragPos[2];
+	Vector2 _traceDragPosition;
 	//Drag 마지막 위치
-	float	EndDragPos[2];
+	Vector2 _endDragPosition;
 
 	float	_force = 0.0f;
-	float	_velocity_x = 0.0f;
-	float	_velocity_y = 0.0f;
+	Vector2 _velocity;
 
 	float	_gravity;
 

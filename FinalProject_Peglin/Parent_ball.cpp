@@ -34,21 +34,17 @@ Parent_ball::Parent_ball() : _gravity(0.01f), IsActive(false), IsClick(false)
 bool Parent_ball::shooting()
 {
 	//힘에 대한 계산
-	const float dirx = StartDragPos[0] - EndDragPos[0];
-	const float diry = StartDragPos[1] - EndDragPos[1];
-
-	float magnitude = std::sqrt(dirx * dirx + diry * diry);
+	const Vector2 direction = _startDragPosition - _endDragPosition;
+	float magnitude = direction.Length();
 	if (magnitude <= MIN_DRAG_DISTANCE)
 	{
-		_velocity_x = 0.0f;
-		_velocity_y = 0.0f;
+		_velocity = {};
 		_force = 0.0f;
 		IsActive = false;
 		return false;
 	}
 
-	_velocity_x = dirx / magnitude;
-	_velocity_y = diry / magnitude;
+	_velocity = direction / magnitude;
 
 	//힘의 값을 MinPower ~ MaxPower 사이로 조정
 	magnitude = std::clamp(magnitude, MIN_POWER, MAX_POWER);
@@ -69,10 +65,10 @@ void Parent_ball::draw(CDC* pDC)
 	pDC->SelectObject(&brush);
 	pDC->SelectObject(GetStockObject(NULL_PEN));
 	pDC->Ellipse(
-		RoundToPixel(pos[0] - _size),
-		RoundToPixel(pos[1] - _size),
-		RoundToPixel(pos[0] + _size),
-		RoundToPixel(pos[1] + _size));
+		RoundToPixel(_position.x - _size),
+		RoundToPixel(_position.y - _size),
+		RoundToPixel(_position.x + _size),
+		RoundToPixel(_position.y + _size));
 	
 	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
 	pDC->SelectObject(&pen);
@@ -99,19 +95,13 @@ void Parent_ball::update(float deltaSeconds)
 
 void Parent_ball::Init()
 {
-	pos[0] = INITIAL_X;
-	pos[1] = INITIAL_Y;
-
-	StartDragPos[0] = INITIAL_X;
-	StartDragPos[1] = INITIAL_Y;
-	TraceDragPos[0] = INITIAL_X;
-	TraceDragPos[1] = INITIAL_Y;
-	EndDragPos[0] = INITIAL_X;
-	EndDragPos[1] = INITIAL_Y;
+	_position = { INITIAL_X, INITIAL_Y };
+	_startDragPosition = _position;
+	_traceDragPosition = _position;
+	_endDragPosition = _position;
 
 	_force = 0.0f;
-	_velocity_x = 0.0f;
-	_velocity_y = 0.0f;
+	_velocity = {};
 
 	IsActive = false;
 	IsClick = false;
@@ -120,27 +110,26 @@ void Parent_ball::Init()
 
 void Parent_ball::collision()
 {
-	if ((pos[0] < 35) || (pos[0] > 945))
+	if ((_position.x < 35.0f) || (_position.x > 945.0f))
 	{
-		_velocity_x *= -1;
+		_velocity.x *= -1.0f;
 	}
-	if (pos[1] < 215)
+	if (_position.y < 215.0f)
 	{
-		_velocity_y *= -1;
+		_velocity.y *= -1.0f;
 	}
 }
 
 void Parent_ball::drawline(CDC* pDC)
 {
-	const float dirx = TraceDragPos[0] - StartDragPos[0];
-	const float diry = TraceDragPos[1] - StartDragPos[1];
-
-	float magnitude = std::sqrt(dirx * dirx + diry * diry);
+	const Vector2 dragDirection = _traceDragPosition - _startDragPosition;
+	float magnitude = dragDirection.Length();
 
 	if (magnitude == 0) return;
 
-	const float ratioX = dirx / magnitude;
-	float ratioY = diry / magnitude;
+	const Vector2 direction = dragDirection / magnitude;
+	const float ratioX = direction.x;
+	float ratioY = direction.y;
 
 	//힘의 값을 MinPower ~ MaxPower 사이로 조정
 	magnitude = std::clamp(magnitude, MIN_POWER, MAX_POWER);
@@ -150,8 +139,8 @@ void Parent_ball::drawline(CDC* pDC)
 	magnitude = std::clamp(magnitude, CONVERT_MIN_POWER, CONVERT_MAX_POWER);
 
 	//선의 좌표들
-	float x1 = pos[0];
-	float y1 = pos[1];
+	float x1 = _position.x;
+	float y1 = _position.y;
 
 	float line_x = 1.0f;
 	float line_y = 1.0f;
@@ -182,8 +171,7 @@ void Parent_ball::drawline(CDC* pDC)
 
 void Parent_ball::movement(float timeScale)
 {
-	_velocity_y += _gravity * timeScale;
-	pos[0] = pos[0] + _velocity_x * _force * timeScale;
-	pos[1] = pos[1] + _velocity_y * _force * timeScale;
+	_velocity.y += _gravity * timeScale;
+	_position += _velocity * (_force * timeScale);
 
 }

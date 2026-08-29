@@ -1,15 +1,17 @@
 #pragma once
+
+#include "Vector2.h"
 class TargetBall
 {
 public:
 	TargetBall() {}
 	~TargetBall() {}
 public:
-	float x, y;
+	Vector2 position;
 	float size = 10.0f;
 public:
 	void draw(CDC* pDC);
-	void setting(float px, float py);
+	void setting(Vector2 newPosition);
 };
 
 class TargetBallList

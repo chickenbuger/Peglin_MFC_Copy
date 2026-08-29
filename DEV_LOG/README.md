@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 1 |
-| 현재 버전 | Version 1.2 |
+| 현재 버전 | Version 1.3 |
 | 스프린트 목표 | 물리·게임 흐름의 구조 분리와 검증 가능한 Peglin형 충돌 개선 |
-| 상태 | 진행 중 — 게임 모델과 MFC 뷰 책임 분리 완료 |
+| 상태 | 진행 중 — 2D 벡터 값 타입과 raw 좌표 API 제거 완료 |
 
 ## 문서
 
@@ -39,6 +39,7 @@
 - [Version 0.15 — Sprint 0 실행·안정성 검증 완료](./Version_0.15.md)
 - [Version 1.1 — 명시적 게임 상태 전이](./Version_1.1.md)
 - [Version 1.2 — 게임 모델과 뷰 책임 분리](./Version_1.2.md)
+- [Version 1.3 — 2D 벡터 값 타입 도입](./Version_1.3.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [빌드 환경 및 명령](../BUILDING.md)

@@ -10,16 +10,15 @@ void TargetBall::draw(CDC* pDC)
 	pDC->SelectObject(&brush);
 	pDC->SelectObject(GetStockObject(NULL_PEN));
 	pDC->Ellipse(
-		static_cast<int>(std::lround(x - size)),
-		static_cast<int>(std::lround(y - size)),
-		static_cast<int>(std::lround(x + size)),
-		static_cast<int>(std::lround(y + size)));
+		static_cast<int>(std::lround(position.x - size)),
+		static_cast<int>(std::lround(position.y - size)),
+		static_cast<int>(std::lround(position.x + size)),
+		static_cast<int>(std::lround(position.y + size)));
 
 	pDC->RestoreDC(savedDc);
 }
 
-void TargetBall::setting(float px, float py)
+void TargetBall::setting(Vector2 newPosition)
 {
-	x = px;
-	y = py;
+	position = newPosition;
 }

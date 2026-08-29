@@ -22,9 +22,9 @@ public:
 	void ResetGame();
 	void ResetBallToAiming();
 
-	bool BeginAim(float x, float y);
-	void UpdateAim(float x, float y);
-	bool ReleaseShot(float x, float y);
+	bool BeginAim(Vector2 position);
+	void UpdateAim(Vector2 position);
+	bool ReleaseShot(Vector2 position);
 	void CancelAim();
 	bool TogglePause();
 
