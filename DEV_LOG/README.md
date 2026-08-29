@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 4 |
-| 현재 버전 | Version 4.3 |
+| 현재 버전 | Version 4.4 |
 | 스프린트 목표 | 사용자 설정·플레이 기록 보존과 배포 가능한 실행 환경 확립 |
-| 상태 | Sprint 4 P0 3/4 완료 — 저장·배포 자동화 테스트 확장 예정 |
+| 상태 | Sprint 4 P0 4/4 구현 완료 — 최종 실행·GDI·패키지 검증 예정 |
 
 ## 문서
 
@@ -60,6 +60,7 @@
 - [Version 4.1 — 사용자 설정 저장·불러오기](./Version_4.1.md)
 - [Version 4.2 — 스테이지별 최고 기록](./Version_4.2.md)
 - [Version 4.3 — Release x64 배포 패키징·사전 검사](./Version_4.3.md)
+- [Version 4.4 — 저장·배포 자동화 테스트 확장](./Version_4.4.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

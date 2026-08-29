@@ -140,8 +140,18 @@ CChildView::CChildView()
 	: _settingsStore(GetDefaultGameSettingsPath()),
 	_recordStore(GetDefaultGameRecordPath())
 {
-	_options = _settingsStore.Load().options;
-	_records = _recordStore.Load().records;
+	const SettingsLoadResult settings = _settingsStore.Load();
+	_options = settings.options;
+	if (settings.state == SettingsLoadState::Migrated)
+	{
+		_settingsSaveFailed = !_settingsStore.Save(_options);
+	}
+	const RecordLoadResult records = _recordStore.Load();
+	_records = records.records;
+	if (records.state == RecordLoadState::Migrated)
+	{
+		_recordSaveFailed = !_recordStore.Save(_records);
+	}
 }
 
 CChildView::~CChildView()

@@ -8,6 +8,7 @@
 enum class SettingsLoadState
 {
 	Loaded,
+	Migrated,
 	Missing,
 	Invalid,
 	IoError

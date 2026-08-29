@@ -115,6 +115,7 @@ Set-Content -LiteralPath (Join-Path $packageDirectory 'SHA256SUMS.txt') -Value $
 
 & (Join-Path $packageDirectory 'Preflight.ps1') -PackageRoot $packageDirectory
 Compress-Archive -Path (Join-Path $packageDirectory '*') -DestinationPath $zipPath -CompressionLevel Optimal
+& (Join-Path $PSScriptRoot 'Test-ReleasePackage.ps1') -ZipPath $zipPath -ExpectedVersion $Version
 
 Write-Output "PACKAGE PASS: $packageDirectory"
 Write-Output "ZIP: $zipPath"

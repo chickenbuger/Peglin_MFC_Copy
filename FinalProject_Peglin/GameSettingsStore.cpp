@@ -83,6 +83,56 @@ namespace
 		return false;
 	}
 
+	bool ParseLegacyDifficulty(std::string_view value, GameDifficulty& difficulty) noexcept
+	{
+		if (value == "0")
+		{
+			difficulty = GameDifficulty::Easy;
+			return true;
+		}
+		if (value == "1")
+		{
+			difficulty = GameDifficulty::Normal;
+			return true;
+		}
+		if (value == "2")
+		{
+			difficulty = GameDifficulty::Hard;
+			return true;
+		}
+		return false;
+	}
+
+	bool ParseLegacySound(std::string_view value, bool& soundEnabled) noexcept
+	{
+		if (value == "true")
+		{
+			soundEnabled = true;
+			return true;
+		}
+		if (value == "false")
+		{
+			soundEnabled = false;
+			return true;
+		}
+		return false;
+	}
+
+	bool ParseLegacyPegColor(std::string_view value, PegColorMode& colorMode) noexcept
+	{
+		if (value == "0")
+		{
+			colorMode = PegColorMode::Standard;
+			return true;
+		}
+		if (value == "1")
+		{
+			colorMode = PegColorMode::HighContrast;
+			return true;
+		}
+		return false;
+	}
+
 	bool ReplaceFile(const std::filesystem::path& temporaryPath, const std::filesystem::path& finalPath)
 	{
 #ifdef _WIN32
@@ -162,13 +212,9 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		const auto sound = values.find("sound_enabled");
 		const auto color = values.find("peg_color_mode");
 		if (version == values.end()
-			|| version->second != SETTINGS_VERSION
 			|| difficulty == values.end()
 			|| sound == values.end()
-			|| color == values.end()
-			|| !ParseDifficulty(difficulty->second, result.options.difficulty)
-			|| !ParseSound(sound->second, result.options.soundEnabled)
-			|| !ParsePegColor(color->second, result.options.pegColorMode))
+			|| color == values.end())
 		{
 			result.options = GameOptions{};
 			result.state = SettingsLoadState::Invalid;
@@ -176,8 +222,35 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 			return result;
 		}
 
-		result.state = SettingsLoadState::Loaded;
-		result.message.clear();
+		if (version->second == SETTINGS_VERSION)
+		{
+			if (!ParseDifficulty(difficulty->second, result.options.difficulty)
+				|| !ParseSound(sound->second, result.options.soundEnabled)
+				|| !ParsePegColor(color->second, result.options.pegColorMode))
+			{
+				result.options = GameOptions{};
+				result.state = SettingsLoadState::Invalid;
+				result.message = "settings value is invalid";
+				return result;
+			}
+			result.state = SettingsLoadState::Loaded;
+			result.message.clear();
+			return result;
+		}
+
+		if (version->second == "0"
+			&& ParseLegacyDifficulty(difficulty->second, result.options.difficulty)
+			&& ParseLegacySound(sound->second, result.options.soundEnabled)
+			&& ParseLegacyPegColor(color->second, result.options.pegColorMode))
+		{
+			result.state = SettingsLoadState::Migrated;
+			result.message = "legacy settings migrated from version 0";
+			return result;
+		}
+
+		result.options = GameOptions{};
+		result.state = SettingsLoadState::Invalid;
+		result.message = "settings version or legacy value is invalid";
 		return result;
 	}
 	catch (const std::exception& exception)

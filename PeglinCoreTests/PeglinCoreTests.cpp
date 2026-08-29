@@ -627,6 +627,21 @@ namespace
 		const SettingsLoadResult unsupportedVersion = store.Load();
 		Check(unsupportedVersion.state == SettingsLoadState::Invalid, "unsupported settings version is rejected");
 		Check(unsupportedVersion.options.difficulty == GameDifficulty::Normal, "unsupported version recovers defaults");
+		{
+			std::ofstream legacy(settingsPath, std::ios::trunc);
+			legacy
+				<< "peglin_settings_version=0\n"
+				<< "difficulty=2\n"
+				<< "sound_enabled=false\n"
+				<< "peg_color_mode=1\n";
+		}
+		const SettingsLoadResult migrated = store.Load();
+		Check(migrated.state == SettingsLoadState::Migrated, "legacy settings report migration state");
+		Check(migrated.options.difficulty == GameDifficulty::Hard, "legacy numeric difficulty migrates");
+		Check(!migrated.options.soundEnabled, "legacy boolean sound migrates");
+		Check(migrated.options.pegColorMode == PegColorMode::HighContrast, "legacy numeric color mode migrates");
+		Check(store.Save(migrated.options), "migrated settings rewrite as version one");
+		Check(store.Load().state == SettingsLoadState::Loaded, "rewritten settings load as current version");
 
 		{
 			std::ofstream incomplete(settingsPath, std::ios::trunc);
@@ -635,6 +650,21 @@ namespace
 		const SettingsLoadResult incomplete = store.Load();
 		Check(incomplete.state == SettingsLoadState::Invalid, "incomplete settings file is rejected");
 		Check(incomplete.options.soundEnabled, "incomplete settings recover defaults");
+		{
+			std::ofstream duplicate(settingsPath, std::ios::trunc);
+			duplicate
+				<< "peglin_settings_version=1\n"
+				<< "difficulty=normal\n"
+				<< "difficulty=hard\n"
+				<< "sound_enabled=1\n"
+				<< "peg_color_mode=standard\n";
+		}
+		Check(store.Load().state == SettingsLoadState::Invalid, "duplicate settings key is rejected");
+		{
+			std::ofstream malformed(settingsPath, std::ios::trunc);
+			malformed << "peglin_settings_version=1\ndifficulty\n";
+		}
+		Check(store.Load().state == SettingsLoadState::Invalid, "malformed settings line is rejected");
 
 		const std::filesystem::path blockedParent = testDirectory / "blocked-parent";
 		{
@@ -727,6 +757,23 @@ namespace
 		}
 		Check(store.Load().state == RecordLoadState::Invalid, "unsupported record version is rejected");
 		{
+			std::ofstream legacy(recordPath, std::ios::trunc);
+			legacy
+				<< "peglin_records_version=0\n"
+				<< "record=stage-1|8800|10|2\n"
+				<< "record=stage-2|1200|4|0\n";
+		}
+		const RecordLoadResult migratedRecords = store.Load();
+		Check(migratedRecords.state == RecordLoadState::Migrated, "legacy records report migration state");
+		Check(migratedRecords.records.GetAll().size() == 2, "legacy records preserve every stage");
+		const StageRecord migratedStage = migratedRecords.records.Get("stage-1", GameDifficulty::Normal);
+		Check(migratedStage.highScore == 8800, "legacy record score migrates");
+		Check(migratedStage.bestCombo == 10, "legacy record combo migrates");
+		Check(migratedStage.clearCount == 2, "legacy record clears migrate");
+		Check(migratedRecords.records.Get("stage-1", GameDifficulty::Hard).highScore == 0, "legacy record defaults to normal difficulty");
+		Check(store.Save(migratedRecords.records), "migrated records rewrite as version one");
+		Check(store.Load().state == RecordLoadState::Loaded, "rewritten records load as current version");
+		{
 			std::ofstream invalidDifficulty(recordPath, std::ios::trunc);
 			invalidDifficulty << "peglin_records_version=1\nrecord=stage-1|nightmare|10|1|1\n";
 		}
@@ -746,6 +793,16 @@ namespace
 				<< "record=stage-1|normal|20|2|1\n";
 		}
 		Check(store.Load().state == RecordLoadState::Invalid, "duplicate record key is rejected");
+		{
+			std::ofstream overflow(recordPath, std::ios::trunc);
+			overflow << "peglin_records_version=1\nrecord=stage-1|normal|999999999999|1|0\n";
+		}
+		Check(store.Load().state == RecordLoadState::Invalid, "overflowing record integer is rejected");
+		{
+			std::ofstream malformed(recordPath, std::ios::trunc);
+			malformed << "peglin_records_version=1\nnot-a-record\n";
+		}
+		Check(store.Load().state == RecordLoadState::Invalid, "malformed record line is rejected");
 
 		const std::filesystem::path blockedParent = testDirectory / "blocked-parent";
 		{

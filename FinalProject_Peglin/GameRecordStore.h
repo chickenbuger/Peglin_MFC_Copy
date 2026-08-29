@@ -36,6 +36,7 @@ private:
 enum class RecordLoadState
 {
 	Loaded,
+	Migrated,
 	Missing,
 	Invalid,
 	IoError

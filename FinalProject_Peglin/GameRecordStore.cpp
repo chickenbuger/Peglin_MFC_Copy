@@ -213,7 +213,8 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 		{
 			line.pop_back();
 		}
-		if (line != std::string(RECORDS_VERSION_KEY) + '=' + std::string(RECORDS_VERSION))
+		const bool legacyVersion = line == std::string(RECORDS_VERSION_KEY) + "=0";
+		if (!legacyVersion && line != std::string(RECORDS_VERSION_KEY) + '=' + std::string(RECORDS_VERSION))
 		{
 			result.state = RecordLoadState::Invalid;
 			result.message = "records version is invalid";
@@ -241,17 +242,29 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 
 			const std::vector<std::string_view> fields = SplitRecord(std::string_view(line).substr(7));
 			StageRecord record;
-			if (fields.size() != 5
+			const std::size_t expectedFields = legacyVersion ? 4 : 5;
+			if (fields.size() != expectedFields
 				|| !IsValidStageId(fields[0])
-				|| !ParseDifficulty(fields[1], record.difficulty)
-				|| !ParseNonNegativeInt(fields[2], record.highScore)
-				|| !ParseNonNegativeInt(fields[3], record.bestCombo)
-				|| !ParseNonNegativeInt(fields[4], record.clearCount))
+				|| (!legacyVersion && !ParseDifficulty(fields[1], record.difficulty)))
 			{
 				result = RecordLoadResult{};
 				result.state = RecordLoadState::Invalid;
 				result.message = "record value is invalid";
 				return result;
+			}
+			const std::size_t scoreIndex = legacyVersion ? 1 : 2;
+			if (!ParseNonNegativeInt(fields[scoreIndex], record.highScore)
+				|| !ParseNonNegativeInt(fields[scoreIndex + 1], record.bestCombo)
+				|| !ParseNonNegativeInt(fields[scoreIndex + 2], record.clearCount))
+			{
+				result = RecordLoadResult{};
+				result.state = RecordLoadState::Invalid;
+				result.message = "record value is invalid";
+				return result;
+			}
+			if (legacyVersion)
+			{
+				record.difficulty = GameDifficulty::Normal;
 			}
 			record.stageId = fields[0];
 			if (!keys.emplace(record.stageId, record.difficulty).second)
@@ -271,8 +284,8 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 			}
 		}
 
-		result.state = RecordLoadState::Loaded;
-		result.message.clear();
+		result.state = legacyVersion ? RecordLoadState::Migrated : RecordLoadState::Loaded;
+		result.message = legacyVersion ? "legacy records migrated from version 0" : "";
 		return result;
 	}
 	catch (const std::exception& exception)
