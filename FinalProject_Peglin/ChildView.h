@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Background.h"
+#include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GameWorld.h"
 
@@ -81,6 +82,7 @@ private:
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
 	void SaveOptions();
+	void RecordResult(bool cleared);
 
 	Background _background;
 	GameWorld _game;
@@ -90,7 +92,10 @@ private:
 	std::vector<FeedbackAnimation> _feedbackAnimations;
 	GameOptions _options;
 	GameSettingsStore _settingsStore;
+	GameRecordStore _recordStore;
+	GameRecordBook _records;
 	bool _settingsSaveFailed = false;
+	bool _recordSaveFailed = false;
 	ScreenMode _screenMode = ScreenMode::StageSelection;
 	std::optional<GameResultSummary> _resultSummary;
 };

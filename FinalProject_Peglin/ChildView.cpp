@@ -137,9 +137,11 @@ namespace
 // CChildView
 
 CChildView::CChildView()
-	: _settingsStore(GetDefaultGameSettingsPath())
+	: _settingsStore(GetDefaultGameSettingsPath()),
+	_recordStore(GetDefaultGameRecordPath())
 {
 	_options = _settingsStore.Load().options;
+	_records = _recordStore.Load().records;
 }
 
 CChildView::~CChildView()
@@ -170,6 +172,7 @@ END_MESSAGE_MAP()
 void CChildView::gameclear()
 {
 	_resultSummary = _game.GetResultSummary();
+	RecordResult(true);
 	_screenMode = ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
@@ -178,6 +181,7 @@ void CChildView::gameclear()
 void CChildView::gameover()
 {
 	_resultSummary = _game.GetResultSummary();
+	RecordResult(false);
 	_screenMode = ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
@@ -568,7 +572,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	bodyFont.CreatePointFont(170, _T("맑은 고딕"));
 	deviceContext->SelectObject(&bodyFont);
 	deviceContext->SetTextColor(RGB(235, 235, 245));
-	deviceContext->TextOut(490, 285, _T("[1] Forgotten Forest"));
+	deviceContext->TextOut(490, 255, _T("[1] Forgotten Forest"));
 	const StageDefinition stageOne = ApplyDifficulty(
 		CreateDefaultStageDefinition(),
 		_options.difficulty);
@@ -577,9 +581,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		_T("48 Pegs · Enemy HP %d · %d Steps"),
 		static_cast<int>(std::lround(stageOne.rules.enemyHealth)),
 		stageOne.rules.enemyStepsBeforeAttack);
-	deviceContext->TextOut(490, 355, stageOneText);
+	deviceContext->TextOut(490, 310, stageOneText);
 	deviceContext->SetTextColor(RGB(170, 210, 255));
-	deviceContext->TextOut(490, 455, _T("[2] Dense Cavern"));
+	deviceContext->TextOut(490, 415, _T("[2] Dense Cavern"));
 	const StageDefinition stageTwo = ApplyDifficulty(
 		CreateChallengeStageDefinition(),
 		_options.difficulty);
@@ -588,7 +592,28 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		_T("40 Pegs · Enemy HP %d · %d Steps"),
 		static_cast<int>(std::lround(stageTwo.rules.enemyHealth)),
 		stageTwo.rules.enemyStepsBeforeAttack);
-	deviceContext->TextOut(490, 525, stageTwoText);
+	deviceContext->TextOut(490, 470, stageTwoText);
+
+	CFont recordFont;
+	recordFont.CreatePointFont(120, _T("맑은 고딕"));
+	deviceContext->SelectObject(&recordFont);
+	deviceContext->SetTextColor(RGB(145, 185, 160));
+	const StageRecord stageOneRecord = _records.Get("stage-1", _options.difficulty);
+	CString stageOneRecordText;
+	stageOneRecordText.Format(
+		_T("기록 %d · 콤보 %d · 클리어 %d"),
+		stageOneRecord.highScore,
+		stageOneRecord.bestCombo,
+		stageOneRecord.clearCount);
+	deviceContext->TextOut(490, 350, stageOneRecordText);
+	const StageRecord stageTwoRecord = _records.Get("stage-2", _options.difficulty);
+	CString stageTwoRecordText;
+	stageTwoRecordText.Format(
+		_T("기록 %d · 콤보 %d · 클리어 %d"),
+		stageTwoRecord.highScore,
+		stageTwoRecord.bestCombo,
+		stageTwoRecord.clearCount);
+	deviceContext->TextOut(490, 510, stageTwoRecordText);
 
 	CFont guideFont;
 	guideFont.CreatePointFont(130, _T("맑은 고딕"));
@@ -600,8 +625,8 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		DifficultyText(_options.difficulty).GetString(),
 		_options.soundEnabled ? _T("켜짐") : _T("꺼짐"),
 		PegColorModeText(_options.pegColorMode).GetString());
-	deviceContext->TextOut(490, 615, currentOptions);
-	deviceContext->TextOut(490, 670, _T("[1]/[2] 시작    [O] 옵션"));
+	deviceContext->TextOut(490, 585, currentOptions);
+	deviceContext->TextOut(490, 635, _T("[1]/[2] 시작    [O] 옵션"));
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -700,10 +725,27 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 	}
 
 	CFont guideFont;
-	guideFont.CreatePointFont(140, _T("맑은 고딕"));
+	guideFont.CreatePointFont(125, _T("맑은 고딕"));
 	deviceContext->SelectObject(&guideFont);
+	if (_resultSummary.has_value())
+	{
+		const StageRecord record = _records.Get(_resultSummary->stageId, _options.difficulty);
+		CString recordText;
+		recordText.Format(
+			_T("RECORD %d · COMBO %d · CLEARS %d"),
+			record.highScore,
+			record.bestCombo,
+			record.clearCount);
+		deviceContext->SetTextColor(RGB(145, 200, 160));
+		deviceContext->TextOut(490, 540, recordText);
+	}
 	deviceContext->SetTextColor(RGB(170, 210, 255));
 	deviceContext->TextOut(490, 620, _T("[R] 다시 도전    [S] 스테이지 선택"));
+	if (_recordSaveFailed)
+	{
+		deviceContext->SetTextColor(RGB(255, 120, 120));
+		deviceContext->TextOut(490, 660, _T("기록 저장 실패 · 현재 실행의 기록은 화면에만 유지됩니다"));
+	}
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -724,6 +766,24 @@ bool CChildView::StartStage(std::string_view stageId)
 void CChildView::SaveOptions()
 {
 	_settingsSaveFailed = !_settingsStore.Save(_options);
+}
+
+void CChildView::RecordResult(bool cleared)
+{
+	if (!_resultSummary.has_value())
+	{
+		return;
+	}
+
+	if (_records.ApplyResult(
+		_resultSummary->stageId,
+		_options.difficulty,
+		_resultSummary->totalScore,
+		_resultSummary->bestCombo,
+		cleared))
+	{
+		_recordSaveFailed = !_recordStore.Save(_records);
+	}
 }
 
 void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)

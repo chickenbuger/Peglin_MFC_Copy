@@ -10,6 +10,7 @@
 
 #include "GameWorld.h"
 #include "GameLayout.h"
+#include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "PegLayout.h"
 #include "Physics.h"
@@ -652,6 +653,117 @@ namespace
 		std::filesystem::remove(testDirectory, cleanupError);
 	}
 
+	void TestStageRecordPersistence()
+	{
+		GameRecordBook records;
+		const StageRecord empty = records.Get("stage-1", GameDifficulty::Normal);
+		Check(empty.highScore == 0, "missing stage record has zero score");
+		Check(empty.bestCombo == 0, "missing stage record has zero combo");
+		Check(empty.clearCount == 0, "missing stage record has zero clears");
+		Check(!records.ApplyResult("bad|stage", GameDifficulty::Normal, 10, 1, true), "invalid stage id is not recorded");
+		Check(!records.ApplyResult("stage-1", GameDifficulty::Normal, -1, 1, false), "negative score is not recorded");
+		Check(!records.ApplyResult("stage-1", GameDifficulty::Normal, 0, 0, false), "empty defeat does not create a record");
+
+		Check(records.ApplyResult("stage-1", GameDifficulty::Normal, 500, 4, false), "first scored run creates a record");
+		StageRecord normal = records.Get("stage-1", GameDifficulty::Normal);
+		Check(normal.highScore == 500, "first run stores high score");
+		Check(normal.bestCombo == 4, "first run stores best combo");
+		Check(normal.clearCount == 0, "defeat does not increment clear count");
+		Check(!records.ApplyResult("stage-1", GameDifficulty::Normal, 300, 2, false), "lower defeat does not overwrite a record");
+		normal = records.Get("stage-1", GameDifficulty::Normal);
+		Check(normal.highScore == 500 && normal.bestCombo == 4, "lower result preserves both records");
+
+		Check(records.ApplyResult("stage-1", GameDifficulty::Normal, 400, 3, true), "victory updates clear count even with lower stats");
+		normal = records.Get("stage-1", GameDifficulty::Normal);
+		Check(normal.highScore == 500, "lower victory preserves high score");
+		Check(normal.bestCombo == 4, "lower victory preserves best combo");
+		Check(normal.clearCount == 1, "victory increments clear count");
+		Check(records.ApplyResult("stage-1", GameDifficulty::Normal, 900, 8, true), "better victory updates all record values");
+		normal = records.Get("stage-1", GameDifficulty::Normal);
+		Check(normal.highScore == 900, "better victory replaces high score");
+		Check(normal.bestCombo == 8, "better victory replaces best combo");
+		Check(normal.clearCount == 2, "second victory increments clear count again");
+
+		Check(records.ApplyResult("stage-1", GameDifficulty::Hard, 700, 6, true), "difficulty creates an isolated record");
+		const StageRecord hard = records.Get("stage-1", GameDifficulty::Hard);
+		Check(hard.highScore == 700 && hard.clearCount == 1, "hard record retains its own result");
+		Check(records.Get("stage-1", GameDifficulty::Normal).highScore == 900, "normal record remains isolated from hard");
+		Check(records.ApplyResult("stage-2", GameDifficulty::Normal, 1200, 10, true), "stage id creates an isolated record");
+		Check(records.Get("stage-2", GameDifficulty::Normal).highScore == 1200, "second stage retains its own result");
+
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_RecordStoreTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path recordPath = testDirectory / "nested" / "records.v1.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove(recordPath, cleanupError);
+		std::filesystem::remove(recordPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(recordPath.parent_path(), cleanupError);
+		std::filesystem::remove(testDirectory, cleanupError);
+
+		GameRecordStore store(recordPath);
+		Check(store.Load().state == RecordLoadState::Missing, "missing records use a distinct load state");
+		std::string saveError;
+		Check(store.Save(records, &saveError), "record save creates missing parent directories");
+		Check(saveError.empty(), "successful record save clears its error");
+		const RecordLoadResult loaded = store.Load();
+		Check(loaded.state == RecordLoadState::Loaded, "valid records load from disk");
+		Check(loaded.records.GetAll().size() == 3, "record load restores every stage and difficulty key");
+		const StageRecord loadedNormal = loaded.records.Get("stage-1", GameDifficulty::Normal);
+		Check(loadedNormal.highScore == 900, "record file preserves high score");
+		Check(loadedNormal.bestCombo == 8, "record file preserves best combo");
+		Check(loadedNormal.clearCount == 2, "record file preserves clear count");
+		Check(loaded.records.Get("stage-1", GameDifficulty::Hard).highScore == 700, "record file preserves difficulty isolation");
+		Check(loaded.records.Get("stage-2", GameDifficulty::Normal).highScore == 1200, "record file preserves stage isolation");
+
+		GameRecordBook updated = loaded.records;
+		Check(updated.ApplyResult("stage-2", GameDifficulty::Normal, 1500, 11, false), "record book accepts a later improvement");
+		Check(store.Save(updated), "record save replaces an existing file");
+		Check(store.Load().records.Get("stage-2", GameDifficulty::Normal).highScore == 1500, "replacement record file contains new high score");
+
+		{
+			std::ofstream incompatible(recordPath, std::ios::trunc);
+			incompatible << "peglin_records_version=999\n";
+		}
+		Check(store.Load().state == RecordLoadState::Invalid, "unsupported record version is rejected");
+		{
+			std::ofstream invalidDifficulty(recordPath, std::ios::trunc);
+			invalidDifficulty << "peglin_records_version=1\nrecord=stage-1|nightmare|10|1|1\n";
+		}
+		const RecordLoadResult unknownDifficulty = store.Load();
+		Check(unknownDifficulty.state == RecordLoadState::Invalid, "unknown record difficulty is rejected");
+		Check(unknownDifficulty.records.GetAll().empty(), "invalid record file does not leak partial data");
+		{
+			std::ofstream negative(recordPath, std::ios::trunc);
+			negative << "peglin_records_version=1\nrecord=stage-1|normal|-1|1|0\n";
+		}
+		Check(store.Load().state == RecordLoadState::Invalid, "negative record value is rejected");
+		{
+			std::ofstream duplicate(recordPath, std::ios::trunc);
+			duplicate
+				<< "peglin_records_version=1\n"
+				<< "record=stage-1|normal|10|1|0\n"
+				<< "record=stage-1|normal|20|2|1\n";
+		}
+		Check(store.Load().state == RecordLoadState::Invalid, "duplicate record key is rejected");
+
+		const std::filesystem::path blockedParent = testDirectory / "blocked-parent";
+		{
+			std::ofstream blocker(blockedParent, std::ios::trunc);
+			blocker << "file blocks directory creation";
+		}
+		GameRecordStore blockedStore(blockedParent / "records.v1.ini");
+		std::string blockedError;
+		Check(!blockedStore.Save(records, &blockedError), "record save fails safely for an unwritable path shape");
+		Check(!blockedError.empty(), "failed record save reports an error");
+
+		std::filesystem::remove(blockedParent, cleanupError);
+		std::filesystem::remove(recordPath, cleanupError);
+		std::filesystem::remove(recordPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(recordPath.parent_path(), cleanupError);
+		std::filesystem::remove(testDirectory, cleanupError);
+	}
+
 	void TestStageRulesConfigureWorld()
 	{
 		StageDefinition stage = CreateDefaultStageDefinition();
@@ -970,6 +1082,7 @@ int main()
 	TestStageSelectionAndResultSummary();
 	TestGameOptionsAndDifficulty();
 	TestGameSettingsPersistence();
+	TestStageRecordPersistence();
 	TestStageRulesConfigureWorld();
 	TestScoreCancellationAndContinuation();
 	TestBombDoesNotChainSecondaryEffects();
