@@ -9,14 +9,40 @@
 
 namespace
 {
-	constexpr float PLAYER_DAMAGE = 20.0f;
 	constexpr float COLLISION_EPSILON = 0.001f;
 	constexpr int SCORE_PER_COMBO_STEP = 100;
+
+	StageDefinition LoadDefaultStage()
+	{
+		StageLoadResult result = LoadStageDefinition("stage-1");
+		return result.IsSuccess()
+			? std::move(*result.stage)
+			: CreateDefaultStageDefinition();
+	}
+
+	StageDefinition CreateCustomStage(PegLayoutDefinition pegLayout)
+	{
+		StageDefinition stage = LoadDefaultStage();
+		stage.id = "custom";
+		stage.displayName = "Custom Stage";
+		stage.pegLayout = std::move(pegLayout);
+		return stage;
+	}
 }
 
+GameWorld::GameWorld()
+	: GameWorld(LoadDefaultStage())
+{
+}
 
 GameWorld::GameWorld(PegLayoutDefinition pegLayout)
-	: _pegLayout(std::move(pegLayout))
+	: GameWorld(CreateCustomStage(std::move(pegLayout)))
+{
+}
+
+GameWorld::GameWorld(StageDefinition stage)
+	: _stage(std::move(stage)),
+	_pegRestitution(_stage.rules.pegRestitution)
 {
 	ResetGame();
 }
@@ -64,9 +90,12 @@ void GameWorld::ResetGame()
 	_feedback = {};
 	_score = {};
 	_terminalResultReported = false;
+	_pegRestitution = _stage.rules.pegRestitution;
 	_ball.Init();
 	_player.Init();
+	_player.SetHp(_stage.rules.playerHealth);
 	_enemy.Init();
+	_enemy.SetHp(_stage.rules.enemyHealth);
 	InitializeTargets();
 }
 
@@ -167,7 +196,7 @@ void GameWorld::SetPegRestitution(float restitution) noexcept
 void GameWorld::InitializeTargets()
 {
 	_targetBallList._targetBallList.RemoveAll();
-	for (const PegDefinition& definition : _pegLayout.pegs)
+	for (const PegDefinition& definition : _stage.pegLayout.pegs)
 	{
 		TargetBall ball;
 		ball.setting(definition);
@@ -260,7 +289,7 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
 {
 	constexpr float POSITION_EPSILON_SQUARED = 0.0001f;
-	for (const PegDefinition& definition : _pegLayout.pegs)
+	for (const PegDefinition& definition : _stage.pegLayout.pegs)
 	{
 		if ((definition.position - excludedPosition).LengthSquared() <= POSITION_EPSILON_SQUARED)
 		{
@@ -297,14 +326,14 @@ void GameWorld::ResolveTurn()
 	_score.currentShot = 0;
 	_score.currentCombo = 0;
 
-	if (_enemy.GetCount() < GameLayout::EnemyStepsBeforeAttack)
+	if (_enemy.GetCount() < _stage.rules.enemyStepsBeforeAttack)
 	{
-		_enemy.SetX(_enemy.GetX() - GameLayout::EnemyStep);
+		_enemy.SetX(_enemy.GetX() - _stage.rules.enemyStep);
 	}
 	else
 	{
-		_player.SetHp(_player.GetHp() - PLAYER_DAMAGE);
-		_feedback.lastPlayerDamage = PLAYER_DAMAGE;
+		_player.SetHp(_player.GetHp() - _stage.rules.playerDamage);
+		_feedback.lastPlayerDamage = _stage.rules.playerDamage;
 	}
 
 	_enemy.SetCount(_enemy.GetCount() + 1);

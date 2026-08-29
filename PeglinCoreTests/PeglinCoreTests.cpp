@@ -421,6 +421,97 @@ namespace
 		}
 		Check(restoredNormalFound, "refresh restores the removed peg with its original type");
 	}
+
+	void TestStageCatalogAndValidation()
+	{
+		const StageLoadResult defaultResult = LoadStageDefinition("stage-1");
+		Check(defaultResult.IsSuccess(), "stage catalog loads stage-1");
+		Check(defaultResult.stage->id == "stage-1", "loaded default stage keeps its id");
+		Check(defaultResult.stage->pegLayout.pegs.size() == 48, "loaded default stage provides its board");
+		Check(Near(defaultResult.stage->rules.enemyHealth, 20.0f), "loaded default stage provides enemy health");
+
+		const StageLoadResult challengeResult = LoadStageDefinition("stage-2");
+		Check(challengeResult.IsSuccess(), "stage catalog loads stage-2");
+		Check(challengeResult.stage->pegLayout.pegs.size() == 40, "challenge stage provides a distinct board");
+		Check(Near(challengeResult.stage->rules.enemyHealth, 30.0f), "challenge stage provides stronger enemy");
+		Check(challengeResult.stage->rules.enemyStepsBeforeAttack == 6, "challenge stage provides faster attack timing");
+
+		const StageLoadResult missingResult = LoadStageDefinition("missing-stage");
+		Check(!missingResult.IsSuccess(), "unknown stage id fails safely");
+		Check(missingResult.validation.error == StageLoadError::NotFound, "unknown stage reports NotFound");
+		Check(!missingResult.stage.has_value(), "failed stage load does not return partial data");
+
+		StageDefinition invalid = CreateDefaultStageDefinition();
+		invalid.id.clear();
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::EmptyId, "empty stage id is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs.clear();
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::EmptyPegLayout, "empty stage board is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs[0].position = { 0.0f, 0.0f };
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::PegOutOfBounds, "out-of-board peg is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs[1].position = invalid.pegLayout.pegs[0].position;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::DuplicatePegPosition, "duplicate peg position is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.rules.enemyHealth = 0.0f;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyHealth, "non-positive enemy health is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.rules.enemyStepsBeforeAttack = 0;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemySteps, "non-positive attack timing is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.rules.pegRestitution = 2.0f;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPegRestitution, "out-of-range stage restitution is rejected");
+	}
+
+	void TestStageRulesConfigureWorld()
+	{
+		StageDefinition stage = CreateDefaultStageDefinition();
+		stage.id = "test-stage";
+		stage.displayName = "Test Stage";
+		stage.pegLayout.pegs = { { { 500.0f, 500.0f }, PegType::Normal } };
+		stage.rules.playerHealth = 75.0f;
+		stage.rules.enemyHealth = 9.0f;
+		stage.rules.playerDamage = 15.0f;
+		stage.rules.enemyStepsBeforeAttack = 2;
+		stage.rules.enemyStep = 10.0f;
+		stage.rules.pegRestitution = 0.5f;
+		Check(ValidateStageDefinition(stage).IsValid(), "custom stage rules validate");
+
+		GameWorld world(stage);
+		Check(world.GetStage().id == "test-stage", "game world retains loaded stage identity");
+		Check(world.GetTargets()._targetBallList.GetCount() == 1, "stage board configures game targets");
+		Check(Near(world.GetPlayer().GetHp(), 75.0f), "stage configures player health");
+		Check(Near(world.GetEnemy().GetHp(), 9.0f), "stage configures enemy health");
+		Check(Near(world.GetPegRestitution(), 0.5f), "stage configures peg restitution");
+
+		const float initialEnemyX = world.GetEnemy().GetX();
+		Launch(world);
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetEnemy().GetX(), initialEnemyX - 10.0f), "stage configures enemy movement step");
+		Check(Near(world.GetPlayer().GetHp(), 75.0f), "enemy movement turn does not damage player early");
+
+		world.GetEnemy().SetCount(2);
+		Launch(world);
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetPlayer().GetHp(), 60.0f), "stage configures player damage per enemy attack");
+
+		world.SetPegRestitution(1.0f);
+		world.ResetGame();
+		Check(Near(world.GetPlayer().GetHp(), 75.0f), "stage reset restores configured player health");
+		Check(Near(world.GetEnemy().GetHp(), 9.0f), "stage reset restores configured enemy health");
+		Check(Near(world.GetPegRestitution(), 0.5f), "stage reset restores configured restitution");
+	}
 }
 
 int main()
@@ -440,6 +531,8 @@ int main()
 	TestCriticalPegEffect();
 	TestBombPegEffect();
 	TestRefreshPegEffect();
+	TestStageCatalogAndValidation();
+	TestStageRulesConfigureWorld();
 
 	if (failures == 0)
 	{

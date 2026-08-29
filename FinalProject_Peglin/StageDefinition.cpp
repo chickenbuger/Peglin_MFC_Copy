@@ -1,0 +1,170 @@
+#include "pch.h"
+#include "StageDefinition.h"
+
+#include "GameLayout.h"
+
+#include <cmath>
+#include <utility>
+
+namespace
+{
+	constexpr std::size_t MAX_STAGE_PEGS = 256;
+	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
+
+	bool IsFinitePositive(float value) noexcept
+	{
+		return std::isfinite(value) && value > 0.0f;
+	}
+
+	bool IsKnownPegType(PegType type) noexcept
+	{
+		switch (type)
+		{
+		case PegType::Normal:
+		case PegType::Critical:
+		case PegType::Bomb:
+		case PegType::Refresh:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	StageLoadResult ValidateLoadedStage(StageDefinition stage)
+	{
+		StageLoadResult result;
+		result.validation = ValidateStageDefinition(stage);
+		if (result.validation.IsValid())
+		{
+			result.stage = std::move(stage);
+		}
+		return result;
+	}
+}
+
+StageDefinition CreateDefaultStageDefinition()
+{
+	StageDefinition stage;
+	stage.id = "stage-1";
+	stage.displayName = "Forgotten Forest";
+	stage.pegLayout = CreateDefaultPegLayout();
+	stage.rules = {};
+	return stage;
+}
+
+StageDefinition CreateChallengeStageDefinition()
+{
+	StageDefinition stage;
+	stage.id = "stage-2";
+	stage.displayName = "Dense Cavern";
+	stage.pegLayout = CreateSeededPegLayout(
+		10,
+		4,
+		{ 80.0f, 380.0f },
+		90.0f,
+		12.0f,
+		20260829u);
+
+	if (stage.pegLayout.pegs.size() == 40)
+	{
+		stage.pegLayout.pegs[7].type = PegType::Critical;
+		stage.pegLayout.pegs[16].type = PegType::Bomb;
+		stage.pegLayout.pegs[24].type = PegType::Refresh;
+		stage.pegLayout.pegs[33].type = PegType::Critical;
+	}
+
+	stage.rules.playerHealth = 100.0f;
+	stage.rules.enemyHealth = 30.0f;
+	stage.rules.playerDamage = 25.0f;
+	stage.rules.enemyStepsBeforeAttack = 6;
+	stage.rules.enemyStep = 64.0f;
+	stage.rules.pegRestitution = 0.9f;
+	return stage;
+}
+
+StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept
+{
+	if (stage.id.empty())
+	{
+		return { StageLoadError::EmptyId, 0 };
+	}
+	if (stage.pegLayout.pegs.empty())
+	{
+		return { StageLoadError::EmptyPegLayout, 0 };
+	}
+	if (stage.pegLayout.pegs.size() > MAX_STAGE_PEGS)
+	{
+		return { StageLoadError::TooManyPegs, stage.pegLayout.pegs.size() };
+	}
+	if (!IsFinitePositive(stage.rules.playerHealth))
+	{
+		return { StageLoadError::InvalidPlayerHealth, 0 };
+	}
+	if (!IsFinitePositive(stage.rules.enemyHealth))
+	{
+		return { StageLoadError::InvalidEnemyHealth, 0 };
+	}
+	if (!IsFinitePositive(stage.rules.playerDamage))
+	{
+		return { StageLoadError::InvalidPlayerDamage, 0 };
+	}
+	if (stage.rules.enemyStepsBeforeAttack <= 0)
+	{
+		return { StageLoadError::InvalidEnemySteps, 0 };
+	}
+	if (!IsFinitePositive(stage.rules.enemyStep))
+	{
+		return { StageLoadError::InvalidEnemyStep, 0 };
+	}
+	if (!std::isfinite(stage.rules.pegRestitution)
+		|| stage.rules.pegRestitution < 0.0f
+		|| stage.rules.pegRestitution > 1.0f)
+	{
+		return { StageLoadError::InvalidPegRestitution, 0 };
+	}
+
+	for (std::size_t index = 0; index < stage.pegLayout.pegs.size(); ++index)
+	{
+		const PegDefinition& peg = stage.pegLayout.pegs[index];
+		if (!IsKnownPegType(peg.type))
+		{
+			return { StageLoadError::InvalidPegType, index };
+		}
+		if (!std::isfinite(peg.position.x)
+			|| !std::isfinite(peg.position.y)
+			|| peg.position.x < GameLayout::BoardLeft + GameLayout::PegRadius
+			|| peg.position.x > GameLayout::BoardRight - GameLayout::PegRadius
+			|| peg.position.y < GameLayout::BoardTop + GameLayout::PegRadius
+			|| peg.position.y > GameLayout::BoardBottom - GameLayout::PegRadius)
+		{
+			return { StageLoadError::PegOutOfBounds, index };
+		}
+
+		for (std::size_t earlier = 0; earlier < index; ++earlier)
+		{
+			if ((peg.position - stage.pegLayout.pegs[earlier].position).LengthSquared()
+				<= DUPLICATE_POSITION_EPSILON_SQUARED)
+			{
+				return { StageLoadError::DuplicatePegPosition, index };
+			}
+		}
+	}
+
+	return {};
+}
+
+StageLoadResult LoadStageDefinition(std::string_view stageId)
+{
+	if (stageId == "stage-1")
+	{
+		return ValidateLoadedStage(CreateDefaultStageDefinition());
+	}
+	if (stageId == "stage-2")
+	{
+		return ValidateLoadedStage(CreateChallengeStageDefinition());
+	}
+
+	StageLoadResult result;
+	result.validation.error = StageLoadError::NotFound;
+	return result;
+}

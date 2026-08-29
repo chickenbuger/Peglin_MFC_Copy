@@ -54,6 +54,7 @@
     <ClCompile Include="..\FinalProject_Peglin\Parent_ball.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\PegLayout.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Player.cpp" />
+    <ClCompile Include="..\FinalProject_Peglin\StageDefinition.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\TargetBall.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

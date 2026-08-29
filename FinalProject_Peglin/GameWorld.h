@@ -5,6 +5,7 @@
 #include "Parent_ball.h"
 #include "PegLayout.h"
 #include "Player.h"
+#include "StageDefinition.h"
 #include "TargetBall.h"
 
 enum class GameUpdateResult
@@ -47,7 +48,9 @@ struct GameScore
 class GameWorld
 {
 public:
-	explicit GameWorld(PegLayoutDefinition pegLayout = CreateDefaultPegLayout());
+	GameWorld();
+	explicit GameWorld(PegLayoutDefinition pegLayout);
+	explicit GameWorld(StageDefinition stage);
 
 	GameUpdateResult Update(float deltaSeconds);
 	void ResetGame();
@@ -65,7 +68,8 @@ public:
 	Enemy& GetEnemy() noexcept { return _enemy; }
 	Parent_ball& GetBall() noexcept { return _ball; }
 	TargetBallList& GetTargets() noexcept { return _targetBallList; }
-	const PegLayoutDefinition& GetPegLayout() const noexcept { return _pegLayout; }
+	const PegLayoutDefinition& GetPegLayout() const noexcept { return _stage.pegLayout; }
+	const StageDefinition& GetStage() const noexcept { return _stage; }
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 	const GameScore& GetScore() const noexcept { return _score; }
@@ -84,7 +88,7 @@ private:
 	Enemy _enemy;
 	Parent_ball _ball;
 	TargetBallList _targetBallList;
-	PegLayoutDefinition _pegLayout;
+	StageDefinition _stage;
 	float _pendingDamage = 0.0f;
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;
