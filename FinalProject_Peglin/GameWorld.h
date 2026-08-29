@@ -6,6 +6,7 @@
 #include "Parent_ball.h"
 #include "PegLayout.h"
 #include "Player.h"
+#include "Progression.h"
 #include "StageDefinition.h"
 #include "TargetBall.h"
 
@@ -108,6 +109,9 @@ public:
 	bool LoadStage(
 		std::string_view stageId,
 		GameDifficulty difficulty = GameDifficulty::Normal);
+	bool SelectOrb(std::string_view orbId) { return _loadout.SelectOrb(orbId); }
+	bool AcquireRelic(std::string_view relicId) { return _loadout.AcquireRelic(relicId); }
+	void ResetProgression();
 
 	bool BeginAim(Vector2 position);
 	void UpdateAim(Vector2 position);
@@ -128,6 +132,11 @@ public:
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 	const GameScore& GetScore() const noexcept { return _score; }
+	const PlayerLoadout& GetLoadout() const noexcept { return _loadout; }
+	ProgressionModifiers GetProgressionModifiers() const noexcept
+	{
+		return _loadout.CalculateModifiers();
+	}
 	std::vector<GameEvent> ConsumeEvents();
 	std::optional<GameResultSummary> GetResultSummary() const;
 
@@ -151,6 +160,7 @@ private:
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;
 	GameScore _score;
+	PlayerLoadout _loadout;
 	std::vector<GameEvent> _events;
 	Vector2 _aimStart;
 	Vector2 _aimCurrent;

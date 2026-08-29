@@ -155,6 +155,12 @@ bool GameWorld::LoadStage(std::string_view stageId, GameDifficulty difficulty)
 	return true;
 }
 
+void GameWorld::ResetProgression()
+{
+	_loadout.Reset();
+	ResetGame();
+}
+
 bool GameWorld::BeginAim(Vector2 position)
 {
 	if (_gameState != GameState::Aiming || _ball.GetActive())
@@ -357,12 +363,16 @@ void GameWorld::HandlePegCollisions()
 void GameWorld::AwardPeg(const TargetBall& target)
 {
 	const PegTypeDefinition& definition = GetPegTypeDefinition(target.type);
-	_pendingDamage += definition.damage;
+	const ProgressionModifiers modifiers = _loadout.CalculateModifiers();
+	const float awardedDamage = definition.damage * modifiers.pegDamageMultiplier;
+	_pendingDamage += awardedDamage;
 	++_score.currentCombo;
 	_score.bestCombo = (std::max)(_score.bestCombo, _score.currentCombo);
-	const int scoreAwarded = SCORE_PER_COMBO_STEP
+	const float rawScore = static_cast<float>(SCORE_PER_COMBO_STEP
 		* _score.currentCombo
-		* definition.scoreMultiplier;
+		* definition.scoreMultiplier)
+		* modifiers.scoreMultiplier;
+	const int scoreAwarded = static_cast<int>(std::lround(rawScore));
 	_score.currentShot += scoreAwarded;
 	_feedback.type = GameFeedbackType::PegHit;
 	++_feedback.currentShotPegHits;
@@ -373,7 +383,7 @@ void GameWorld::AwardPeg(const TargetBall& target)
 		scoreAwarded,
 		_score.currentCombo,
 		1,
-		definition.damage
+		awardedDamage
 	});
 }
 
@@ -464,8 +474,11 @@ void GameWorld::ResolveTurn()
 	}
 	else
 	{
-		_player.SetHp(_player.GetHp() - _stage.rules.playerDamage);
-		_feedback.lastPlayerDamage = _stage.rules.playerDamage;
+		const ProgressionModifiers modifiers = _loadout.CalculateModifiers();
+		const float incomingDamage = _stage.rules.playerDamage
+			* modifiers.incomingDamageMultiplier;
+		_player.SetHp(_player.GetHp() - incomingDamage);
+		_feedback.lastPlayerDamage = incomingDamage;
 	}
 
 	_enemy.SetCount(_enemy.GetCount() + 1);

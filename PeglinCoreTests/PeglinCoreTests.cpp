@@ -14,6 +14,7 @@
 #include "GameSettingsStore.h"
 #include "PegLayout.h"
 #include "Physics.h"
+#include "Progression.h"
 
 namespace
 {
@@ -1116,6 +1117,81 @@ namespace
 		Check(defeatWorld.GetState() == GameState::Defeat, "stage defeat enters terminal state");
 		Check(defeatWorld.Update(0.0f) == GameUpdateResult::None, "stage defeat result remains single-shot");
 	}
+
+	void TestOrbAndRelicProgression()
+	{
+		Check(GetOrbDefinitions().size() == 3, "orb catalog exposes three stable definitions");
+		Check(GetRelicDefinitions().size() == 3, "relic catalog exposes three stable definitions");
+		Check(FindOrbDefinition("basic-orb") != nullptr, "basic orb has a stable id");
+		Check(FindOrbDefinition("unknown-orb") == nullptr, "unknown orb id is rejected");
+		Check(FindRelicDefinition("combo-lantern") != nullptr, "combo lantern has a stable id");
+		Check(FindRelicDefinition("unknown-relic") == nullptr, "unknown relic id is rejected");
+
+		PlayerLoadout loadout;
+		Check(loadout.GetSelectedOrbId() == "basic-orb", "loadout starts with the basic orb");
+		Check(loadout.GetAcquiredRelics().empty(), "loadout starts without relics");
+		Check(!loadout.SelectOrb("unknown-orb"), "loadout rejects an unknown orb");
+		Check(loadout.GetSelectedOrbId() == "basic-orb", "failed orb selection preserves the current orb");
+		Check(loadout.SelectOrb("iron-orb"), "loadout selects a registered orb");
+		Check(loadout.GetSelectedOrbId() == "iron-orb", "selected orb id is retained");
+
+		Check(loadout.AcquireRelic("combo-lantern"), "unique relic can be acquired once");
+		Check(!loadout.AcquireRelic("combo-lantern"), "unique relic rejects a duplicate");
+		Check(loadout.AcquireRelic("bark-guard"), "stackable relic accepts its first stack");
+		Check(loadout.AcquireRelic("bark-guard"), "stackable relic accepts its second stack");
+		Check(!loadout.AcquireRelic("bark-guard"), "stackable relic enforces its maximum stacks");
+		Check(!loadout.AcquireRelic("unknown-relic"), "loadout rejects an unknown relic");
+		Check(loadout.GetRelicStackCount("combo-lantern") == 1, "unique relic reports one stack");
+		Check(loadout.GetRelicStackCount("bark-guard") == 2, "stackable relic reports two stacks");
+
+		const ProgressionModifiers modifiers = loadout.CalculateModifiers();
+		Check(Near(modifiers.pegDamageMultiplier, 1.5f), "orb damage modifier applies before relics");
+		Check(Near(modifiers.scoreMultiplier, 0.9375f), "orb and relic score modifiers compose deterministically");
+		Check(Near(modifiers.incomingDamageMultiplier, 0.7225f), "relic acquisition order composes incoming damage");
+
+		GameWorld world;
+		Check(world.SelectOrb("iron-orb"), "game world accepts a registered orb");
+		Check(world.AcquireRelic("bark-guard"), "game world acquires the first guard relic");
+		Check(world.AcquireRelic("bark-guard"), "game world acquires the second guard relic");
+		Launch(world);
+		auto scan = world.GetTargets()._targetBallList.GetHeadPosition();
+		Vector2 normalPeg;
+		while (scan != nullptr)
+		{
+			const TargetBall& candidate = world.GetTargets()._targetBallList.GetNext(scan);
+			if (candidate.type == PegType::Normal)
+			{
+				normalPeg = candidate.position;
+				break;
+			}
+		}
+		world.GetBall().SetPosition(normalPeg + Vector2{ -15.0f, 0.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetScore().currentShot == 75, "iron orb reduces awarded score deterministically");
+		Check(Near(world.ConsumeEvents().front().damage, 1.5f), "iron orb increases peg damage in feedback");
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetEnemy().GetHp(), 18.5f), "iron orb damage reaches turn resolution");
+
+		world.ResetGame();
+		Check(world.GetLoadout().GetSelectedOrbId() == "iron-orb", "retry preserves the selected orb");
+		Check(world.GetLoadout().GetRelicStackCount("bark-guard") == 2, "retry preserves acquired relics");
+		world.GetEnemy().SetCount(8);
+		Launch(world);
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetFeedback().lastPlayerDamage, 14.45f), "two guard relics reduce incoming damage");
+		Check(Near(world.GetPlayer().GetHp(), 85.55f), "reduced incoming damage updates player health");
+
+		world.ResetProgression();
+		Check(world.GetLoadout().GetSelectedOrbId() == "basic-orb", "progression reset restores the basic orb");
+		Check(world.GetLoadout().GetAcquiredRelics().empty(), "progression reset removes acquired relics");
+		Check(Near(world.GetProgressionModifiers().pegDamageMultiplier, 1.0f), "progression reset restores neutral damage");
+		Check(Near(world.GetPlayer().GetHp(), 100.0f), "progression reset also starts a fresh game");
+	}
 }
 
 int main()
@@ -1148,6 +1224,7 @@ int main()
 	TestAimPreviewMatchesShotInput();
 	TestStageValidationMatrix();
 	TestStageVictoryAndDefeatRegression();
+	TestOrbAndRelicProgression();
 
 	if (failures == 0)
 	{
