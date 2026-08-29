@@ -12,6 +12,7 @@
 #include "Parent_ball.h"
 #include "Background.h"
 #include "TargetBall.h"
+#include "GameState.h"
 
 // CChildView 창
 
@@ -30,14 +31,11 @@ public:
 	Background		_background;
 	TargetBallList	_targetBallList;
 
-	float ball_DMG = 0.0f;
-
-	bool check = false;
-
 public:
 	void gameclear();
 	void gameover();
 	void restart();
+	GameState GetGameState() const noexcept { return _gameState; }
 
 protected:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
@@ -66,9 +64,14 @@ private:
 	void Init_ball();
 	void Collision();
 	void UpdateGameStep(float deltaSeconds);
+	void ResolveTurn();
+	bool TransitionTo(GameState nextState);
 
 	UINT_PTR _gameTimerId = 0;
 	std::chrono::steady_clock::time_point _lastFrameTime{};
 	double _accumulatedTimeSeconds = 0.0;
+	float _pendingDamage = 0.0f;
+	GameState _gameState = GameState::Aiming;
+	GameState _stateBeforePause = GameState::Aiming;
 };
 

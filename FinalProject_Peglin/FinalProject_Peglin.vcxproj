@@ -193,6 +193,7 @@
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="FinalProject_Peglin.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="GameState.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Parent_ball.h" />
     <ClInclude Include="pch.h" />

@@ -57,21 +57,13 @@ END_MESSAGE_MAP()
 
 void CChildView::gameclear()
 {
-	if (!check)
-	{
-		check = true;
-		AfxMessageBox(_T("Game Clear!!"));
-	}
+	AfxMessageBox(_T("Game Clear!!"));
 	ResetGameState();
 }
 
 void CChildView::gameover()
 {
-	if (!check)
-	{
-		check = true;
-		AfxMessageBox(_T("Game Over!!"));
-	}
+	AfxMessageBox(_T("Game Over!!"));
 	ResetGameState();
 }
 
@@ -136,7 +128,7 @@ void CChildView::Collision()
 
 			// 5️ targetBall 제거
 			_targetBallList._targetBallList.RemoveAt(cur);
-			ball_DMG += 1.0f;
+			_pendingDamage += 1.0f;
 		}
 	}
 }
@@ -148,7 +140,9 @@ void CChildView::restart()
 
 void CChildView::ResetGameState()
 {
-	check = false;
+	_gameState = GameState::Aiming;
+	_stateBeforePause = GameState::Aiming;
+	_pendingDamage = 0.0f;
 	_ball.Init();
 	_player.Init();
 	_enemy.Init();
@@ -281,39 +275,76 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
-	Collision();
-	_ball.update(deltaSeconds);
-
-	if (_ball.GetPos()[1] > 800.0f)
+	switch (_gameState)
 	{
-		if (_enemy.GetCount() < 8)
+	case GameState::Aiming:
+	case GameState::Paused:
+		break;
+	case GameState::BallInFlight:
+		Collision();
+		_ball.update(deltaSeconds);
+		if (_ball.GetPos()[1] > 800.0f)
 		{
-			_enemy.SetX(_enemy.GetX() - 64);
+			TransitionTo(GameState::ResolvingTurn);
 		}
-		else
-		{
-			_player.SetHp(_player.GetHp() - 20.0f);
-		}
-		_enemy.SetCount(_enemy.GetCount() + 1);
-		_enemy.SetHp(_enemy.GetHp() - ball_DMG);
-		ball_DMG = 0.0f;
-		_ball.Init();
-	}
-
-	if (_player.GetHp() <= 0)
-	{
-		gameover();
-	}
-	else if (_enemy.GetHp() <= 0)
-	{
+		break;
+	case GameState::ResolvingTurn:
+		ResolveTurn();
+		break;
+	case GameState::Victory:
 		gameclear();
+		break;
+	case GameState::Defeat:
+		gameover();
+		break;
 	}
+}
+
+void CChildView::ResolveTurn()
+{
+	if (_enemy.GetCount() < 8)
+	{
+		_enemy.SetX(_enemy.GetX() - 64.0f);
+	}
+	else
+	{
+		_player.SetHp(_player.GetHp() - 20.0f);
+	}
+
+	_enemy.SetCount(_enemy.GetCount() + 1);
+	_enemy.SetHp(_enemy.GetHp() - _pendingDamage);
+	_pendingDamage = 0.0f;
+	_ball.Init();
+
+	if (_player.GetHp() <= 0.0f)
+	{
+		TransitionTo(GameState::Defeat);
+	}
+	else if (_enemy.GetHp() <= 0.0f)
+	{
+		TransitionTo(GameState::Victory);
+	}
+	else
+	{
+		TransitionTo(GameState::Aiming);
+	}
+}
+
+bool CChildView::TransitionTo(GameState nextState)
+{
+	if (!CanTransitionTo(_gameState, nextState))
+	{
+		return false;
+	}
+
+	_gameState = nextState;
+	return true;
 }
 
 
 void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
-	if (_ball.GetActive() == false)
+	if (_gameState == GameState::Aiming && _ball.GetActive() == false)
 	{
 		SetFocus();
 		SetCapture();
@@ -327,12 +358,15 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	if (_ball.GetClick())
+	if (_gameState == GameState::Aiming && _ball.GetClick())
 	{
 		if (_ball.GetActive() == false)
 		{
 			_ball.SetEndDragPos(static_cast<float>(point.x), static_cast<float>(point.y));
-			_ball.shooting();
+			if (_ball.shooting())
+			{
+				TransitionTo(GameState::BallInFlight);
+			}
 		}
 		_ball.SetClick(false);
 	}
@@ -367,13 +401,25 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nChar == VK_SPACE)
 	{
-		_ball.stop = !_ball.stop;
+		if (_gameState == GameState::Paused)
+		{
+			_ball.stop = false;
+			TransitionTo(_stateBeforePause);
+		}
+		else if (_gameState == GameState::Aiming || _gameState == GameState::BallInFlight)
+		{
+			_stateBeforePause = _gameState;
+			_ball.stop = true;
+			TransitionTo(GameState::Paused);
+		}
 
 		Invalidate();
 	}
 	if (nChar == VK_F5)
 	{
 		_ball.Init();
+		_pendingDamage = 0.0f;
+		TransitionTo(GameState::Aiming);
 		Invalidate();
 	}
 
