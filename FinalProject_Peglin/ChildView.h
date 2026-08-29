@@ -63,6 +63,7 @@ private:
 	void ConsumeGameEvents();
 	void UpdateFeedbackAnimations(float deltaSeconds);
 	void DrawFeedbackAnimations(CDC* deviceContext);
+	void DrawAimPreview(CDC* deviceContext);
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 
 	Background _background;

@@ -188,6 +188,8 @@ void CChildView::OnPaint()
 		_target.draw(&memDc);
 	}
 
+	DrawAimPreview(&memDc);
+
 	if (_game.GetPlayer().GetHp() > 0.0f)
 	{
 		CString Text;
@@ -404,6 +406,58 @@ void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
 			animation.text);
 	}
 
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawAimPreview(CDC* deviceContext)
+{
+	const AimPreview preview = _game.GetAimPreview();
+	if (!preview.visible)
+	{
+		return;
+	}
+
+	const int savedDc = deviceContext->SaveDC();
+	const BYTE red = static_cast<BYTE>(std::lround(255.0f * preview.normalizedStrength));
+	const BYTE green = static_cast<BYTE>(std::lround(220.0f * (1.0f - preview.normalizedStrength)));
+	const COLORREF strengthColor = RGB(red, green, 60);
+
+	CPen pathPen(PS_DOT, 2, RGB(210, 210, 255));
+	deviceContext->SelectObject(&pathPen);
+	deviceContext->SelectObject(GetStockObject(NULL_BRUSH));
+	deviceContext->MoveTo(
+		static_cast<int>(std::lround(_game.GetBall().GetPosition().x)),
+		static_cast<int>(std::lround(_game.GetBall().GetPosition().y)));
+	for (const Vector2 point : preview.points)
+	{
+		deviceContext->LineTo(
+			static_cast<int>(std::lround(point.x)),
+			static_cast<int>(std::lround(point.y)));
+	}
+
+	const int left = static_cast<int>(std::lround(GameLayout::AimStrengthPosition.x));
+	const int top = static_cast<int>(std::lround(GameLayout::AimStrengthPosition.y));
+	const int right = static_cast<int>(std::lround(left + GameLayout::AimStrengthWidth));
+	const int bottom = static_cast<int>(std::lround(top + GameLayout::AimStrengthHeight));
+	CBrush strengthBrush(strengthColor);
+	deviceContext->SelectObject(&strengthBrush);
+	deviceContext->SelectObject(GetStockObject(NULL_PEN));
+	deviceContext->Rectangle(
+		left,
+		top,
+		static_cast<int>(std::lround(left + GameLayout::AimStrengthWidth * preview.normalizedStrength)),
+		bottom);
+	deviceContext->SelectObject(GetStockObject(NULL_BRUSH));
+	deviceContext->SelectObject(GetStockObject(WHITE_PEN));
+	deviceContext->Rectangle(left, top, right, bottom);
+
+	CString strengthText;
+	strengthText.Format(
+		_T("POWER %d%%"),
+		static_cast<int>(std::lround(preview.normalizedStrength * 100.0f)));
+	deviceContext->SetBkMode(TRANSPARENT);
+	deviceContext->SetTextColor(RGB(255, 255, 255));
+	deviceContext->TextOut(left, bottom + 3, strengthText);
 	deviceContext->RestoreDC(savedDc);
 }
 

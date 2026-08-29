@@ -11,6 +11,23 @@ namespace
 {
 	constexpr float COLLISION_EPSILON = 0.001f;
 	constexpr int SCORE_PER_COMBO_STEP = 100;
+	constexpr float AIM_MIN_DRAG_DISTANCE = 0.001f;
+	constexpr float AIM_MIN_FORCE = 1.0f;
+	constexpr float AIM_MAX_FORCE = 10.0f;
+	constexpr float AIM_MAX_DRAG_DISTANCE = 400.0f;
+	constexpr float AIM_PREVIEW_TIMESTEP_SCALE = 4.0f;
+	constexpr float AIM_PREVIEW_GRAVITY = 0.01f;
+
+	float AimForceFromDragDistance(float distance)
+	{
+		const float clampedDistance = std::clamp(
+			distance,
+			AIM_MIN_FORCE,
+			AIM_MAX_DRAG_DISTANCE);
+		const float converted = clampedDistance
+			/ (AIM_MAX_DRAG_DISTANCE / AIM_MAX_FORCE);
+		return std::clamp(converted, AIM_MIN_FORCE, AIM_MAX_FORCE);
+	}
 
 	StageDefinition LoadDefaultStage()
 	{
@@ -90,6 +107,9 @@ void GameWorld::ResetGame()
 	_feedback = {};
 	_score = {};
 	_events.clear();
+	_aimStart = _ball.GetPosition();
+	_aimCurrent = _aimStart;
+	_aimInProgress = false;
 	_terminalResultReported = false;
 	_pegRestitution = _stage.rules.pegRestitution;
 	_ball.Init();
@@ -108,6 +128,9 @@ void GameWorld::ResetBallToAiming()
 	_score.currentShot = 0;
 	_score.currentCombo = 0;
 	_events.clear();
+	_aimStart = _ball.GetPosition();
+	_aimCurrent = _aimStart;
+	_aimInProgress = false;
 	_terminalResultReported = false;
 	TransitionTo(GameState::Aiming);
 }
@@ -122,6 +145,9 @@ bool GameWorld::BeginAim(Vector2 position)
 	_ball.SetStartDragPos(position);
 	_ball.SetTraceDragPos(position);
 	_ball.SetClick(true);
+	_aimStart = position;
+	_aimCurrent = position;
+	_aimInProgress = true;
 	return true;
 }
 
@@ -130,7 +156,55 @@ void GameWorld::UpdateAim(Vector2 position)
 	if (_gameState == GameState::Aiming && _ball.GetClick())
 	{
 		_ball.SetTraceDragPos(position);
+		_aimCurrent = position;
 	}
+}
+
+AimPreview GameWorld::GetAimPreview() const noexcept
+{
+	AimPreview preview;
+	const Vector2 launchVector = _aimStart - _aimCurrent;
+	preview.dragDistance = launchVector.Length();
+	if (!_aimInProgress
+		|| _gameState != GameState::Aiming
+		|| preview.dragDistance <= AIM_MIN_DRAG_DISTANCE)
+	{
+		return preview;
+	}
+
+	preview.visible = true;
+	preview.launchDirection = launchVector.Normalized();
+	const float force = AimForceFromDragDistance(preview.dragDistance);
+	preview.normalizedStrength = (force - AIM_MIN_FORCE)
+		/ (AIM_MAX_FORCE - AIM_MIN_FORCE);
+
+	Vector2 position = _ball.GetPosition();
+	Vector2 velocity = preview.launchDirection;
+	for (Vector2& point : preview.points)
+	{
+		velocity.y += AIM_PREVIEW_GRAVITY * AIM_PREVIEW_TIMESTEP_SCALE;
+		position += velocity * (force * AIM_PREVIEW_TIMESTEP_SCALE);
+
+		if (position.x < GameLayout::BallLeftBoundary)
+		{
+			position.x = GameLayout::BallLeftBoundary;
+			velocity.x = std::fabs(velocity.x);
+		}
+		else if (position.x > GameLayout::BallRightBoundary)
+		{
+			position.x = GameLayout::BallRightBoundary;
+			velocity.x = -std::fabs(velocity.x);
+		}
+		if (position.y < GameLayout::BallTopBoundary)
+		{
+			position.y = GameLayout::BallTopBoundary;
+			velocity.y = std::fabs(velocity.y);
+		}
+
+		point = position;
+	}
+
+	return preview;
 }
 
 bool GameWorld::ReleaseShot(Vector2 position)
@@ -158,12 +232,14 @@ bool GameWorld::ReleaseShot(Vector2 position)
 	}
 
 	_ball.SetClick(false);
+	_aimInProgress = false;
 	return launched;
 }
 
 void GameWorld::CancelAim()
 {
 	_ball.SetClick(false);
+	_aimInProgress = false;
 }
 
 bool GameWorld::TogglePause()

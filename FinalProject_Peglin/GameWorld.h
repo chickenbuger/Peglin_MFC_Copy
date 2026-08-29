@@ -8,6 +8,7 @@
 #include "StageDefinition.h"
 #include "TargetBall.h"
 
+#include <array>
 #include <vector>
 
 enum class GameUpdateResult
@@ -69,6 +70,17 @@ struct GameEvent
 	float damage = 0.0f;
 };
 
+struct AimPreview
+{
+	static constexpr std::size_t PointCount = 16;
+
+	bool visible = false;
+	Vector2 launchDirection;
+	float dragDistance = 0.0f;
+	float normalizedStrength = 0.0f;
+	std::array<Vector2, PointCount> points{};
+};
+
 class GameWorld
 {
 public:
@@ -82,6 +94,7 @@ public:
 
 	bool BeginAim(Vector2 position);
 	void UpdateAim(Vector2 position);
+	AimPreview GetAimPreview() const noexcept;
 	bool ReleaseShot(Vector2 position);
 	void CancelAim();
 	bool TogglePause();
@@ -119,6 +132,9 @@ private:
 	GameFeedback _feedback;
 	GameScore _score;
 	std::vector<GameEvent> _events;
+	Vector2 _aimStart;
+	Vector2 _aimCurrent;
+	bool _aimInProgress = false;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 	bool _terminalResultReported = false;

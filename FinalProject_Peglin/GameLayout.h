@@ -41,4 +41,7 @@ struct GameLayout
 	inline static constexpr Vector2 FeedbackText{ 330.0f, 90.0f };
 	inline static constexpr Vector2 OptionsText{ 330.0f, 110.0f };
 	inline static constexpr Vector2 TurnEffectPosition{ 490.0f, 150.0f };
+	inline static constexpr Vector2 AimStrengthPosition{ 30.0f, 290.0f };
+	inline static constexpr float AimStrengthWidth = 160.0f;
+	inline static constexpr float AimStrengthHeight = 14.0f;
 };

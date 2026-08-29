@@ -661,6 +661,40 @@ namespace
 		Check(world.ConsumeEvents().empty(), "new game clears pending feedback events");
 	}
 
+	void TestAimPreviewMatchesShotInput()
+	{
+		GameWorld world;
+		const Vector2 start = world.GetBall().GetPosition();
+		Check(world.BeginAim(start), "aim preview begins from the ball");
+		Check(!world.GetAimPreview().visible, "zero-length aim keeps preview hidden");
+
+		world.UpdateAim(start + Vector2{ 220.0f, 0.0f });
+		const AimPreview medium = world.GetAimPreview();
+		Check(medium.visible, "non-zero drag shows aim preview");
+		Check(Near(medium.launchDirection.x, -1.0f) && Near(medium.launchDirection.y, 0.0f), "preview points opposite the drag direction");
+		Check(Near(medium.normalizedStrength, 0.5f), "220-pixel drag maps to fifty percent strength");
+		Check(medium.points.front().x < start.x, "first preview point follows launch direction");
+
+		bool allPointsInsideWalls = true;
+		for (const Vector2 point : medium.points)
+		{
+			allPointsInsideWalls = allPointsInsideWalls
+				&& point.x >= GameLayout::BallLeftBoundary
+				&& point.x <= GameLayout::BallRightBoundary
+				&& point.y >= GameLayout::BallTopBoundary;
+		}
+		Check(allPointsInsideWalls, "preview wall reflections stay inside physical boundaries");
+
+		world.UpdateAim(start + Vector2{ 400.0f, 0.0f });
+		Check(Near(world.GetAimPreview().normalizedStrength, 1.0f), "maximum drag clamps preview strength to one");
+		Check(world.ReleaseShot(start + Vector2{ 400.0f, 0.0f }), "previewed drag launches the ball");
+		Check(Near(world.GetBall().GetVelocity().x, -1.0f), "launched velocity matches preview direction");
+		Check(!world.GetAimPreview().visible, "preview hides after launch");
+
+		world.ResetBallToAiming();
+		Check(!world.GetAimPreview().visible, "F5 leaves no stale aim preview");
+	}
+
 	void TestStageValidationMatrix()
 	{
 		StageDefinition invalid = CreateDefaultStageDefinition();
@@ -757,6 +791,7 @@ int main()
 	TestBombDoesNotChainSecondaryEffects();
 	TestRefreshDoesNotDuplicateActivePegs();
 	TestGameEventFeedbackStream();
+	TestAimPreviewMatchesShotInput();
 	TestStageValidationMatrix();
 	TestStageVictoryAndDefeatRegression();
 
