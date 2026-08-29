@@ -14,6 +14,51 @@
 #define new DEBUG_NEW
 #endif
 
+namespace
+{
+	CString StateText(GameState state)
+	{
+		switch (state)
+		{
+		case GameState::Aiming: return _T("상태: 조준 중");
+		case GameState::BallInFlight: return _T("상태: 공 비행 중");
+		case GameState::ResolvingTurn: return _T("상태: 턴 정산 중");
+		case GameState::Victory: return _T("상태: 승리");
+		case GameState::Defeat: return _T("상태: 패배");
+		case GameState::Paused: return _T("상태: 일시정지");
+		}
+
+		return _T("상태: 알 수 없음");
+	}
+
+	CString FeedbackText(const GameFeedback& feedback)
+	{
+		CString text;
+		switch (feedback.type)
+		{
+		case GameFeedbackType::Ready:
+			return _T("드래그하여 공을 발사하세요");
+		case GameFeedbackType::ShotLaunched:
+		case GameFeedbackType::PegHit:
+		case GameFeedbackType::Paused:
+			text.Format(_T("이번 발사 적중: %d"), feedback.currentShotPegHits);
+			break;
+		case GameFeedbackType::TurnResolved:
+			text.Format(_T("턴 %d: 몬스터 피해 %d"), feedback.turnNumber, static_cast<int>(feedback.lastEnemyDamage));
+			break;
+		case GameFeedbackType::PlayerDamaged:
+			text.Format(_T("턴 %d: 플레이어 피해 %d"), feedback.turnNumber, static_cast<int>(feedback.lastPlayerDamage));
+			break;
+		case GameFeedbackType::Victory:
+			return _T("몬스터를 처치했습니다");
+		case GameFeedbackType::Defeat:
+			return _T("플레이어가 쓰러졌습니다");
+		}
+
+		return text;
+	}
+}
+
 // CChildView
 
 CChildView::CChildView()
@@ -127,6 +172,19 @@ void CChildView::OnPaint()
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
 			Text1);
 	}
+
+	const int textState = memDc.SaveDC();
+	memDc.SetBkMode(TRANSPARENT);
+	memDc.SetTextColor(RGB(0, 0, 0));
+	memDc.TextOut(
+		static_cast<int>(std::lround(GameLayout::StateText.x)),
+		static_cast<int>(std::lround(GameLayout::StateText.y)),
+		StateText(_game.GetState()));
+	memDc.TextOut(
+		static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
+		static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
+		FeedbackText(_game.GetFeedback()));
+	memDc.RestoreDC(textState);
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 	memDc.SelectObject(previousBitmap);

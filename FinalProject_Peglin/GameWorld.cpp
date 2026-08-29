@@ -56,6 +56,7 @@ void GameWorld::ResetGame()
 	_gameState = GameState::Aiming;
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
+	_feedback = {};
 	_ball.Init();
 	_player.Init();
 	_enemy.Init();
@@ -66,6 +67,7 @@ void GameWorld::ResetBallToAiming()
 {
 	_ball.Init();
 	_pendingDamage = 0.0f;
+	_feedback = {};
 	TransitionTo(GameState::Aiming);
 }
 
@@ -105,6 +107,10 @@ bool GameWorld::ReleaseShot(Vector2 position)
 		if (launched)
 		{
 			TransitionTo(GameState::BallInFlight);
+			_feedback.type = GameFeedbackType::ShotLaunched;
+			_feedback.currentShotPegHits = 0;
+			_feedback.lastEnemyDamage = 0.0f;
+			_feedback.lastPlayerDamage = 0.0f;
 		}
 	}
 
@@ -122,14 +128,20 @@ bool GameWorld::TogglePause()
 	if (_gameState == GameState::Paused)
 	{
 		_ball.stop = false;
-		return TransitionTo(_stateBeforePause);
+		const bool transitioned = TransitionTo(_stateBeforePause);
+		_feedback.type = _stateBeforePause == GameState::BallInFlight
+			? GameFeedbackType::ShotLaunched
+			: GameFeedbackType::Ready;
+		return transitioned;
 	}
 
 	if (_gameState == GameState::Aiming || _gameState == GameState::BallInFlight)
 	{
 		_stateBeforePause = _gameState;
 		_ball.stop = true;
-		return TransitionTo(GameState::Paused);
+		const bool transitioned = TransitionTo(GameState::Paused);
+		_feedback.type = GameFeedbackType::Paused;
+		return transitioned;
 	}
 
 	return false;
@@ -191,12 +203,17 @@ void GameWorld::HandlePegCollisions()
 				ReflectVelocity(_ball.GetVelocity(), normal, _pegRestitution));
 			_targetBallList._targetBallList.RemoveAt(current);
 			_pendingDamage += 1.0f;
+			_feedback.type = GameFeedbackType::PegHit;
+			++_feedback.currentShotPegHits;
 		}
 	}
 }
 
 void GameWorld::ResolveTurn()
 {
+	_feedback.lastEnemyDamage = _pendingDamage;
+	_feedback.lastPlayerDamage = 0.0f;
+
 	if (_enemy.GetCount() < GameLayout::EnemyStepsBeforeAttack)
 	{
 		_enemy.SetX(_enemy.GetX() - GameLayout::EnemyStep);
@@ -204,9 +221,11 @@ void GameWorld::ResolveTurn()
 	else
 	{
 		_player.SetHp(_player.GetHp() - PLAYER_DAMAGE);
+		_feedback.lastPlayerDamage = PLAYER_DAMAGE;
 	}
 
 	_enemy.SetCount(_enemy.GetCount() + 1);
+	_feedback.turnNumber = _enemy.GetCount();
 	_enemy.SetHp(_enemy.GetHp() - _pendingDamage);
 	_pendingDamage = 0.0f;
 	_ball.Init();
@@ -214,14 +233,19 @@ void GameWorld::ResolveTurn()
 	if (_player.GetHp() <= 0.0f)
 	{
 		TransitionTo(GameState::Defeat);
+		_feedback.type = GameFeedbackType::Defeat;
 	}
 	else if (_enemy.GetHp() <= 0.0f)
 	{
 		TransitionTo(GameState::Victory);
+		_feedback.type = GameFeedbackType::Victory;
 	}
 	else
 	{
 		TransitionTo(GameState::Aiming);
+		_feedback.type = _feedback.lastPlayerDamage > 0.0f
+			? GameFeedbackType::PlayerDamaged
+			: GameFeedbackType::TurnResolved;
 	}
 }
 

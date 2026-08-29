@@ -87,6 +87,8 @@ namespace
 
 		world.Update(0.0f);
 		Check(targets.GetCount() == 47, "peg collision removes exactly one peg");
+		Check(world.GetFeedback().type == GameFeedbackType::PegHit, "peg collision emits PegHit feedback");
+		Check(world.GetFeedback().currentShotPegHits == 1, "peg feedback counts current shot hits");
 		Check(Near(world.GetBall().GetVelocity().x, -1.0f), "peg normal speed uses restitution");
 		Check(Near(world.GetBall().GetVelocity().y, 3.0f), "peg tangent speed is preserved");
 		const float separation = (world.GetBall().GetPosition() - pegPosition).Length();
@@ -98,6 +100,8 @@ namespace
 		const GameUpdateResult result = world.Update(0.0f);
 		Check(result == GameUpdateResult::None, "ordinary turn has no terminal result");
 		Check(Near(world.GetEnemy().GetHp(), 19.0f), "one removed peg deals exactly one damage");
+		Check(world.GetFeedback().type == GameFeedbackType::TurnResolved, "ordinary turn emits TurnResolved feedback");
+		Check(Near(world.GetFeedback().lastEnemyDamage, 1.0f), "turn feedback reports enemy damage");
 		Check(world.GetState() == GameState::Aiming, "ordinary turn returns to Aiming");
 	}
 
@@ -154,6 +158,8 @@ namespace
 		Check(result == GameUpdateResult::Defeat, "player attack threshold reports Defeat");
 		Check(world.GetState() == GameState::Defeat, "player attack threshold enters Defeat state");
 		Check(Near(world.GetPlayer().GetHp(), 0.0f), "defeat applies player damage once");
+		Check(world.GetFeedback().type == GameFeedbackType::Defeat, "defeat emits Defeat feedback");
+		Check(Near(world.GetFeedback().lastPlayerDamage, 20.0f), "defeat feedback reports player damage");
 	}
 
 	void TestStateAndRestitutionRules()

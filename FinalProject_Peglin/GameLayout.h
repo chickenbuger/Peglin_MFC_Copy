@@ -37,4 +37,6 @@ struct GameLayout
 	inline static constexpr int EnemyStepsBeforeAttack = 8;
 	inline static constexpr float EnemyHealthTextOffsetX = -30.0f;
 	inline static constexpr float EnemyHealthTextY = 90.0f;
+	inline static constexpr Vector2 StateText{ 330.0f, 70.0f };
+	inline static constexpr Vector2 FeedbackText{ 330.0f, 90.0f };
 };

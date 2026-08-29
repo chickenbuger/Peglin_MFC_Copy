@@ -13,6 +13,27 @@ enum class GameUpdateResult
 	Defeat
 };
 
+enum class GameFeedbackType
+{
+	Ready,
+	ShotLaunched,
+	PegHit,
+	TurnResolved,
+	PlayerDamaged,
+	Victory,
+	Defeat,
+	Paused
+};
+
+struct GameFeedback
+{
+	GameFeedbackType type = GameFeedbackType::Ready;
+	int currentShotPegHits = 0;
+	int turnNumber = 0;
+	float lastEnemyDamage = 0.0f;
+	float lastPlayerDamage = 0.0f;
+};
+
 class GameWorld
 {
 public:
@@ -35,6 +56,7 @@ public:
 	Parent_ball& GetBall() noexcept { return _ball; }
 	TargetBallList& GetTargets() noexcept { return _targetBallList; }
 	GameState GetState() const noexcept { return _gameState; }
+	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 
 private:
 	void InitializeTargets();
@@ -48,6 +70,7 @@ private:
 	TargetBallList _targetBallList;
 	float _pendingDamage = 0.0f;
 	float _pegRestitution = 0.85f;
+	GameFeedback _feedback;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 };
