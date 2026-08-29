@@ -9,6 +9,7 @@
 #include "GameLayout.h"
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -74,6 +75,19 @@ namespace
 
 		return text;
 	}
+
+	COLORREF PegEffectColor(PegType type)
+	{
+		switch (type)
+		{
+		case PegType::Normal: return RGB(255, 80, 80);
+		case PegType::Critical: return RGB(255, 190, 0);
+		case PegType::Bomb: return RGB(255, 120, 0);
+		case PegType::Refresh: return RGB(0, 190, 90);
+		}
+
+		return RGB(255, 255, 255);
+	}
 }
 
 // CChildView
@@ -111,17 +125,20 @@ void CChildView::gameclear()
 {
 	AfxMessageBox(_T("Game Clear!!"));
 	_game.ResetGame();
+	_feedbackAnimations.clear();
 }
 
 void CChildView::gameover()
 {
 	AfxMessageBox(_T("Game Over!!"));
 	_game.ResetGame();
+	_feedbackAnimations.clear();
 }
 
 void CChildView::restart()
 {
 	_game.ResetGame();
+	_feedbackAnimations.clear();
 }
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
@@ -201,7 +218,13 @@ void CChildView::OnPaint()
 		static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
 		static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
 		FeedbackText(_game.GetFeedback(), _game.GetScore()));
+	memDc.TextOut(
+		static_cast<int>(std::lround(GameLayout::OptionsText.x)),
+		static_cast<int>(std::lround(GameLayout::OptionsText.y)),
+		_soundEnabled ? _T("사운드: 켜짐 (M)") : _T("사운드: 꺼짐 (M)"));
 	memDc.RestoreDC(textState);
+
+	DrawFeedbackAnimations(&memDc);
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 	memDc.SelectObject(previousBitmap);
@@ -270,7 +293,11 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
-	switch (_game.Update(deltaSeconds))
+	const GameUpdateResult result = _game.Update(deltaSeconds);
+	ConsumeGameEvents();
+	UpdateFeedbackAnimations(deltaSeconds);
+
+	switch (result)
 	{
 	case GameUpdateResult::None:
 		break;
@@ -281,6 +308,127 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 		gameover();
 		break;
 	}
+}
+
+void CChildView::ConsumeGameEvents()
+{
+	for (const GameEvent& event : _game.ConsumeEvents())
+	{
+		FeedbackAnimation animation;
+		animation.position = event.position;
+		animation.color = PegEffectColor(event.pegType);
+
+		switch (event.type)
+		{
+		case GameEventType::PegHit:
+			if (event.pegType == PegType::Critical)
+			{
+				animation.text.Format(_T("CRIT +%d"), event.scoreAwarded);
+			}
+			else
+			{
+				animation.text.Format(_T("+%d · x%d"), event.scoreAwarded, event.combo);
+			}
+			break;
+		case GameEventType::BombTriggered:
+			animation.text.Format(_T("BOOM! %d"), event.affectedPegs);
+			animation.color = RGB(255, 120, 0);
+			animation.lifetimeSeconds = 1.1f;
+			break;
+		case GameEventType::RefreshTriggered:
+			animation.text.Format(_T("REFRESH +%d"), event.affectedPegs);
+			animation.color = RGB(0, 190, 90);
+			animation.lifetimeSeconds = 1.1f;
+			break;
+		case GameEventType::TurnResolved:
+			animation.text.Format(_T("TURN +%d"), event.scoreAwarded);
+			animation.position = GameLayout::TurnEffectPosition;
+			animation.color = RGB(40, 100, 220);
+			break;
+		case GameEventType::PlayerDamaged:
+			animation.text.Format(_T("HP -%d"), static_cast<int>(event.damage));
+			animation.color = RGB(220, 0, 0);
+			animation.lifetimeSeconds = 1.2f;
+			break;
+		case GameEventType::Victory:
+			animation.text = _T("CLEAR!");
+			animation.position = GameLayout::TurnEffectPosition;
+			animation.color = RGB(0, 150, 60);
+			break;
+		case GameEventType::Defeat:
+			animation.text = _T("GAME OVER");
+			animation.position = GameLayout::TurnEffectPosition;
+			animation.color = RGB(220, 0, 0);
+			break;
+		}
+
+		_feedbackAnimations.push_back(std::move(animation));
+		PlayEventSound(event.type, event.pegType);
+	}
+}
+
+void CChildView::UpdateFeedbackAnimations(float deltaSeconds)
+{
+	for (FeedbackAnimation& animation : _feedbackAnimations)
+	{
+		animation.ageSeconds += deltaSeconds;
+	}
+
+	_feedbackAnimations.erase(
+		std::remove_if(
+			_feedbackAnimations.begin(),
+			_feedbackAnimations.end(),
+			[](const FeedbackAnimation& animation)
+			{
+				return animation.ageSeconds >= animation.lifetimeSeconds;
+			}),
+		_feedbackAnimations.end());
+}
+
+void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
+{
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->SetBkMode(TRANSPARENT);
+
+	CFont effectFont;
+	effectFont.CreatePointFont(140, _T("맑은 고딕"));
+	deviceContext->SelectObject(&effectFont);
+
+	for (const FeedbackAnimation& animation : _feedbackAnimations)
+	{
+		const float progress = animation.ageSeconds / animation.lifetimeSeconds;
+		deviceContext->SetTextColor(animation.color);
+		deviceContext->TextOut(
+			static_cast<int>(std::lround(animation.position.x - 30.0f)),
+			static_cast<int>(std::lround(animation.position.y - progress * 45.0f)),
+			animation.text);
+	}
+
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
+{
+	if (!_soundEnabled)
+	{
+		return;
+	}
+
+	UINT sound = MB_OK;
+	if (eventType == GameEventType::PlayerDamaged || eventType == GameEventType::Defeat)
+	{
+		sound = MB_ICONHAND;
+	}
+	else if (eventType == GameEventType::Victory || pegType == PegType::Refresh)
+	{
+		sound = MB_ICONASTERISK;
+	}
+	else if (eventType == GameEventType::BombTriggered || pegType == PegType::Critical)
+	{
+		sound = MB_ICONEXCLAMATION;
+	}
+
+	::MessageBeep(sound);
 }
 
 
@@ -336,6 +484,11 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if (nChar == VK_F5)
 	{
 		_game.ResetBallToAiming();
+		Invalidate();
+	}
+	if (nChar == 'M')
+	{
+		_soundEnabled = !_soundEnabled;
 		Invalidate();
 	}
 

@@ -89,6 +89,7 @@ void GameWorld::ResetGame()
 	_pendingDamage = 0.0f;
 	_feedback = {};
 	_score = {};
+	_events.clear();
 	_terminalResultReported = false;
 	_pegRestitution = _stage.rules.pegRestitution;
 	_ball.Init();
@@ -106,6 +107,7 @@ void GameWorld::ResetBallToAiming()
 	_feedback = {};
 	_score.currentShot = 0;
 	_score.currentCombo = 0;
+	_events.clear();
 	_terminalResultReported = false;
 	TransitionTo(GameState::Aiming);
 }
@@ -262,17 +264,28 @@ void GameWorld::AwardPeg(const TargetBall& target)
 	_pendingDamage += definition.damage;
 	++_score.currentCombo;
 	_score.bestCombo = (std::max)(_score.bestCombo, _score.currentCombo);
-	_score.currentShot += SCORE_PER_COMBO_STEP
+	const int scoreAwarded = SCORE_PER_COMBO_STEP
 		* _score.currentCombo
 		* definition.scoreMultiplier;
+	_score.currentShot += scoreAwarded;
 	_feedback.type = GameFeedbackType::PegHit;
 	++_feedback.currentShotPegHits;
+	_events.push_back({
+		GameEventType::PegHit,
+		target.position,
+		target.type,
+		scoreAwarded,
+		_score.currentCombo,
+		1,
+		definition.damage
+	});
 }
 
 void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 {
 	const float blastRadius = GetPegTypeDefinition(bomb.type).blastRadius;
 	const float blastRadiusSquared = blastRadius * blastRadius;
+	int removedPegs = 0;
 	auto position = _targetBallList._targetBallList.GetHeadPosition();
 	while (position != nullptr)
 	{
@@ -282,13 +295,25 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 		{
 			_targetBallList._targetBallList.RemoveAt(current);
 			AwardPeg(target);
+			++removedPegs;
 		}
 	}
+
+	_events.push_back({
+		GameEventType::BombTriggered,
+		bomb.position,
+		bomb.type,
+		0,
+		_score.currentCombo,
+		removedPegs,
+		0.0f
+	});
 }
 
 void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
 {
 	constexpr float POSITION_EPSILON_SQUARED = 0.0001f;
+	int restoredPegs = 0;
 	for (const PegDefinition& definition : _stage.pegLayout.pegs)
 	{
 		if ((definition.position - excludedPosition).LengthSquared() <= POSITION_EPSILON_SQUARED)
@@ -313,8 +338,19 @@ void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
 			TargetBall restored;
 			restored.setting(definition);
 			_targetBallList.add(restored);
+			++restoredPegs;
 		}
 	}
+
+	_events.push_back({
+		GameEventType::RefreshTriggered,
+		excludedPosition,
+		PegType::Refresh,
+		0,
+		_score.currentCombo,
+		restoredPegs,
+		0.0f
+	});
 }
 
 void GameWorld::ResolveTurn()
@@ -339,6 +375,27 @@ void GameWorld::ResolveTurn()
 	_enemy.SetCount(_enemy.GetCount() + 1);
 	_feedback.turnNumber = _enemy.GetCount();
 	_enemy.SetHp(_enemy.GetHp() - _pendingDamage);
+	_events.push_back({
+		GameEventType::TurnResolved,
+		{},
+		PegType::Normal,
+		_score.lastTurn,
+		_score.bestCombo,
+		_feedback.currentShotPegHits,
+		_feedback.lastEnemyDamage
+	});
+	if (_feedback.lastPlayerDamage > 0.0f)
+	{
+		_events.push_back({
+			GameEventType::PlayerDamaged,
+			GameLayout::PlayerPosition,
+			PegType::Normal,
+			0,
+			0,
+			0,
+			_feedback.lastPlayerDamage
+		});
+	}
 	_pendingDamage = 0.0f;
 	_ball.Init();
 
@@ -346,11 +403,29 @@ void GameWorld::ResolveTurn()
 	{
 		TransitionTo(GameState::Defeat);
 		_feedback.type = GameFeedbackType::Defeat;
+		_events.push_back({
+			GameEventType::Defeat,
+			{},
+			PegType::Normal,
+			0,
+			0,
+			0,
+			0.0f
+		});
 	}
 	else if (_enemy.GetHp() <= 0.0f)
 	{
 		TransitionTo(GameState::Victory);
 		_feedback.type = GameFeedbackType::Victory;
+		_events.push_back({
+			GameEventType::Victory,
+			{},
+			PegType::Normal,
+			0,
+			0,
+			0,
+			0.0f
+		});
 	}
 	else
 	{
@@ -359,6 +434,13 @@ void GameWorld::ResolveTurn()
 			? GameFeedbackType::PlayerDamaged
 			: GameFeedbackType::TurnResolved;
 	}
+}
+
+std::vector<GameEvent> GameWorld::ConsumeEvents()
+{
+	std::vector<GameEvent> events;
+	events.swap(_events);
+	return events;
 }
 
 GameUpdateResult GameWorld::ReportTerminalResult(GameUpdateResult result) noexcept

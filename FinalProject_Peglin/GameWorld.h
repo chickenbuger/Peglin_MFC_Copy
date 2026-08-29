@@ -8,6 +8,8 @@
 #include "StageDefinition.h"
 #include "TargetBall.h"
 
+#include <vector>
+
 enum class GameUpdateResult
 {
 	None,
@@ -45,6 +47,28 @@ struct GameScore
 	int bestCombo = 0;
 };
 
+enum class GameEventType
+{
+	PegHit,
+	BombTriggered,
+	RefreshTriggered,
+	TurnResolved,
+	PlayerDamaged,
+	Victory,
+	Defeat
+};
+
+struct GameEvent
+{
+	GameEventType type = GameEventType::PegHit;
+	Vector2 position;
+	PegType pegType = PegType::Normal;
+	int scoreAwarded = 0;
+	int combo = 0;
+	int affectedPegs = 0;
+	float damage = 0.0f;
+};
+
 class GameWorld
 {
 public:
@@ -73,6 +97,7 @@ public:
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 	const GameScore& GetScore() const noexcept { return _score; }
+	std::vector<GameEvent> ConsumeEvents();
 
 private:
 	void InitializeTargets();
@@ -93,6 +118,7 @@ private:
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;
 	GameScore _score;
+	std::vector<GameEvent> _events;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 	bool _terminalResultReported = false;

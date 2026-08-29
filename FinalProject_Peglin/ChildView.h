@@ -6,6 +6,7 @@
 #pragma once
 
 #include <chrono>
+#include <vector>
 
 #include "Background.h"
 #include "GameWorld.h"
@@ -48,13 +49,28 @@ protected:
 	afx_msg void On32771();
 
 private:
+	struct FeedbackAnimation
+	{
+		CString text;
+		Vector2 position;
+		COLORREF color = RGB(255, 255, 255);
+		float ageSeconds = 0.0f;
+		float lifetimeSeconds = 0.9f;
+	};
+
 	void ReleaseMouseInput(bool cancelDrag);
 	void UpdateGameStep(float deltaSeconds);
+	void ConsumeGameEvents();
+	void UpdateFeedbackAnimations(float deltaSeconds);
+	void DrawFeedbackAnimations(CDC* deviceContext);
+	void PlayEventSound(GameEventType eventType, PegType pegType);
 
 	Background _background;
 	GameWorld _game;
 	UINT_PTR _gameTimerId = 0;
 	std::chrono::steady_clock::time_point _lastFrameTime{};
 	double _accumulatedTimeSeconds = 0.0;
+	std::vector<FeedbackAnimation> _feedbackAnimations;
+	bool _soundEnabled = true;
 };
 

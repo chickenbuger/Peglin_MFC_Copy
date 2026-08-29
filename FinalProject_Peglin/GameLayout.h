@@ -39,4 +39,6 @@ struct GameLayout
 	inline static constexpr float EnemyHealthTextY = 90.0f;
 	inline static constexpr Vector2 StateText{ 330.0f, 70.0f };
 	inline static constexpr Vector2 FeedbackText{ 330.0f, 90.0f };
+	inline static constexpr Vector2 OptionsText{ 330.0f, 110.0f };
+	inline static constexpr Vector2 TurnEffectPosition{ 490.0f, 150.0f };
 };

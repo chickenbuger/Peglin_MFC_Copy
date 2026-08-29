@@ -1,5 +1,6 @@
 #include <afxwin.h>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <string_view>
@@ -601,6 +602,65 @@ namespace
 		Check(normalCount == 1 && refreshCount == 1, "refresh cycle preserves one peg per original definition");
 	}
 
+	void TestGameEventFeedbackStream()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{ { 500.0f, 500.0f }, PegType::Bomb },
+			{ { 580.0f, 500.0f }, PegType::Critical },
+			{ { 760.0f, 500.0f }, PegType::Refresh }
+		};
+		GameWorld world(layout);
+		Launch(world);
+		world.GetBall().SetPosition({ 485.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+
+		const std::vector<GameEvent> bombEvents = world.ConsumeEvents();
+		Check(bombEvents.size() == 3, "bomb collision emits two peg hits and one effect event");
+		const auto bombEffect = std::find_if(
+			bombEvents.begin(),
+			bombEvents.end(),
+			[](const GameEvent& event) { return event.type == GameEventType::BombTriggered; });
+		Check(bombEffect != bombEvents.end(), "bomb collision emits BombTriggered event");
+		Check(bombEffect != bombEvents.end() && bombEffect->affectedPegs == 1, "bomb event reports affected neighbors");
+		const auto criticalHit = std::find_if(
+			bombEvents.begin(),
+			bombEvents.end(),
+			[](const GameEvent& event)
+			{
+				return event.type == GameEventType::PegHit && event.pegType == PegType::Critical;
+			});
+		Check(criticalHit != bombEvents.end(), "blast removal retains critical peg identity in feedback");
+		Check(criticalHit != bombEvents.end() && criticalHit->scoreAwarded == 400, "critical event reports combo-multiplied score");
+		Check(world.ConsumeEvents().empty(), "consuming feedback drains the event stream");
+
+		world.GetBall().SetPosition({ 745.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		const std::vector<GameEvent> refreshEvents = world.ConsumeEvents();
+		const auto refreshEffect = std::find_if(
+			refreshEvents.begin(),
+			refreshEvents.end(),
+			[](const GameEvent& event) { return event.type == GameEventType::RefreshTriggered; });
+		Check(refreshEffect != refreshEvents.end(), "refresh collision emits RefreshTriggered event");
+		Check(refreshEffect != refreshEvents.end() && refreshEffect->affectedPegs == 2, "refresh event reports restored peg count");
+
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		const std::vector<GameEvent> turnEvents = world.ConsumeEvents();
+		const auto turnEvent = std::find_if(
+			turnEvents.begin(),
+			turnEvents.end(),
+			[](const GameEvent& event) { return event.type == GameEventType::TurnResolved; });
+		Check(turnEvent != turnEvents.end(), "resolved shot emits TurnResolved event");
+		Check(turnEvent != turnEvents.end() && turnEvent->scoreAwarded == world.GetScore().lastTurn, "turn event reports committed score");
+
+		world.ResetGame();
+		Check(world.ConsumeEvents().empty(), "new game clears pending feedback events");
+	}
+
 	void TestStageValidationMatrix()
 	{
 		StageDefinition invalid = CreateDefaultStageDefinition();
@@ -696,6 +756,7 @@ int main()
 	TestScoreCancellationAndContinuation();
 	TestBombDoesNotChainSecondaryEffects();
 	TestRefreshDoesNotDuplicateActivePegs();
+	TestGameEventFeedbackStream();
 	TestStageValidationMatrix();
 	TestStageVictoryAndDefeatRegression();
 

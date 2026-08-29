@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 2 |
-| 현재 버전 | Version 2.5 |
-| 스프린트 목표 | 플레이 결과의 의미 강화와 데이터 기반 콘텐츠·로딩 경로 확장 |
-| 상태 | Sprint 2 완료 — P0와 모든 검증 게이트 통과, Sprint 3 미착수 |
+| 현재 스프린트 | Sprint 3 |
+| 현재 버전 | Version 3.1 |
+| 스프린트 목표 | 플레이 의사결정·결과 전달 강화와 콘텐츠 선택 경로 완성 |
+| 상태 | Sprint 3 진행 중 — P0 1/4 완료 |
 
 ## 문서
 
@@ -52,10 +52,11 @@
 - [Version 2.3 — 검증된 스테이지 정의와 로딩](./Version_2.3.md)
 - [Version 2.4 — Sprint 2 규칙 회귀 테스트 확장](./Version_2.4.md)
 - [Version 2.5 — Sprint 2 최종 검증 완료](./Version_2.5.md)
+- [Version 3.1 — 애니메이션과 음소거 가능한 사운드 피드백](./Version_3.1.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
-- [Next Version Plan 3 — Sprint 3 계획(미착수)](./Next_Version_Plan_3.md)
+- [Next Version Plan 3 — Sprint 3 진행 계획](./Next_Version_Plan_3.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차
