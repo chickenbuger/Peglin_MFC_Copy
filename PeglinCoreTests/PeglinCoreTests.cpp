@@ -6,6 +6,7 @@
 
 #include "GameWorld.h"
 #include "GameLayout.h"
+#include "PegLayout.h"
 #include "Physics.h"
 
 namespace
@@ -183,6 +184,74 @@ namespace
 		const Vector2 firstPeg = world.GetTargets()._targetBallList.GetAt(head).position;
 		Check(Near(firstPeg.x, GameLayout::PegStart.x) && Near(firstPeg.y, GameLayout::PegStart.y), "layout controls first peg position");
 	}
+
+	void TestSeededPegLayout()
+	{
+		const PegLayoutDefinition first = CreateSeededPegLayout(
+			GameLayout::PegColumns,
+			GameLayout::PegRows,
+			GameLayout::PegStart,
+			GameLayout::PegSpacing,
+			20.0f,
+			12345u);
+		const PegLayoutDefinition repeated = CreateSeededPegLayout(
+			GameLayout::PegColumns,
+			GameLayout::PegRows,
+			GameLayout::PegStart,
+			GameLayout::PegSpacing,
+			20.0f,
+			12345u);
+		const PegLayoutDefinition different = CreateSeededPegLayout(
+			GameLayout::PegColumns,
+			GameLayout::PegRows,
+			GameLayout::PegStart,
+			GameLayout::PegSpacing,
+			20.0f,
+			54321u);
+
+		Check(first.positions.size() == 48, "seeded layout preserves requested peg count");
+		bool sameSeedMatches = first.positions.size() == repeated.positions.size();
+		bool differentSeedDiffers = false;
+		bool allInsideBoard = true;
+		for (std::size_t index = 0; index < first.positions.size(); ++index)
+		{
+			const Vector2 position = first.positions[index];
+			sameSeedMatches = sameSeedMatches
+				&& Near(position.x, repeated.positions[index].x)
+				&& Near(position.y, repeated.positions[index].y);
+			differentSeedDiffers = differentSeedDiffers
+				|| !Near(position.x, different.positions[index].x)
+				|| !Near(position.y, different.positions[index].y);
+			allInsideBoard = allInsideBoard
+				&& position.x >= GameLayout::BoardLeft + GameLayout::PegRadius
+				&& position.x <= GameLayout::BoardRight - GameLayout::PegRadius
+				&& position.y >= GameLayout::BoardTop + GameLayout::PegRadius
+				&& position.y <= GameLayout::BoardBottom - GameLayout::PegRadius;
+		}
+
+		Check(sameSeedMatches, "same seed reproduces identical peg positions");
+		Check(differentSeedDiffers, "different seed changes peg positions");
+		Check(allInsideBoard, "seeded jitter keeps every peg inside board");
+	}
+
+	void TestDataDrivenPegLayout()
+	{
+		PegLayoutDefinition custom;
+		custom.positions = {
+			{ 300.0f, 400.0f },
+			{ 500.0f, 500.0f },
+			{ 700.0f, 600.0f }
+		};
+		GameWorld world(custom);
+
+		Check(world.GetPegLayout().positions.size() == 3, "game world retains custom layout data");
+		Check(world.GetTargets()._targetBallList.GetCount() == 3, "custom layout controls target count");
+		const auto head = world.GetTargets()._targetBallList.GetHeadPosition();
+		const Vector2 firstPeg = world.GetTargets()._targetBallList.GetAt(head).position;
+		Check(Near(firstPeg.x, 300.0f) && Near(firstPeg.y, 400.0f), "custom layout controls peg positions");
+		world.ResetGame();
+		Check(world.GetTargets()._targetBallList.GetCount() == 3, "reset rebuilds the configured custom layout");
+	}
 }
 
 int main()
@@ -195,6 +264,8 @@ int main()
 	TestDefeatTransition();
 	TestStateAndRestitutionRules();
 	TestLayoutConfiguration();
+	TestSeededPegLayout();
+	TestDataDrivenPegLayout();
 
 	if (failures == 0)
 	{

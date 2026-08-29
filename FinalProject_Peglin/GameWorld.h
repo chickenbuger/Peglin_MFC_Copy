@@ -3,6 +3,7 @@
 #include "Enemy.h"
 #include "GameState.h"
 #include "Parent_ball.h"
+#include "PegLayout.h"
 #include "Player.h"
 #include "TargetBall.h"
 
@@ -37,7 +38,7 @@ struct GameFeedback
 class GameWorld
 {
 public:
-	GameWorld();
+	explicit GameWorld(PegLayoutDefinition pegLayout = CreateDefaultPegLayout());
 
 	GameUpdateResult Update(float deltaSeconds);
 	void ResetGame();
@@ -55,6 +56,7 @@ public:
 	Enemy& GetEnemy() noexcept { return _enemy; }
 	Parent_ball& GetBall() noexcept { return _ball; }
 	TargetBallList& GetTargets() noexcept { return _targetBallList; }
+	const PegLayoutDefinition& GetPegLayout() const noexcept { return _pegLayout; }
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 
@@ -68,6 +70,7 @@ private:
 	Enemy _enemy;
 	Parent_ball _ball;
 	TargetBallList _targetBallList;
+	PegLayoutDefinition _pegLayout;
 	float _pendingDamage = 0.0f;
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;

@@ -4,6 +4,7 @@
 #include "Physics.h"
 
 #include <cmath>
+#include <utility>
 
 namespace
 {
@@ -11,7 +12,9 @@ namespace
 	constexpr float COLLISION_EPSILON = 0.001f;
 }
 
-GameWorld::GameWorld()
+
+GameWorld::GameWorld(PegLayoutDefinition pegLayout)
+	: _pegLayout(std::move(pegLayout))
 {
 	ResetGame();
 }
@@ -155,16 +158,11 @@ void GameWorld::SetPegRestitution(float restitution) noexcept
 void GameWorld::InitializeTargets()
 {
 	_targetBallList._targetBallList.RemoveAll();
-	for (int column = 0; column < GameLayout::PegColumns; ++column)
+	for (const Vector2 position : _pegLayout.positions)
 	{
-		for (int row = 0; row < GameLayout::PegRows; ++row)
-		{
-			TargetBall ball;
-			ball.setting({
-				GameLayout::PegStart.x + static_cast<float>(column) * GameLayout::PegSpacing,
-				GameLayout::PegStart.y + static_cast<float>(row) * GameLayout::PegSpacing });
-			_targetBallList.add(ball);
-		}
+		TargetBall ball;
+		ball.setting(position);
+		_targetBallList.add(ball);
 	}
 }
 
