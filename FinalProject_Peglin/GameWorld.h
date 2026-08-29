@@ -64,6 +64,7 @@ private:
 	void InitializeTargets();
 	void HandlePegCollisions();
 	void ResolveTurn();
+	GameUpdateResult ReportTerminalResult(GameUpdateResult result) noexcept;
 	bool TransitionTo(GameState nextState);
 
 	Player _player;
@@ -76,4 +77,5 @@ private:
 	GameFeedback _feedback;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
+	bool _terminalResultReported = false;
 };

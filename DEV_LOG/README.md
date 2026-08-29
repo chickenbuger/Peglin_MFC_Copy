@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 1 |
-| 현재 버전 | Version 1.9 |
+| 현재 버전 | Version 1.10 |
 | 스프린트 목표 | 물리·게임 흐름의 구조 분리와 검증 가능한 Peglin형 충돌 개선 |
-| 상태 | Sprint 1 완료 — 전체 회귀·GDI 안정성 검증 통과, Sprint 2 미착수 |
+| 상태 | Sprint 1 완료 — 종료 메시지 중복 표시 수정 및 회귀 검증 통과, Sprint 2 미착수 |
 
 ## 문서
 
@@ -46,6 +46,7 @@
 - [Version 1.7 — 피해·턴 전환 피드백](./Version_1.7.md)
 - [Version 1.8 — 재현 가능한 데이터 기반 페그 배치](./Version_1.8.md)
 - [Version 1.9 — Sprint 1 최종 검증 완료](./Version_1.9.md)
+- [Version 1.10 — 게임 종료 메시지 단일 표시](./Version_1.10.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 계획(미착수)](./Next_Version_Plan_2.md)

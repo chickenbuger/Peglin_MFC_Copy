@@ -145,6 +145,8 @@ namespace
 		const GameUpdateResult result = world.Update(0.0f);
 		Check(result == GameUpdateResult::Victory, "lethal peg damage reports Victory");
 		Check(world.GetState() == GameState::Victory, "lethal peg damage enters Victory state");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "Victory result is reported only once");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "Victory state does not repeat its result");
 	}
 
 	void TestDefeatTransition()
@@ -161,6 +163,8 @@ namespace
 		Check(Near(world.GetPlayer().GetHp(), 0.0f), "defeat applies player damage once");
 		Check(world.GetFeedback().type == GameFeedbackType::Defeat, "defeat emits Defeat feedback");
 		Check(Near(world.GetFeedback().lastPlayerDamage, 20.0f), "defeat feedback reports player damage");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "Defeat result is reported only once");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "Defeat state does not repeat its result");
 	}
 
 	void TestStateAndRestitutionRules()

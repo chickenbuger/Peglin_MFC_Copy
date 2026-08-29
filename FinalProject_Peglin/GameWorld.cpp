@@ -38,17 +38,17 @@ GameUpdateResult GameWorld::Update(float deltaSeconds)
 		ResolveTurn();
 		if (_gameState == GameState::Victory)
 		{
-			return GameUpdateResult::Victory;
+			return ReportTerminalResult(GameUpdateResult::Victory);
 		}
 		if (_gameState == GameState::Defeat)
 		{
-			return GameUpdateResult::Defeat;
+			return ReportTerminalResult(GameUpdateResult::Defeat);
 		}
 		break;
 	case GameState::Victory:
-		return GameUpdateResult::Victory;
+		return ReportTerminalResult(GameUpdateResult::Victory);
 	case GameState::Defeat:
-		return GameUpdateResult::Defeat;
+		return ReportTerminalResult(GameUpdateResult::Defeat);
 	}
 
 	return GameUpdateResult::None;
@@ -60,6 +60,7 @@ void GameWorld::ResetGame()
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
 	_feedback = {};
+	_terminalResultReported = false;
 	_ball.Init();
 	_player.Init();
 	_enemy.Init();
@@ -71,6 +72,7 @@ void GameWorld::ResetBallToAiming()
 	_ball.Init();
 	_pendingDamage = 0.0f;
 	_feedback = {};
+	_terminalResultReported = false;
 	TransitionTo(GameState::Aiming);
 }
 
@@ -245,6 +247,17 @@ void GameWorld::ResolveTurn()
 			? GameFeedbackType::PlayerDamaged
 			: GameFeedbackType::TurnResolved;
 	}
+}
+
+GameUpdateResult GameWorld::ReportTerminalResult(GameUpdateResult result) noexcept
+{
+	if (_terminalResultReported)
+	{
+		return GameUpdateResult::None;
+	}
+
+	_terminalResultReported = true;
+	return result;
 }
 
 bool GameWorld::TransitionTo(GameState nextState)
