@@ -104,6 +104,7 @@ void GameWorld::ResetGame()
 	_gameState = GameState::Aiming;
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
+	_enemyShield = 0.0f;
 	_feedback = {};
 	_score = {};
 	_events.clear();
@@ -459,31 +460,81 @@ void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
 	});
 }
 
+EnemyActionDefinition GameWorld::GetNextEnemyAction() const noexcept
+{
+	if (!_stage.enemyPattern.empty())
+	{
+		const std::size_t actionIndex = static_cast<std::size_t>(_enemy.GetCount())
+			% _stage.enemyPattern.size();
+		return _stage.enemyPattern[actionIndex];
+	}
+
+	if (_enemy.GetCount() < _stage.rules.enemyStepsBeforeAttack)
+	{
+		return { EnemyActionType::Advance, _stage.rules.enemyStep };
+	}
+	return { EnemyActionType::Strike, _stage.rules.playerDamage };
+}
+
+void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
+{
+	switch (action.type)
+	{
+	case EnemyActionType::Advance:
+		_enemy.SetX(_enemy.GetX() - action.magnitude);
+		_events.push_back({
+			GameEventType::EnemyAdvanced,
+			{ _enemy.GetX(), GameLayout::EnemyInitialPosition.y },
+			PegType::Normal,
+			0,
+			0,
+			0,
+			action.magnitude
+		});
+		break;
+	case EnemyActionType::Strike:
+	{
+		const ProgressionModifiers modifiers = _loadout.CalculateModifiers();
+		const float incomingDamage = action.magnitude
+			* modifiers.incomingDamageMultiplier;
+		_player.SetHp(_player.GetHp() - incomingDamage);
+		_feedback.lastPlayerDamage = incomingDamage;
+		break;
+	}
+	case EnemyActionType::Fortify:
+		_enemyShield += action.magnitude;
+		_events.push_back({
+			GameEventType::EnemyFortified,
+			{ _enemy.GetX(), GameLayout::EnemyInitialPosition.y },
+			PegType::Normal,
+			0,
+			0,
+			0,
+			action.magnitude
+		});
+		break;
+	}
+}
+
 void GameWorld::ResolveTurn()
 {
-	_feedback.lastEnemyDamage = _pendingDamage;
+	const float shieldAbsorbed = (std::min)(_enemyShield, _pendingDamage);
+	_enemyShield -= shieldAbsorbed;
+	const float enemyDamage = _pendingDamage - shieldAbsorbed;
+	_feedback.lastEnemyDamage = enemyDamage;
 	_feedback.lastPlayerDamage = 0.0f;
 	_score.lastTurn = _score.currentShot;
 	_score.total += _score.lastTurn;
 	_score.currentShot = 0;
 	_score.currentCombo = 0;
 
-	if (_enemy.GetCount() < _stage.rules.enemyStepsBeforeAttack)
+	_enemy.SetHp(_enemy.GetHp() - enemyDamage);
+	if (_enemy.GetHp() > 0.0f)
 	{
-		_enemy.SetX(_enemy.GetX() - _stage.rules.enemyStep);
+		ExecuteEnemyAction(GetNextEnemyAction());
 	}
-	else
-	{
-		const ProgressionModifiers modifiers = _loadout.CalculateModifiers();
-		const float incomingDamage = _stage.rules.playerDamage
-			* modifiers.incomingDamageMultiplier;
-		_player.SetHp(_player.GetHp() - incomingDamage);
-		_feedback.lastPlayerDamage = incomingDamage;
-	}
-
 	_enemy.SetCount(_enemy.GetCount() + 1);
 	_feedback.turnNumber = _enemy.GetCount();
-	_enemy.SetHp(_enemy.GetHp() - _pendingDamage);
 	_events.push_back({
 		GameEventType::TurnResolved,
 		{},

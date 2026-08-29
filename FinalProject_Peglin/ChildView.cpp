@@ -110,8 +110,30 @@ namespace
 		{
 			return _T("Dense Cavern");
 		}
+		if (stageId == "stage-3")
+		{
+			return _T("Rootbound Citadel");
+		}
 
 		return _T("Unknown Stage");
+	}
+
+	CString EnemyActionText(const EnemyActionDefinition& action)
+	{
+		CString text;
+		switch (action.type)
+		{
+		case EnemyActionType::Advance:
+			text.Format(_T("다음: 이동 %d"), static_cast<int>(std::lround(action.magnitude)));
+			break;
+		case EnemyActionType::Strike:
+			text.Format(_T("다음: 공격 %d"), static_cast<int>(std::lround(action.magnitude)));
+			break;
+		case EnemyActionType::Fortify:
+			text.Format(_T("다음: 방어막 %d"), static_cast<int>(std::lround(action.magnitude)));
+			break;
+		}
+		return text;
 	}
 
 	CString DifficultyText(GameDifficulty difficulty)
@@ -293,6 +315,20 @@ void CChildView::OnPaint()
 			static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
 			Text1);
+		CString enemyAction = EnemyActionText(_game.GetNextEnemyAction());
+		memDc.TextOut(
+			static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
+			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 20.0f)),
+			enemyAction);
+		if (_game.GetEnemyShield() > 0.0f)
+		{
+			CString shieldText;
+			shieldText.Format(_T("방어막 : %d"), static_cast<int>(std::lround(_game.GetEnemyShield())));
+			memDc.TextOut(
+				static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
+				static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 40.0f)),
+				shieldText);
+		}
 	}
 
 	const int textState = memDc.SaveDC();
@@ -446,6 +482,15 @@ void CChildView::ConsumeGameEvents()
 			animation.position = GameLayout::TurnEffectPosition;
 			animation.color = RGB(40, 100, 220);
 			break;
+		case GameEventType::EnemyAdvanced:
+			animation.text.Format(_T("ADVANCE %d"), static_cast<int>(std::lround(event.damage)));
+			animation.color = RGB(240, 180, 80);
+			break;
+		case GameEventType::EnemyFortified:
+			animation.text.Format(_T("SHIELD +%d"), static_cast<int>(std::lround(event.damage)));
+			animation.color = RGB(90, 180, 255);
+			animation.lifetimeSeconds = 1.1f;
+			break;
 		case GameEventType::PlayerDamaged:
 			animation.text.Format(_T("HP -%d"), static_cast<int>(event.damage));
 			animation.color = RGB(220, 0, 0);
@@ -582,7 +627,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	bodyFont.CreatePointFont(170, _T("맑은 고딕"));
 	deviceContext->SelectObject(&bodyFont);
 	deviceContext->SetTextColor(RGB(235, 235, 245));
-	deviceContext->TextOut(490, 255, _T("[1] Forgotten Forest"));
+	deviceContext->TextOut(490, 215, _T("[1] Forgotten Forest"));
 	const StageDefinition stageOne = ApplyDifficulty(
 		CreateDefaultStageDefinition(),
 		_options.difficulty);
@@ -591,9 +636,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		_T("48 Pegs · Enemy HP %d · %d Steps"),
 		static_cast<int>(std::lround(stageOne.rules.enemyHealth)),
 		stageOne.rules.enemyStepsBeforeAttack);
-	deviceContext->TextOut(490, 310, stageOneText);
+	deviceContext->TextOut(490, 250, stageOneText);
 	deviceContext->SetTextColor(RGB(170, 210, 255));
-	deviceContext->TextOut(490, 415, _T("[2] Dense Cavern"));
+	deviceContext->TextOut(490, 345, _T("[2] Dense Cavern"));
 	const StageDefinition stageTwo = ApplyDifficulty(
 		CreateChallengeStageDefinition(),
 		_options.difficulty);
@@ -602,7 +647,17 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		_T("40 Pegs · Enemy HP %d · %d Steps"),
 		static_cast<int>(std::lround(stageTwo.rules.enemyHealth)),
 		stageTwo.rules.enemyStepsBeforeAttack);
-	deviceContext->TextOut(490, 470, stageTwoText);
+	deviceContext->TextOut(490, 380, stageTwoText);
+	deviceContext->SetTextColor(RGB(255, 185, 95));
+	deviceContext->TextOut(490, 475, _T("[3] Rootbound Citadel · BOSS"));
+	const StageDefinition stageThree = ApplyDifficulty(
+		CreateBossStageDefinition(),
+		_options.difficulty);
+	CString stageThreeText;
+	stageThreeText.Format(
+		_T("36 Pegs · Boss HP %d · 4-Action Pattern"),
+		static_cast<int>(std::lround(stageThree.rules.enemyHealth)));
+	deviceContext->TextOut(490, 510, stageThreeText);
 
 	CFont recordFont;
 	recordFont.CreatePointFont(120, _T("맑은 고딕"));
@@ -615,7 +670,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		stageOneRecord.highScore,
 		stageOneRecord.bestCombo,
 		stageOneRecord.clearCount);
-	deviceContext->TextOut(490, 350, stageOneRecordText);
+	deviceContext->TextOut(490, 285, stageOneRecordText);
 	const StageRecord stageTwoRecord = _records.Get("stage-2", _options.difficulty);
 	CString stageTwoRecordText;
 	stageTwoRecordText.Format(
@@ -623,7 +678,15 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		stageTwoRecord.highScore,
 		stageTwoRecord.bestCombo,
 		stageTwoRecord.clearCount);
-	deviceContext->TextOut(490, 510, stageTwoRecordText);
+	deviceContext->TextOut(490, 415, stageTwoRecordText);
+	const StageRecord stageThreeRecord = _records.Get("stage-3", _options.difficulty);
+	CString stageThreeRecordText;
+	stageThreeRecordText.Format(
+		_T("기록 %d · 콤보 %d · 클리어 %d"),
+		stageThreeRecord.highScore,
+		stageThreeRecord.bestCombo,
+		stageThreeRecord.clearCount);
+	deviceContext->TextOut(490, 545, stageThreeRecordText);
 
 	CFont guideFont;
 	guideFont.CreatePointFont(130, _T("맑은 고딕"));
@@ -635,8 +698,8 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		DifficultyText(_options.difficulty).GetString(),
 		_options.soundEnabled ? _T("켜짐") : _T("꺼짐"),
 		PegColorModeText(_options.pegColorMode).GetString());
-	deviceContext->TextOut(490, 585, currentOptions);
-	deviceContext->TextOut(490, 635, _T("[1]/[2] 시작    [O] 옵션"));
+	deviceContext->TextOut(490, 610, currentOptions);
+	deviceContext->TextOut(490, 655, _T("[1]/[2]/[3] 시작    [O] 옵션"));
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -890,6 +953,10 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		else if (nChar == '2')
 		{
 			StartStage("stage-2");
+		}
+		else if (nChar == '3')
+		{
+			StartStage("stage-3");
 		}
 		else if (nChar == 'O')
 		{

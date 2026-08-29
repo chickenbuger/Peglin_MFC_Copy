@@ -10,9 +10,10 @@ namespace
 {
 	constexpr std::size_t MAX_STAGE_PEGS = 256;
 	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
-	constexpr std::array<StageCatalogEntry, 2> STAGE_CATALOG = {
+	constexpr std::array<StageCatalogEntry, 3> STAGE_CATALOG = {
 		StageCatalogEntry{ "stage-1", "Forgotten Forest" },
-		StageCatalogEntry{ "stage-2", "Dense Cavern" }
+		StageCatalogEntry{ "stage-2", "Dense Cavern" },
+		StageCatalogEntry{ "stage-3", "Rootbound Citadel" }
 	};
 
 	bool IsFinitePositive(float value) noexcept
@@ -28,6 +29,19 @@ namespace
 		case PegType::Critical:
 		case PegType::Bomb:
 		case PegType::Refresh:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	bool IsKnownEnemyAction(EnemyActionType type) noexcept
+	{
+		switch (type)
+		{
+		case EnemyActionType::Advance:
+		case EnemyActionType::Strike:
+		case EnemyActionType::Fortify:
 			return true;
 		default:
 			return false;
@@ -86,6 +100,44 @@ StageDefinition CreateChallengeStageDefinition()
 	return stage;
 }
 
+StageDefinition CreateBossStageDefinition()
+{
+	StageDefinition stage;
+	stage.id = "stage-3";
+	stage.displayName = "Rootbound Citadel";
+	stage.pegLayout = CreateSeededPegLayout(
+		9,
+		4,
+		{ 100.0f, 380.0f },
+		100.0f,
+		16.0f,
+		20260830u);
+
+	if (stage.pegLayout.pegs.size() == 36)
+	{
+		stage.pegLayout.pegs[4].type = PegType::Critical;
+		stage.pegLayout.pegs[10].type = PegType::Bomb;
+		stage.pegLayout.pegs[17].type = PegType::Refresh;
+		stage.pegLayout.pegs[22].type = PegType::Bomb;
+		stage.pegLayout.pegs[31].type = PegType::Critical;
+	}
+
+	stage.rules.playerHealth = 110.0f;
+	stage.rules.enemyHealth = 60.0f;
+	stage.rules.playerDamage = 20.0f;
+	stage.rules.enemyStepsBeforeAttack = 4;
+	stage.rules.enemyStep = 48.0f;
+	stage.rules.pegRestitution = 0.92f;
+	stage.isBoss = true;
+	stage.enemyPattern = {
+		{ EnemyActionType::Advance, 48.0f },
+		{ EnemyActionType::Fortify, 4.0f },
+		{ EnemyActionType::Strike, 18.0f },
+		{ EnemyActionType::Strike, 24.0f }
+	};
+	return stage;
+}
+
 StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept
 {
 	if (stage.id.empty())
@@ -125,6 +177,22 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 		|| stage.rules.pegRestitution > 1.0f)
 	{
 		return { StageLoadError::InvalidPegRestitution, 0 };
+	}
+	if (stage.isBoss && stage.enemyPattern.empty())
+	{
+		return { StageLoadError::MissingBossPattern, 0 };
+	}
+	for (std::size_t index = 0; index < stage.enemyPattern.size(); ++index)
+	{
+		const EnemyActionDefinition& action = stage.enemyPattern[index];
+		if (!IsKnownEnemyAction(action.type))
+		{
+			return { StageLoadError::InvalidEnemyAction, index };
+		}
+		if (!IsFinitePositive(action.magnitude))
+		{
+			return { StageLoadError::InvalidEnemyActionMagnitude, index };
+		}
 	}
 
 	for (std::size_t index = 0; index < stage.pegLayout.pegs.size(); ++index)
@@ -167,13 +235,17 @@ StageLoadResult LoadStageDefinition(std::string_view stageId)
 	{
 		return ValidateLoadedStage(CreateChallengeStageDefinition());
 	}
+	if (stageId == "stage-3")
+	{
+		return ValidateLoadedStage(CreateBossStageDefinition());
+	}
 
 	StageLoadResult result;
 	result.validation.error = StageLoadError::NotFound;
 	return result;
 }
 
-const std::array<StageCatalogEntry, 2>& GetStageCatalog() noexcept
+const std::array<StageCatalogEntry, 3>& GetStageCatalog() noexcept
 {
 	return STAGE_CATALOG;
 }

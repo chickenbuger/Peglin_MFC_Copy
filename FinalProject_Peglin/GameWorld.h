@@ -29,6 +29,8 @@ enum class GameFeedbackType
 	ShotLaunched,
 	PegHit,
 	TurnResolved,
+	EnemyAdvanced,
+	EnemyFortified,
 	PlayerDamaged,
 	Victory,
 	Defeat,
@@ -59,6 +61,8 @@ enum class GameEventType
 	BombTriggered,
 	RefreshTriggered,
 	TurnResolved,
+	EnemyAdvanced,
+	EnemyFortified,
 	PlayerDamaged,
 	Victory,
 	Defeat
@@ -137,6 +141,8 @@ public:
 	{
 		return _loadout.CalculateModifiers();
 	}
+	EnemyActionDefinition GetNextEnemyAction() const noexcept;
+	float GetEnemyShield() const noexcept { return _enemyShield; }
 	std::vector<GameEvent> ConsumeEvents();
 	std::optional<GameResultSummary> GetResultSummary() const;
 
@@ -146,6 +152,7 @@ private:
 	void AwardPeg(const TargetBall& target);
 	void ApplyBombEffect(const TargetBall& bomb);
 	void RestoreRemovedPegs(Vector2 excludedPosition);
+	void ExecuteEnemyAction(const EnemyActionDefinition& action);
 	void ResolveTurn();
 	GameUpdateResult ReportTerminalResult(GameUpdateResult result) noexcept;
 	bool TransitionTo(GameState nextState);
@@ -157,6 +164,7 @@ private:
 	StageDefinition _stage;
 	GameDifficulty _difficulty = GameDifficulty::Normal;
 	float _pendingDamage = 0.0f;
+	float _enemyShield = 0.0f;
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;
 	GameScore _score;

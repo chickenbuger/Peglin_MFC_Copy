@@ -57,6 +57,13 @@ inline StageDefinition ApplyDifficulty(
 		stage.rules.enemyHealth *= 0.8f;
 		stage.rules.playerDamage *= 0.75f;
 		stage.rules.enemyStepsBeforeAttack += 2;
+		for (EnemyActionDefinition& action : stage.enemyPattern)
+		{
+			if (action.type == EnemyActionType::Strike)
+			{
+				action.magnitude *= 0.75f;
+			}
+		}
 		break;
 	case GameDifficulty::Normal:
 		break;
@@ -66,6 +73,13 @@ inline StageDefinition ApplyDifficulty(
 		stage.rules.enemyStepsBeforeAttack = (std::max)(
 			1,
 			stage.rules.enemyStepsBeforeAttack - 2);
+		for (EnemyActionDefinition& action : stage.enemyPattern)
+		{
+			if (action.type == EnemyActionType::Strike)
+			{
+				action.magnitude *= 1.25f;
+			}
+		}
 		break;
 	}
 

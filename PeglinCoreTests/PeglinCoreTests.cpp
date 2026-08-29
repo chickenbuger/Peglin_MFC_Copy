@@ -431,8 +431,12 @@ namespace
 	void TestStageCatalogAndValidation()
 	{
 		const auto& catalog = GetStageCatalog();
-		Check(catalog.size() == 2, "stage catalog exposes two selectable stages");
-		Check(catalog[0].id == "stage-1" && catalog[1].id == "stage-2", "stage catalog keeps stable selection ids");
+		Check(catalog.size() == 3, "stage catalog exposes three selectable stages");
+		Check(
+			catalog[0].id == "stage-1"
+			&& catalog[1].id == "stage-2"
+			&& catalog[2].id == "stage-3",
+			"stage catalog keeps stable selection ids");
 
 		const StageLoadResult defaultResult = LoadStageDefinition("stage-1");
 		Check(defaultResult.IsSuccess(), "stage catalog loads stage-1");
@@ -445,6 +449,13 @@ namespace
 		Check(challengeResult.stage->pegLayout.pegs.size() == 40, "challenge stage provides a distinct board");
 		Check(Near(challengeResult.stage->rules.enemyHealth, 30.0f), "challenge stage provides stronger enemy");
 		Check(challengeResult.stage->rules.enemyStepsBeforeAttack == 6, "challenge stage provides faster attack timing");
+
+		const StageLoadResult bossResult = LoadStageDefinition("stage-3");
+		Check(bossResult.IsSuccess(), "stage catalog loads stage-3");
+		Check(bossResult.stage->isBoss, "stage-3 is marked as a boss stage");
+		Check(bossResult.stage->pegLayout.pegs.size() == 36, "boss stage provides its own board");
+		Check(bossResult.stage->enemyPattern.size() == 4, "boss stage exposes a four-action pattern");
+		Check(Near(bossResult.stage->rules.enemyHealth, 60.0f), "boss stage provides boss health");
 
 		const StageLoadResult missingResult = LoadStageDefinition("missing-stage");
 		Check(!missingResult.IsSuccess(), "unknown stage id fails safely");
@@ -1082,6 +1093,96 @@ namespace
 		Check(deterministic, "repeated stage-2 loads are deterministic");
 	}
 
+	void TestBossEnemyActionPattern()
+	{
+		const StageDefinition boss = CreateBossStageDefinition();
+		Check(ValidateStageDefinition(boss).IsValid(), "boss stage definition validates");
+		Check(boss.isBoss, "boss stage keeps its boss marker");
+		Check(boss.enemyPattern.size() == 4, "boss pattern has four telegraphed actions");
+		Check(boss.enemyPattern[0].type == EnemyActionType::Advance, "boss opens by advancing");
+		Check(boss.enemyPattern[1].type == EnemyActionType::Fortify, "boss follows with fortify");
+		Check(boss.enemyPattern[2].type == EnemyActionType::Strike, "boss third action is a strike");
+		Check(boss.enemyPattern[3].type == EnemyActionType::Strike, "boss fourth action is a heavy strike");
+
+		const StageDefinition easy = ApplyDifficulty(boss, GameDifficulty::Easy);
+		const StageDefinition hard = ApplyDifficulty(boss, GameDifficulty::Hard);
+		Check(Near(easy.enemyPattern[2].magnitude, 13.5f), "easy difficulty scales boss strike damage");
+		Check(Near(easy.enemyPattern[3].magnitude, 18.0f), "easy difficulty scales boss heavy strike damage");
+		Check(Near(hard.enemyPattern[2].magnitude, 22.5f), "hard difficulty scales boss strike damage");
+		Check(Near(hard.enemyPattern[3].magnitude, 30.0f), "hard difficulty scales boss heavy strike damage");
+		Check(Near(hard.enemyPattern[0].magnitude, 48.0f), "difficulty does not scale boss movement");
+		Check(Near(hard.enemyPattern[1].magnitude, 4.0f), "difficulty does not scale boss shield");
+
+		StageDefinition invalid = boss;
+		invalid.enemyPattern.clear();
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::MissingBossPattern, "boss without a pattern is rejected");
+		invalid = boss;
+		invalid.enemyPattern[0].type = static_cast<EnemyActionType>(999);
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyAction, "unknown enemy action is rejected");
+		invalid = boss;
+		invalid.enemyPattern[1].magnitude = 0.0f;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyActionMagnitude, "non-positive enemy action is rejected");
+
+		auto ResolveEmptyTurn = [](GameWorld& world)
+		{
+			Launch(world);
+			world.GetBall().SetPosition({ 500.0f, 801.0f });
+			world.Update(0.0f);
+			world.Update(0.0f);
+		};
+		auto HasEvent = [](const std::vector<GameEvent>& events, GameEventType type)
+		{
+			return std::any_of(events.begin(), events.end(), [type](const GameEvent& event)
+			{
+				return event.type == type;
+			});
+		};
+
+		GameWorld world(boss);
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "boss advance is previewed before turn one");
+		const float initialEnemyX = world.GetEnemy().GetX();
+		ResolveEmptyTurn(world);
+		Check(Near(world.GetEnemy().GetX(), initialEnemyX - 48.0f), "advance action moves the boss by its magnitude");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Fortify, "fortify is previewed after advance");
+		Check(HasEvent(world.ConsumeEvents(), GameEventType::EnemyAdvanced), "advance action emits feedback event");
+
+		ResolveEmptyTurn(world);
+		Check(Near(world.GetEnemyShield(), 4.0f), "fortify action grants boss shield");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Strike, "strike is previewed after fortify");
+		Check(HasEvent(world.ConsumeEvents(), GameEventType::EnemyFortified), "fortify action emits feedback event");
+
+		Launch(world);
+		auto scan = world.GetTargets()._targetBallList.GetHeadPosition();
+		Vector2 normalPeg;
+		while (scan != nullptr)
+		{
+			const TargetBall& candidate = world.GetTargets()._targetBallList.GetNext(scan);
+			if (candidate.type == PegType::Normal)
+			{
+				normalPeg = candidate.position;
+				break;
+			}
+		}
+		world.GetBall().SetPosition(normalPeg + Vector2{ -15.0f, 0.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(Near(world.GetEnemyShield(), 3.0f), "boss shield absorbs pending peg damage first");
+		Check(Near(world.GetEnemy().GetHp(), 60.0f), "absorbed peg damage does not reduce boss health");
+		Check(Near(world.GetPlayer().GetHp(), 92.0f), "boss strike applies its telegraphed damage");
+		Check(Near(world.GetFeedback().lastEnemyDamage, 0.0f), "absorbed damage is excluded from resolved enemy damage");
+
+		ResolveEmptyTurn(world);
+		Check(Near(world.GetPlayer().GetHp(), 68.0f), "boss heavy strike applies its telegraphed damage");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "boss pattern loops after the fourth action");
+		world.ResetGame();
+		Check(Near(world.GetEnemyShield(), 0.0f), "retry clears boss shield");
+		Check(world.GetEnemy().GetCount() == 0, "retry resets boss action index");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "retry restores the first boss action preview");
+	}
+
 	void TestStageVictoryAndDefeatRegression()
 	{
 		StageDefinition victoryStage = CreateDefaultStageDefinition();
@@ -1225,6 +1326,7 @@ int main()
 	TestStageValidationMatrix();
 	TestStageVictoryAndDefeatRegression();
 	TestOrbAndRelicProgression();
+	TestBossEnemyActionPattern();
 
 	if (failures == 0)
 	{

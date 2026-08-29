@@ -7,6 +7,20 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
+
+enum class EnemyActionType
+{
+	Advance,
+	Strike,
+	Fortify
+};
+
+struct EnemyActionDefinition
+{
+	EnemyActionType type = EnemyActionType::Advance;
+	float magnitude = 0.0f;
+};
 
 struct StageRules
 {
@@ -24,6 +38,8 @@ struct StageDefinition
 	std::string displayName;
 	PegLayoutDefinition pegLayout;
 	StageRules rules;
+	bool isBoss = false;
+	std::vector<EnemyActionDefinition> enemyPattern;
 };
 
 enum class StageLoadError
@@ -41,7 +57,10 @@ enum class StageLoadError
 	InvalidPlayerDamage,
 	InvalidEnemySteps,
 	InvalidEnemyStep,
-	InvalidPegRestitution
+	InvalidPegRestitution,
+	MissingBossPattern,
+	InvalidEnemyAction,
+	InvalidEnemyActionMagnitude
 };
 
 struct StageValidationResult
@@ -68,6 +87,7 @@ struct StageCatalogEntry
 
 StageDefinition CreateDefaultStageDefinition();
 StageDefinition CreateChallengeStageDefinition();
+StageDefinition CreateBossStageDefinition();
 StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept;
 StageLoadResult LoadStageDefinition(std::string_view stageId);
-const std::array<StageCatalogEntry, 2>& GetStageCatalog() noexcept;
+const std::array<StageCatalogEntry, 3>& GetStageCatalog() noexcept;
