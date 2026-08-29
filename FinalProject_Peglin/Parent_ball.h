@@ -13,7 +13,6 @@ public:
 	//setter
 	void SetStartDragPos(Vector2 position)		{ _startDragPosition = position; }
 	void SetEndDragPos(Vector2 position)		{ _endDragPosition = position; }
-	void SetTraceDragPos(Vector2 position)		{ _traceDragPosition = position; }
 	void SetPosition(Vector2 position)			{ _position = position; }
 	void SetVelocity(Vector2 velocity)			{ _velocity = velocity; }
 	void SetClick(bool click)					{ IsClick = click; }
@@ -38,7 +37,6 @@ public:
 	bool stop=false;
 
 private:
-	void drawline(CDC* pDC);
 	void movement(float timeScale);
 
 private:
@@ -47,8 +45,6 @@ private:
 
 	//Drag 시작 위치
 	Vector2 _startDragPosition;
-	//Drag 중 라인 위치
-	Vector2 _traceDragPosition;
 	//Drag 마지막 위치
 	Vector2 _endDragPosition;
 

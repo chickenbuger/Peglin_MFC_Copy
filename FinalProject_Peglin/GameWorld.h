@@ -82,13 +82,20 @@ struct GameEvent
 
 struct AimPreview
 {
-	static constexpr std::size_t PointCount = 16;
+	static constexpr std::size_t PointCount = 24;
+	static constexpr float GuideLengthPixels = 57.0f;
 
 	bool visible = false;
 	Vector2 launchDirection;
 	float dragDistance = 0.0f;
 	float normalizedStrength = 0.0f;
+	std::size_t firstPegCollisionPoint = PointCount;
 	std::array<Vector2, PointCount> points{};
+
+	bool PredictsPegCollision() const noexcept
+	{
+		return firstPegCollisionPoint < PointCount;
+	}
 };
 
 struct GameResultSummary

@@ -801,18 +801,54 @@ void CChildView::DrawAimPreview(CDC* deviceContext)
 	const BYTE green = static_cast<BYTE>(std::lround(220.0f * (1.0f - preview.normalizedStrength)));
 	const COLORREF strengthColor = RGB(red, green, 60);
 
-	CPen pathPen(PS_DOT, 2, RGB(210, 210, 255));
+	CPen pathPen(PS_SOLID, 2, RGB(190, 220, 255));
+	CPen reflectedPen(PS_SOLID, 3, RGB(255, 194, 62));
 	deviceContext->SelectObject(&pathPen);
 	deviceContext->SelectObject(GetStockObject(NULL_BRUSH));
 	deviceContext->MoveTo(
 		static_cast<int>(std::lround(_game.GetBall().GetPosition().x)),
 		static_cast<int>(std::lround(_game.GetBall().GetPosition().y)));
-	for (const Vector2 point : preview.points)
+	for (std::size_t index = 0; index < preview.points.size(); ++index)
 	{
+		const Vector2 point = preview.points[index];
 		deviceContext->LineTo(
 			static_cast<int>(std::lround(point.x)),
 			static_cast<int>(std::lround(point.y)));
+		if (index == preview.firstPegCollisionPoint)
+		{
+			deviceContext->SelectObject(&reflectedPen);
+		}
 	}
+
+	if (preview.PredictsPegCollision())
+	{
+		const Vector2 collision = preview.points[preview.firstPegCollisionPoint];
+		const int collisionX = static_cast<int>(std::lround(collision.x));
+		const int collisionY = static_cast<int>(std::lround(collision.y));
+		deviceContext->SelectObject(&reflectedPen);
+		deviceContext->SelectObject(GetStockObject(NULL_BRUSH));
+		deviceContext->Ellipse(
+			collisionX - 7,
+			collisionY - 7,
+			collisionX + 7,
+			collisionY + 7);
+	}
+
+	const Vector2 arrowEnd = preview.points.back();
+	const Vector2 arrowDirection =
+		(arrowEnd - preview.points[preview.points.size() - 2]).Normalized();
+	const Vector2 arrowNormal{ -arrowDirection.y, arrowDirection.x };
+	const Vector2 arrowLeft = arrowEnd - arrowDirection * 9.0f + arrowNormal * 4.0f;
+	const Vector2 arrowRight = arrowEnd - arrowDirection * 9.0f - arrowNormal * 4.0f;
+	deviceContext->MoveTo(
+		static_cast<int>(std::lround(arrowLeft.x)),
+		static_cast<int>(std::lround(arrowLeft.y)));
+	deviceContext->LineTo(
+		static_cast<int>(std::lround(arrowEnd.x)),
+		static_cast<int>(std::lround(arrowEnd.y)));
+	deviceContext->LineTo(
+		static_cast<int>(std::lround(arrowRight.x)),
+		static_cast<int>(std::lround(arrowRight.y)));
 
 	const int left = static_cast<int>(std::lround(GameLayout::AimStrengthPosition.x));
 	const int top = static_cast<int>(std::lround(GameLayout::AimStrengthPosition.y));

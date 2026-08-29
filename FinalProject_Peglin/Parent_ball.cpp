@@ -85,21 +85,16 @@ void Parent_ball::draw(CDC* pDC, CBitmap* sprite, float visualOffsetY, float vis
 	else
 	{
 		CBrush brush(RGB(200, 200, 200));
-		pDC->SelectObject(&brush);
-		pDC->SelectObject(GetStockObject(NULL_PEN));
+		CBrush* previousBrush = pDC->SelectObject(&brush);
+		CPen* previousPen = static_cast<CPen*>(
+			pDC->SelectStockObject(NULL_PEN));
 		pDC->Ellipse(
 			RoundToPixel(_position.x - _size),
 			RoundToPixel(_position.y - _size),
 			RoundToPixel(_position.x + _size),
 			RoundToPixel(_position.y + _size));
-	}
-	
-	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
-	pDC->SelectObject(&pen);
-
-	if (!IsActive && IsClick)
-	{
-		drawline(pDC);
+		pDC->SelectObject(previousPen);
+		pDC->SelectObject(previousBrush);
 	}
 
 	pDC->RestoreDC(savedDc);
@@ -121,7 +116,6 @@ void Parent_ball::Init()
 {
 	_position = GameLayout::BallInitialPosition;
 	_startDragPosition = _position;
-	_traceDragPosition = _position;
 	_endDragPosition = _position;
 
 	_force = 0.0f;
@@ -148,55 +142,6 @@ void Parent_ball::collision()
 	{
 		_position.y = GameLayout::BallTopBoundary;
 		_velocity = ReflectVelocity(_velocity, { 0.0f, 1.0f }, WALL_RESTITUTION);
-	}
-}
-
-void Parent_ball::drawline(CDC* pDC)
-{
-	const Vector2 dragDirection = _traceDragPosition - _startDragPosition;
-	float magnitude = dragDirection.Length();
-
-	if (magnitude == 0) return;
-
-	const Vector2 direction = dragDirection / magnitude;
-	const float ratioX = direction.x;
-	float ratioY = direction.y;
-
-	//힘의 값을 MinPower ~ MaxPower 사이로 조정
-	magnitude = std::clamp(magnitude, MIN_POWER, MAX_POWER);
-
-	//힘의 값을 1~10사이 값으로 고정
-	magnitude = magnitude / (MAX_POWER / CONVERT_MAX_POWER);
-	magnitude = std::clamp(magnitude, CONVERT_MIN_POWER, CONVERT_MAX_POWER);
-
-	//선의 좌표들
-	float x1 = _position.x;
-	float y1 = _position.y;
-
-	float line_x = 1.0f;
-	float line_y = 1.0f;
-
-	//펜 선택
-	CPen pen(PS_SOLID, 4, RGB(255, 255, 255));
-	pDC->SelectObject(&pen);
-
-	for (int i = 0; i < (int)magnitude; i++)
-	{
-		ratioY -= _gravity;
-
-		float x2 = x1 - ratioX * magnitude * line_x;
-		float y2 = y1 - ratioY * magnitude * line_y;
-
-		//벽에 닿으면 x축이 반대로
-		if ((x2 < GameLayout::BallLeftBoundary) || (x2 > GameLayout::BallRightBoundary)) line_x *= -1;
-		//천장에 닿으면 y축이 반대로
-		if (y2 < GameLayout::BallTopBoundary) line_y *= -1;
-
-		pDC->MoveTo(RoundToPixel(x1), RoundToPixel(y1));
-		pDC->LineTo(RoundToPixel(x2), RoundToPixel(y2));
-
-		//new->old
-		x1 = x2; y1 = y2;
 	}
 }
 

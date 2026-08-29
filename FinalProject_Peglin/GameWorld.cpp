@@ -15,8 +15,9 @@ namespace
 	constexpr float AIM_MIN_FORCE = 1.0f;
 	constexpr float AIM_MAX_FORCE = 10.0f;
 	constexpr float AIM_MAX_DRAG_DISTANCE = 400.0f;
-	constexpr float AIM_PREVIEW_TIMESTEP_SCALE = 4.0f;
 	constexpr float AIM_PREVIEW_GRAVITY = 0.01f;
+	constexpr float AIM_PREVIEW_STEP_LENGTH =
+		AimPreview::GuideLengthPixels / static_cast<float>(AimPreview::PointCount);
 
 	float AimForceFromDragDistance(float distance)
 	{
@@ -202,7 +203,6 @@ bool GameWorld::BeginAim(Vector2 position)
 	}
 
 	_ball.SetStartDragPos(position);
-	_ball.SetTraceDragPos(position);
 	_ball.SetClick(true);
 	_aimStart = position;
 	_aimCurrent = position;
@@ -214,7 +214,6 @@ void GameWorld::UpdateAim(Vector2 position)
 {
 	if (_gameState == GameState::Aiming && _ball.GetClick())
 	{
-		_ball.SetTraceDragPos(position);
 		_aimCurrent = position;
 	}
 }
@@ -239,10 +238,12 @@ AimPreview GameWorld::GetAimPreview() const noexcept
 
 	Vector2 position = _ball.GetPosition();
 	Vector2 velocity = preview.launchDirection;
-	for (Vector2& point : preview.points)
+	for (std::size_t index = 0; index < preview.points.size(); ++index)
 	{
-		velocity.y += AIM_PREVIEW_GRAVITY * AIM_PREVIEW_TIMESTEP_SCALE;
-		position += velocity * (force * AIM_PREVIEW_TIMESTEP_SCALE);
+		const float speed = (std::max)(velocity.Length(), COLLISION_EPSILON);
+		const float timeScale = AIM_PREVIEW_STEP_LENGTH / (force * speed);
+		velocity.y += AIM_PREVIEW_GRAVITY * timeScale;
+		position += velocity.Normalized() * AIM_PREVIEW_STEP_LENGTH;
 
 		if (position.x < GameLayout::BallLeftBoundary)
 		{
@@ -260,7 +261,37 @@ AimPreview GameWorld::GetAimPreview() const noexcept
 			velocity.y = std::fabs(velocity.y);
 		}
 
-		point = position;
+		auto targetPosition = _targetBallList._targetBallList.GetHeadPosition();
+		while (targetPosition != nullptr)
+		{
+			const TargetBall& target =
+				_targetBallList._targetBallList.GetNext(targetPosition);
+			const Vector2 offset = position - target.position;
+			const float collisionRadius = _ball.GetSize() + target.size;
+			const float distanceSquared = offset.LengthSquared();
+			if (distanceSquared > collisionRadius * collisionRadius)
+			{
+				continue;
+			}
+
+			const float distance = std::sqrt(distanceSquared);
+			Vector2 normal = distance > COLLISION_EPSILON
+				? offset / distance
+				: (velocity * -1.0f).Normalized();
+			if (normal.LengthSquared() == 0.0f)
+			{
+				normal = { 0.0f, -1.0f };
+			}
+			position += normal * (collisionRadius - distance + COLLISION_EPSILON);
+			velocity = ReflectVelocity(velocity, normal, _pegRestitution);
+			if (!preview.PredictsPegCollision())
+			{
+				preview.firstPegCollisionPoint = index;
+			}
+			break;
+		}
+
+		preview.points[index] = position;
 	}
 
 	return preview;

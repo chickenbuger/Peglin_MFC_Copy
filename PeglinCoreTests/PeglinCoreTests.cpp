@@ -1037,6 +1037,16 @@ namespace
 		Check(Near(medium.launchDirection.x, -1.0f) && Near(medium.launchDirection.y, 0.0f), "preview points opposite the drag direction");
 		Check(Near(medium.normalizedStrength, 0.5f), "220-pixel drag maps to fifty percent strength");
 		Check(medium.points.front().x < start.x, "first preview point follows launch direction");
+		float previewLength = 0.0f;
+		Vector2 previousPoint = start;
+		for (const Vector2 point : medium.points)
+		{
+			previewLength += (point - previousPoint).Length();
+			previousPoint = point;
+		}
+		Check(
+			std::fabs(previewLength - AimPreview::GuideLengthPixels) < 0.25f,
+			"aim guide stays near one and a half centimeters at 96 DPI");
 
 		bool allPointsInsideWalls = true;
 		for (const Vector2 point : medium.points)
@@ -1047,6 +1057,21 @@ namespace
 				&& point.y >= GameLayout::BallTopBoundary;
 		}
 		Check(allPointsInsideWalls, "preview wall reflections stay inside physical boundaries");
+
+		PegLayoutDefinition collisionLayout;
+		collisionLayout.pegs.push_back({ start + Vector2{ 40.0f, 0.0f }, PegType::Normal });
+		GameWorld collisionWorld(collisionLayout);
+		Check(collisionWorld.BeginAim(start), "collision preview begins from the ball");
+		collisionWorld.UpdateAim(start - Vector2{ 220.0f, 0.0f });
+		const AimPreview collision = collisionWorld.GetAimPreview();
+		Check(collision.PredictsPegCollision(), "aim guide predicts an intersecting peg");
+		Check(
+			collision.firstPegCollisionPoint < collision.points.size() - 1,
+			"predicted peg collision leaves room for a reflected direction");
+		Check(
+			collision.points.back().x
+				< collision.points[collision.firstPegCollisionPoint].x,
+			"aim guide shows the post-peg reflection direction");
 
 		world.UpdateAim(start + Vector2{ 400.0f, 0.0f });
 		Check(Near(world.GetAimPreview().normalizedStrength, 1.0f), "maximum drag clamps preview strength to one");
