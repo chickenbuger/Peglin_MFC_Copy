@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 3 |
-| 현재 버전 | Version 3.4 |
+| 현재 스프린트 | Sprint 3 완료 |
+| 현재 버전 | Version 3.5 |
 | 스프린트 목표 | 플레이 의사결정·결과 전달 강화와 콘텐츠 선택 경로 완성 |
-| 상태 | Sprint 3 P0 4/4 구현 완료 — 최종 실행·GDI 검증 예정 |
+| 상태 | Sprint 3 P0 4/4와 최종 게이트 6/6 통과 — Sprint 4 계획 작성, 구현 미착수 |
 
 ## 문서
 
@@ -56,10 +56,12 @@
 - [Version 3.2 — 조준 예상선과 발사 세기 시각화](./Version_3.2.md)
 - [Version 3.3 — 스테이지 선택과 결과 화면](./Version_3.3.md)
 - [Version 3.4 — 난이도와 접근성 옵션](./Version_3.4.md)
+- [Version 3.5 — Sprint 3 최종 검증 완료](./Version_3.5.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
-- [Next Version Plan 3 — Sprint 3 진행 계획](./Next_Version_Plan_3.md)
+- [Next Version Plan 3 — Sprint 3 완료 기록](./Next_Version_Plan_3.md)
+- [Next Version Plan 4 — Sprint 4 계획](./Next_Version_Plan_4.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차
