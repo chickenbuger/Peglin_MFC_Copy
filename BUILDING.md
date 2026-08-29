@@ -51,6 +51,17 @@ $msbuild = 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Curr
 
 프로젝트는 `UseOfMfc=Dynamic`을 사용한다. 개발 PC에서는 Visual Studio에 설치된 MFC 런타임으로 실행한다. 다른 PC에 배포할 때는 대상 아키텍처에 맞는 최신 Visual C++ 재배포 가능 패키지의 설치를 전제로 하며, Sprint 0에서 배포 패키징 방식을 확정하기 전까지 실행 파일만 단독 배포하지 않는다.
 
+## 핵심 자동화 테스트
+
+솔루션 재빌드 시 `PeglinCoreTests`가 앱과 함께 생성된다. 각 실행 파일은 0 길이 발사, 벽·페그 반사, 피해·턴 정산과 승패 상태 전이를 검증하며 하나라도 실패하면 종료 코드 1을 반환한다.
+
+```powershell
+& '.\Debug\tests\x64\PeglinCoreTests.exe'
+& '.\Release\tests\x64\PeglinCoreTests.exe'
+& '.\Debug\tests\Win32\PeglinCoreTests.exe'
+& '.\Release\tests\Win32\PeglinCoreTests.exe'
+```
+
 ## 현재 검증 상태
 
 2026-08-29 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. Version 0.15에서 전체 플레이 흐름과 10분 GDI 안정성 검증(기준 31개, 마지막 34개, 증가 3개, 후반 지속 상승 없음)을 통과했으며 Sprint 0 빌드·실행 기준선을 확정했다.
