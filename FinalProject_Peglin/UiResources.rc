@@ -2,6 +2,7 @@
 
 IDB_UI_ADVENTURE_FRAME BITMAP "res\\ui-adventure-frame-v1.bmp"
 IDB_GAMEPLAY_CAVE_V2 BITMAP "res\\gameplay-cave-v2.bmp"
+IDB_GAMEPLAY_CAVE_V3 BITMAP "res\\gameplay-cave-v3.bmp"
 IDB_PLAYER_HERO_V2 BITMAP "res\\player-hero-v2.bmp"
 IDB_ENEMY_CRYSTAL_TOAD_V2 BITMAP "res\\enemy-crystal-toad-v2.bmp"
 IDB_ORB_AMBER_TEAL_V2 BITMAP "res\\orb-amber-teal-v2.bmp"

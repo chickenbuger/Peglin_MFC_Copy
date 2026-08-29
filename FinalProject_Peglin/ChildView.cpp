@@ -351,6 +351,8 @@ void CChildView::OnPaint()
 		return;
 	}
 
+	DrawPlayfieldBoundary(&memDc);
+
 	//targetball
 	auto& targets = _game.GetTargets()._targetBallList;
 	auto pos = targets.GetHeadPosition();
@@ -383,6 +385,13 @@ void CChildView::OnPaint()
 			GetEnemySprite(combatant.definition.visual),
 			enemyGroup ? GameLayout::EnemyGroupSize : GameLayout::EnemySize,
 			enemyGroup ? GameLayout::EnemyGroupY : GameLayout::EnemyInitialPosition.y,
+			index == _game.GetActiveEnemyIndex());
+		DrawEnemyHealthBar(
+			&memDc,
+			combatant,
+			enemyGroup ? GameLayout::EnemyGroupSize : GameLayout::EnemySize,
+			enemyGroup ? GameLayout::EnemyGroupY : GameLayout::EnemyInitialPosition.y,
+			enemyGroup,
 			index == _game.GetActiveEnemyIndex());
 	}
 
@@ -417,28 +426,28 @@ void CChildView::OnPaint()
 	{
 		CString Text1;
 		Text1.Format(
-			_T("%s HP %d · 남은 %zu"),
+			_T("%s HP %d/%d · 남은 %zu"),
 			Utf8Text(_game.GetActiveEnemyDefinition().displayName).GetString(),
 			static_cast<int>(std::lround(_game.GetEnemy().GetHp())),
+			static_cast<int>(std::lround(_game.GetActiveEnemyDefinition().health)),
 			_game.GetLivingEnemyCount());
 		memDc.TextOut(
 			680,
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
 			Text1);
 		CString enemyAction = EnemyActionText(_game.GetNextEnemyAction());
+		if (_game.GetEnemyShield() > 0.0f)
+		{
+			CString shieldText;
+			shieldText.Format(
+				_T(" · 방어막 %d"),
+				static_cast<int>(std::lround(_game.GetEnemyShield())));
+			enemyAction += shieldText;
+		}
 		memDc.TextOut(
 			680,
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 20.0f)),
 			enemyAction);
-		if (_game.GetEnemyShield() > 0.0f)
-		{
-			CString shieldText;
-			shieldText.Format(_T("방어막 : %d"), static_cast<int>(std::lround(_game.GetEnemyShield())));
-			memDc.TextOut(
-				680,
-				static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 40.0f)),
-				shieldText);
-		}
 	}
 	memDc.RestoreDC(statusTextState);
 
@@ -481,7 +490,7 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 
 	_uiBackgroundLoaded = _uiBackground.LoadBitmap(IDB_UI_ADVENTURE_FRAME) != FALSE;
-	_gameplayBackground.LoadBitmap(IDB_GAMEPLAY_CAVE_V2);
+	_gameplayBackground.LoadBitmap(IDB_GAMEPLAY_CAVE_V3);
 	_playerSprite.LoadBitmap(IDB_PLAYER_HERO_V2);
 	_enemySprite.LoadBitmap(IDB_ENEMY_CRYSTAL_TOAD_V2);
 	_enemyBatSprite.LoadBitmap(IDB_ENEMY_EMBER_BAT_V1);
@@ -874,6 +883,89 @@ void CChildView::DrawAimPreview(CDC* deviceContext)
 	deviceContext->SetTextColor(RGB(255, 255, 255));
 	deviceContext->TextOut(left, bottom + 3, strengthText);
 	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawPlayfieldBoundary(CDC* deviceContext)
+{
+	const int left = static_cast<int>(std::lround(GameLayout::PegFieldLeft));
+	const int top = static_cast<int>(std::lround(GameLayout::PegFieldTop));
+	const int right = static_cast<int>(std::lround(GameLayout::PegFieldRight));
+	const int bottom = static_cast<int>(std::lround(GameLayout::PegFieldBottom));
+	constexpr int CORNER_LENGTH = 30;
+
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->SelectStockObject(NULL_BRUSH);
+
+	CPen shadowPen(PS_SOLID, 5, RGB(5, 10, 18));
+	deviceContext->SelectObject(&shadowPen);
+	deviceContext->Rectangle(left, top, right, bottom);
+
+	CPen boundaryPen(PS_SOLID, 2, UiTheme::Blue);
+	deviceContext->SelectObject(&boundaryPen);
+	deviceContext->Rectangle(left + 2, top + 2, right - 2, bottom - 2);
+
+	CPen cornerPen(PS_SOLID, 4, UiTheme::Gold);
+	deviceContext->SelectObject(&cornerPen);
+	deviceContext->MoveTo(left, top + CORNER_LENGTH);
+	deviceContext->LineTo(left, top);
+	deviceContext->LineTo(left + CORNER_LENGTH, top);
+	deviceContext->MoveTo(right - CORNER_LENGTH, top);
+	deviceContext->LineTo(right, top);
+	deviceContext->LineTo(right, top + CORNER_LENGTH);
+	deviceContext->MoveTo(left, bottom - CORNER_LENGTH);
+	deviceContext->LineTo(left, bottom);
+	deviceContext->LineTo(left + CORNER_LENGTH, bottom);
+	deviceContext->MoveTo(right - CORNER_LENGTH, bottom);
+	deviceContext->LineTo(right, bottom);
+	deviceContext->LineTo(right, bottom - CORNER_LENGTH);
+
+	const CRect labelBounds(left + 36, top - 11, left + 154, top + 12);
+	deviceContext->FillSolidRect(labelBounds, RGB(8, 14, 24));
+	UiRenderer::DrawText(
+		deviceContext,
+		labelBounds,
+		_T("PEG FIELD"),
+		85,
+		UiTheme::Gold);
+
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawEnemyHealthBar(
+	CDC* deviceContext,
+	const EnemyCombatant& combatant,
+	Vector2 drawSize,
+	float drawY,
+	bool enemyGroup,
+	bool activeTarget)
+{
+	const float fraction = combatant.HealthFraction();
+	const COLORREF fillColor = fraction <= 0.25f
+		? UiTheme::Danger
+		: (fraction <= 0.55f ? UiTheme::Orange : UiTheme::Green);
+	const float barTop = enemyGroup
+		? drawY + GameLayout::EnemyGroupHealthBarOffsetY
+		: drawY + drawSize.y + GameLayout::EnemySoloHealthBarOffsetY;
+	const int left = static_cast<int>(std::lround(
+		combatant.actor.GetX() + GameLayout::EnemyHealthBarInsetX));
+	const int right = static_cast<int>(std::lround(
+		combatant.actor.GetX() + drawSize.x - GameLayout::EnemyHealthBarInsetX));
+	const int top = static_cast<int>(std::lround(barTop));
+	const int bottom = static_cast<int>(std::lround(
+		barTop + GameLayout::EnemyHealthBarHeight));
+
+	CString healthText;
+	healthText.Format(
+		_T("%d/%d"),
+		static_cast<int>(std::lround(combatant.actor.GetHp())),
+		static_cast<int>(std::lround(combatant.definition.health)));
+	UiRenderer::DrawProgressBar(
+		deviceContext,
+		CRect(left, top, right, bottom),
+		fraction,
+		healthText,
+		fillColor,
+		activeTarget ? UiTheme::Gold : UiTheme::Border);
 }
 
 void CChildView::DrawStageSelection(CDC* deviceContext)

@@ -28,12 +28,12 @@ namespace
 	{
 		position.x = std::clamp(
 			position.x,
-			GameLayout::BoardLeft + GameLayout::PegRadius,
-			GameLayout::BoardRight - GameLayout::PegRadius);
+			GameLayout::PegFieldLeft + GameLayout::PegRadius,
+			GameLayout::PegFieldRight - GameLayout::PegRadius);
 		position.y = std::clamp(
 			position.y,
-			GameLayout::BoardTop + GameLayout::PegRadius,
-			GameLayout::BoardBottom - GameLayout::PegRadius);
+			GameLayout::PegFieldTop + GameLayout::PegRadius,
+			GameLayout::PegFieldBottom - GameLayout::PegRadius);
 		return position;
 	}
 }

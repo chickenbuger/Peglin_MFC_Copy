@@ -115,6 +115,15 @@ struct EnemyCombatant
 	float shield = 0.0f;
 
 	bool IsAlive() const noexcept { return actor.GetHp() > 0.0f; }
+	float HealthFraction() const noexcept
+	{
+		if (definition.health <= 0.0f)
+		{
+			return 0.0f;
+		}
+		const float fraction = actor.GetHp() / definition.health;
+		return fraction < 0.0f ? 0.0f : (fraction > 1.0f ? 1.0f : fraction);
+	}
 };
 
 class GameWorld

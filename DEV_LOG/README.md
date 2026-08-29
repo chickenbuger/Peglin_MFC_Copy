@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 6 |
-| 현재 버전 | Version 6.3 |
+| 현재 버전 | Version 6.4 |
 | 스프린트 목표 | 게임플레이 시각 완성도, 런 진행·보상, 외부 콘텐츠와 UI 확장 비용 개선 |
-| 상태 | Sprint 6 진행 중 — P0 3/8 완료 · 다음 작업은 런 진행과 보상 선택 |
+| 상태 | Sprint 6 진행 중 — P0 4/9 완료 · 다음 작업은 런 진행과 보상 선택 |
 
 ## 문서
 
@@ -70,6 +70,7 @@
 - [Version 6.1 — ImageGen 게임플레이 아트와 공 이동 피드백](./Version_6.1.md)
 - [Version 6.2 — 멀티 몬스터 전투와 적 종류 확장](./Version_6.2.md)
 - [Version 6.3 — 1.5cm 조준 가이드와 페그 반사 예상](./Version_6.3.md)
+- [Version 6.4 — 새 페그 필드 UI와 개별 체력 막대](./Version_6.4.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

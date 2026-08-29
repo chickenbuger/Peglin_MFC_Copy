@@ -267,10 +267,10 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 		}
 		if (!std::isfinite(peg.position.x)
 			|| !std::isfinite(peg.position.y)
-			|| peg.position.x < GameLayout::BoardLeft + GameLayout::PegRadius
-			|| peg.position.x > GameLayout::BoardRight - GameLayout::PegRadius
-			|| peg.position.y < GameLayout::BoardTop + GameLayout::PegRadius
-			|| peg.position.y > GameLayout::BoardBottom - GameLayout::PegRadius)
+			|| peg.position.x < GameLayout::PegFieldLeft + GameLayout::PegRadius
+			|| peg.position.x > GameLayout::PegFieldRight - GameLayout::PegRadius
+			|| peg.position.y < GameLayout::PegFieldTop + GameLayout::PegRadius
+			|| peg.position.y > GameLayout::PegFieldBottom - GameLayout::PegRadius)
 		{
 			return { StageLoadError::PegOutOfBounds, index };
 		}

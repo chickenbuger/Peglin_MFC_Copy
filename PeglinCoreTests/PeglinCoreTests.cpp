@@ -239,6 +239,15 @@ namespace
 		GameWorld world;
 		Check(Near(world.GetBall().GetPosition().x, GameLayout::BallInitialPosition.x), "layout controls initial ball x");
 		Check(Near(world.GetBall().GetPosition().y, GameLayout::BallInitialPosition.y), "layout controls initial ball y");
+		Check(
+			world.GetBall().GetPosition().x >= GameLayout::PegFieldLeft + GameLayout::BallRadius
+				&& world.GetBall().GetPosition().x <= GameLayout::PegFieldRight - GameLayout::BallRadius
+				&& world.GetBall().GetPosition().y >= GameLayout::PegFieldTop + GameLayout::BallRadius
+				&& world.GetBall().GetPosition().y <= GameLayout::PegFieldBottom - GameLayout::BallRadius,
+			"initial ball begins inside displayed peg field");
+		Check(
+			GameLayout::BallTopBoundary >= GameLayout::PegFieldTop + GameLayout::BallRadius,
+			"ball ceiling remains inside displayed peg field");
 		Check(Near(world.GetEnemy().GetX(), GameLayout::EnemyInitialPosition.x), "layout controls initial enemy x");
 		Check(world.GetTargets()._targetBallList.GetCount() == GameLayout::PegColumns * GameLayout::PegRows, "layout controls peg count");
 		const auto head = world.GetTargets()._targetBallList.GetHeadPosition();
@@ -284,15 +293,15 @@ namespace
 				|| !Near(position.x, different.pegs[index].position.x)
 				|| !Near(position.y, different.pegs[index].position.y);
 			allInsideBoard = allInsideBoard
-				&& position.x >= GameLayout::BoardLeft + GameLayout::PegRadius
-				&& position.x <= GameLayout::BoardRight - GameLayout::PegRadius
-				&& position.y >= GameLayout::BoardTop + GameLayout::PegRadius
-				&& position.y <= GameLayout::BoardBottom - GameLayout::PegRadius;
+				&& position.x >= GameLayout::PegFieldLeft + GameLayout::PegRadius
+				&& position.x <= GameLayout::PegFieldRight - GameLayout::PegRadius
+				&& position.y >= GameLayout::PegFieldTop + GameLayout::PegRadius
+				&& position.y <= GameLayout::PegFieldBottom - GameLayout::PegRadius;
 		}
 
 		Check(sameSeedMatches, "same seed reproduces identical peg positions");
 		Check(differentSeedDiffers, "different seed changes peg positions");
-		Check(allInsideBoard, "seeded jitter keeps every peg inside board");
+		Check(allInsideBoard, "seeded jitter keeps every peg inside the displayed field");
 	}
 
 	void TestDataDrivenPegLayout()
@@ -1358,6 +1367,12 @@ namespace
 		Check(world.GetActiveEnemyIndex() == 0, "first monster begins as the active target");
 		Check(world.GetActiveEnemyDefinition().id == "crystal-toad", "active target keeps its stable monster id");
 		Check(Near(world.GetEnemy().GetHp(), 8.0f), "active target uses its own health");
+		Check(Near(world.GetEnemies()[0].HealthFraction(), 1.0f), "monster health progress begins full");
+		world.GetEnemy().SetHp(2.0f);
+		Check(Near(world.GetEnemies()[0].HealthFraction(), 0.25f), "monster health progress tracks current health");
+		world.GetEnemy().SetHp(20.0f);
+		Check(Near(world.GetEnemies()[0].HealthFraction(), 1.0f), "monster health progress clamps above maximum");
+		world.GetEnemy().SetHp(8.0f);
 		Check(Near(world.GetEnemies()[1].actor.GetX(), GameLayout::EnemyGroupStartX + GameLayout::EnemyGroupSpacing), "monster roster uses distinct stage positions");
 
 		auto DefeatActive = [&world]()

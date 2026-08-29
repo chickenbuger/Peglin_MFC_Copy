@@ -37,4 +37,11 @@ public:
 		CDC* deviceContext,
 		const CRect& bounds,
 		const CString& text);
+	static void DrawProgressBar(
+		CDC* deviceContext,
+		const CRect& bounds,
+		float normalizedValue,
+		const CString& text,
+		COLORREF fillColor = UiTheme::Green,
+		COLORREF borderColor = UiTheme::Border);
 };

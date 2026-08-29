@@ -13,12 +13,16 @@ struct GameLayout
 	inline static constexpr float BoardRight = 960.0f;
 	inline static constexpr float BoardTop = 200.0f;
 	inline static constexpr float BoardBottom = 700.0f;
+	inline static constexpr float PegFieldLeft = 30.0f;
+	inline static constexpr float PegFieldRight = 970.0f;
+	inline static constexpr float PegFieldTop = 300.0f;
+	inline static constexpr float PegFieldBottom = 680.0f;
 
 	inline static constexpr float BallRadius = 10.0f;
-	inline static constexpr Vector2 BallInitialPosition{ 490.0f, 250.0f };
-	inline static constexpr float BallLeftBoundary = BoardLeft + BallRadius + 5.0f;
-	inline static constexpr float BallRightBoundary = BoardRight - BallRadius - 5.0f;
-	inline static constexpr float BallTopBoundary = BoardTop + BallRadius + 5.0f;
+	inline static constexpr Vector2 BallInitialPosition{ 490.0f, 330.0f };
+	inline static constexpr float BallLeftBoundary = PegFieldLeft + BallRadius + 5.0f;
+	inline static constexpr float BallRightBoundary = PegFieldRight - BallRadius - 5.0f;
+	inline static constexpr float BallTopBoundary = PegFieldTop + BallRadius + 5.0f;
 	inline static constexpr float BallExitY = WindowHeight;
 
 	inline static constexpr int PegColumns = 12;
@@ -40,12 +44,16 @@ struct GameLayout
 	inline static constexpr float EnemyStep = 64.0f;
 	inline static constexpr int EnemyStepsBeforeAttack = 8;
 	inline static constexpr float EnemyHealthTextOffsetX = -30.0f;
-	inline static constexpr float EnemyHealthTextY = 90.0f;
+	inline static constexpr float EnemyHealthTextY = 84.0f;
+	inline static constexpr float EnemyHealthBarInsetX = 4.0f;
+	inline static constexpr float EnemyHealthBarHeight = 14.0f;
+	inline static constexpr float EnemyGroupHealthBarOffsetY = -15.0f;
+	inline static constexpr float EnemySoloHealthBarOffsetY = 4.0f;
 	inline static constexpr Vector2 StateText{ 330.0f, 70.0f };
 	inline static constexpr Vector2 FeedbackText{ 330.0f, 90.0f };
 	inline static constexpr Vector2 OptionsText{ 330.0f, 110.0f };
 	inline static constexpr Vector2 TurnEffectPosition{ 490.0f, 150.0f };
-	inline static constexpr Vector2 AimStrengthPosition{ 30.0f, 290.0f };
+	inline static constexpr Vector2 AimStrengthPosition{ 30.0f, 265.0f };
 	inline static constexpr float AimStrengthWidth = 160.0f;
 	inline static constexpr float AimStrengthHeight = 14.0f;
 };

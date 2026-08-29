@@ -87,6 +87,14 @@ private:
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
+	void DrawPlayfieldBoundary(CDC* deviceContext);
+	void DrawEnemyHealthBar(
+		CDC* deviceContext,
+		const EnemyCombatant& combatant,
+		Vector2 drawSize,
+		float drawY,
+		bool enemyGroup,
+		bool activeTarget);
 	void DrawStageSelection(CDC* deviceContext);
 	void DrawLoadoutScreen(CDC* deviceContext);
 	void DrawOptions(CDC* deviceContext);
