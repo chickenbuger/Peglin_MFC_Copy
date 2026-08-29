@@ -93,6 +93,7 @@ private:
 	void DrawResultScreen(CDC* deviceContext);
 	void DrawMenuBackdrop(CDC* deviceContext);
 	void DrawPlayingLoadout(CDC* deviceContext);
+	CBitmap* GetEnemySprite(EnemyVisualKind visual) noexcept;
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
 	bool StartSelectedStage();
@@ -118,6 +119,8 @@ private:
 	CBitmap _gameplayBackground;
 	CBitmap _playerSprite;
 	CBitmap _enemySprite;
+	CBitmap _enemyBatSprite;
+	CBitmap _enemyShamanSprite;
 	CBitmap _orbSprite;
 	std::size_t _selectedStageIndex = 0;
 	CString _loadoutNotice;

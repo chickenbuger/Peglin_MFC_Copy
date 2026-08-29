@@ -22,6 +22,11 @@ public:
 	float	GetHp() const noexcept		{ return hp; }
 	float	GetX() const noexcept		{ return x; }
 public:
-	void draw(CDC* pDC, CBitmap* sprite = nullptr);
+	void draw(
+		CDC* pDC,
+		CBitmap* sprite = nullptr,
+		Vector2 drawSize = GameLayout::EnemySize,
+		float drawY = GameLayout::EnemyInitialPosition.y,
+		bool activeTarget = false) const;
 	void Init();
 };

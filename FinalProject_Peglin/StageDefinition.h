@@ -22,6 +22,21 @@ struct EnemyActionDefinition
 	float magnitude = 0.0f;
 };
 
+enum class EnemyVisualKind
+{
+	CrystalToad,
+	EmberBat,
+	MossShaman
+};
+
+struct EnemyDefinition
+{
+	std::string id;
+	std::string displayName;
+	EnemyVisualKind visual = EnemyVisualKind::CrystalToad;
+	float health = 20.0f;
+};
+
 struct StageRules
 {
 	float playerHealth = 100.0f;
@@ -39,6 +54,7 @@ struct StageDefinition
 	PegLayoutDefinition pegLayout;
 	StageRules rules;
 	bool isBoss = false;
+	std::vector<EnemyDefinition> enemies;
 	std::vector<EnemyActionDefinition> enemyPattern;
 };
 
@@ -60,7 +76,13 @@ enum class StageLoadError
 	InvalidPegRestitution,
 	MissingBossPattern,
 	InvalidEnemyAction,
-	InvalidEnemyActionMagnitude
+	InvalidEnemyActionMagnitude,
+	TooManyEnemies,
+	InvalidEnemyId,
+	DuplicateEnemyId,
+	InvalidEnemyName,
+	InvalidEnemyVisual,
+	InvalidEnemyRosterHealth
 };
 
 struct StageValidationResult

@@ -9,6 +9,7 @@
 namespace
 {
 	constexpr std::size_t MAX_STAGE_PEGS = 256;
+	constexpr std::size_t MAX_STAGE_ENEMIES = 3;
 	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
 	constexpr std::array<StageCatalogEntry, 3> STAGE_CATALOG = {
 		StageCatalogEntry{ "stage-1", "Forgotten Forest" },
@@ -46,6 +47,37 @@ namespace
 		default:
 			return false;
 		}
+	}
+
+	bool IsKnownEnemyVisual(EnemyVisualKind visual) noexcept
+	{
+		switch (visual)
+		{
+		case EnemyVisualKind::CrystalToad:
+		case EnemyVisualKind::EmberBat:
+		case EnemyVisualKind::MossShaman:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	bool IsSafeEnemyId(std::string_view id) noexcept
+	{
+		if (id.empty() || id.size() > 48)
+		{
+			return false;
+		}
+		for (const char character : id)
+		{
+			const bool lower = character >= 'a' && character <= 'z';
+			const bool digit = character >= '0' && character <= '9';
+			if (!lower && !digit && character != '-')
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	StageLoadResult ValidateLoadedStage(StageDefinition stage)
@@ -181,6 +213,37 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 	if (stage.isBoss && stage.enemyPattern.empty())
 	{
 		return { StageLoadError::MissingBossPattern, 0 };
+	}
+	if (stage.enemies.size() > MAX_STAGE_ENEMIES)
+	{
+		return { StageLoadError::TooManyEnemies, stage.enemies.size() };
+	}
+	for (std::size_t index = 0; index < stage.enemies.size(); ++index)
+	{
+		const EnemyDefinition& enemy = stage.enemies[index];
+		if (!IsSafeEnemyId(enemy.id))
+		{
+			return { StageLoadError::InvalidEnemyId, index };
+		}
+		if (enemy.displayName.empty() || enemy.displayName.size() > 64)
+		{
+			return { StageLoadError::InvalidEnemyName, index };
+		}
+		if (!IsKnownEnemyVisual(enemy.visual))
+		{
+			return { StageLoadError::InvalidEnemyVisual, index };
+		}
+		if (!IsFinitePositive(enemy.health))
+		{
+			return { StageLoadError::InvalidEnemyRosterHealth, index };
+		}
+		for (std::size_t earlier = 0; earlier < index; ++earlier)
+		{
+			if (stage.enemies[earlier].id == enemy.id)
+			{
+				return { StageLoadError::DuplicateEnemyId, index };
+			}
+		}
 	}
 	for (std::size_t index = 0; index < stage.enemyPattern.size(); ++index)
 	{

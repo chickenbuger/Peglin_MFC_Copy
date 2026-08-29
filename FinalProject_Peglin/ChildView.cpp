@@ -367,10 +367,24 @@ void CChildView::OnPaint()
 		&memDc,
 		_playerSprite.GetSafeHandle() != nullptr ? &_playerSprite : nullptr);
 
-	//enemy
-	_game.GetEnemy().draw(
-		&memDc,
-		_enemySprite.GetSafeHandle() != nullptr ? &_enemySprite : nullptr);
+
+	//enemy squad
+	const auto& enemyRoster = _game.GetEnemies();
+	const bool enemyGroup = enemyRoster.size() > 1;
+	for (std::size_t index = 0; index < enemyRoster.size(); ++index)
+	{
+		const EnemyCombatant& combatant = enemyRoster[index];
+		if (!combatant.IsAlive())
+		{
+			continue;
+		}
+		combatant.actor.draw(
+			&memDc,
+			GetEnemySprite(combatant.definition.visual),
+			enemyGroup ? GameLayout::EnemyGroupSize : GameLayout::EnemySize,
+			enemyGroup ? GameLayout::EnemyGroupY : GameLayout::EnemyInitialPosition.y,
+			index == _game.GetActiveEnemyIndex());
+	}
 
 	float orbOffsetY = 0.0f;
 	float orbScale = 1.0f;
@@ -402,14 +416,18 @@ void CChildView::OnPaint()
 	if (_game.GetEnemy().GetHp() > 0.0f)
 	{
 		CString Text1;
-		Text1.Format(_T("몬스터 체력 : %d"), static_cast<int>(_game.GetEnemy().GetHp()));
+		Text1.Format(
+			_T("%s HP %d · 남은 %zu"),
+			Utf8Text(_game.GetActiveEnemyDefinition().displayName).GetString(),
+			static_cast<int>(std::lround(_game.GetEnemy().GetHp())),
+			_game.GetLivingEnemyCount());
 		memDc.TextOut(
-			static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
+			680,
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
 			Text1);
 		CString enemyAction = EnemyActionText(_game.GetNextEnemyAction());
 		memDc.TextOut(
-			static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
+			680,
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 20.0f)),
 			enemyAction);
 		if (_game.GetEnemyShield() > 0.0f)
@@ -417,7 +435,7 @@ void CChildView::OnPaint()
 			CString shieldText;
 			shieldText.Format(_T("방어막 : %d"), static_cast<int>(std::lround(_game.GetEnemyShield())));
 			memDc.TextOut(
-				static_cast<int>(std::lround(_game.GetEnemy().GetX() + GameLayout::EnemyHealthTextOffsetX)),
+				680,
 				static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 40.0f)),
 				shieldText);
 		}
@@ -466,6 +484,8 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_gameplayBackground.LoadBitmap(IDB_GAMEPLAY_CAVE_V2);
 	_playerSprite.LoadBitmap(IDB_PLAYER_HERO_V2);
 	_enemySprite.LoadBitmap(IDB_ENEMY_CRYSTAL_TOAD_V2);
+	_enemyBatSprite.LoadBitmap(IDB_ENEMY_EMBER_BAT_V1);
+	_enemyShamanSprite.LoadBitmap(IDB_ENEMY_MOSS_SHAMAN_V1);
 	_orbSprite.LoadBitmap(IDB_ORB_AMBER_TEAL_V2);
 
 	constexpr UINT GAME_TIMER_INTERVAL_MS = 10;
@@ -501,6 +521,14 @@ void CChildView::OnDestroy()
 	if (_enemySprite.GetSafeHandle() != nullptr)
 	{
 		_enemySprite.DeleteObject();
+	}
+	if (_enemyBatSprite.GetSafeHandle() != nullptr)
+	{
+		_enemyBatSprite.DeleteObject();
+	}
+	if (_enemyShamanSprite.GetSafeHandle() != nullptr)
+	{
+		_enemyShamanSprite.DeleteObject();
 	}
 	if (_orbSprite.GetSafeHandle() != nullptr)
 	{
@@ -612,6 +640,11 @@ void CChildView::ConsumeGameEvents()
 			animation.text.Format(_T("SHIELD +%d"), static_cast<int>(std::lround(event.damage)));
 			animation.color = RGB(90, 180, 255);
 			animation.lifetimeSeconds = 1.1f;
+			break;
+		case GameEventType::EnemyDefeated:
+			animation.text.Format(_T("DEFEATED · %d LEFT"), event.affectedPegs);
+			animation.color = RGB(255, 194, 62);
+			animation.lifetimeSeconds = 1.25f;
 			break;
 		case GameEventType::PlayerDamaged:
 			animation.text.Format(_T("HP -%d"), static_cast<int>(event.damage));
@@ -855,11 +888,22 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			title,
 			160,
 			selected ? UiTheme::Gold : UiTheme::Text);
+		const std::size_t enemyCount = configured.enemies.empty()
+			? std::size_t{ 1 }
+			: configured.enemies.size();
+		float totalEnemyHealth = configured.enemies.empty()
+			? configured.rules.enemyHealth
+			: 0.0f;
+		for (const EnemyDefinition& enemy : configured.enemies)
+		{
+			totalEnemyHealth += enemy.health;
+		}
 		CString rules;
 		rules.Format(
-			_T("페그 %zu · HP %d · %s"),
+			_T("페그 %zu · 적 %zu · 총 HP %d · %s"),
 			configured.pegLayout.pegs.size(),
-			static_cast<int>(std::lround(configured.rules.enemyHealth)),
+			enemyCount,
+			static_cast<int>(std::lround(totalEnemyHealth)),
 			configured.isBoss ? _T("행동 패턴") : _T("이동 후 공격"));
 		UiRenderer::DrawText(
 			deviceContext,
@@ -1025,6 +1069,20 @@ void CChildView::DrawMenuBackdrop(CDC* deviceContext)
 		bounds);
 }
 
+CBitmap* CChildView::GetEnemySprite(EnemyVisualKind visual) noexcept
+{
+	switch (visual)
+	{
+	case EnemyVisualKind::CrystalToad:
+		return _enemySprite.GetSafeHandle() != nullptr ? &_enemySprite : nullptr;
+	case EnemyVisualKind::EmberBat:
+		return _enemyBatSprite.GetSafeHandle() != nullptr ? &_enemyBatSprite : nullptr;
+	case EnemyVisualKind::MossShaman:
+		return _enemyShamanSprite.GetSafeHandle() != nullptr ? &_enemyShamanSprite : nullptr;
+	}
+	return nullptr;
+}
+
 void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 {
 	CString loadout;
@@ -1097,7 +1155,9 @@ void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 	{
 		sound = MB_ICONHAND;
 	}
-	else if (eventType == GameEventType::Victory || pegType == PegType::Refresh)
+	else if (eventType == GameEventType::Victory
+		|| eventType == GameEventType::EnemyDefeated
+		|| pegType == PegType::Refresh)
 	{
 		sound = MB_ICONASTERISK;
 	}

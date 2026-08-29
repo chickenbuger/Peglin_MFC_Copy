@@ -195,6 +195,15 @@ namespace
 		return true;
 	}
 
+	bool ParseEnemyVisual(std::string_view text, EnemyVisualKind& visual) noexcept
+	{
+		if (text == "CrystalToad") visual = EnemyVisualKind::CrystalToad;
+		else if (text == "EmberBat") visual = EnemyVisualKind::EmberBat;
+		else if (text == "MossShaman") visual = EnemyVisualKind::MossShaman;
+		else return false;
+		return true;
+	}
+
 	bool HasEveryRequiredField(const StageBuilder& builder) noexcept
 	{
 		return builder.hasId
@@ -289,7 +298,7 @@ namespace
 				continue;
 			}
 
-			if (key != "peg_type" && key != "action"
+			if (key != "peg_type" && key != "action" && key != "enemy"
 				&& !builder.scalarKeys.insert(std::string(key)).second)
 			{
 				return Fallback(ContentLoadError::DuplicateKey, lineNumber);
@@ -401,6 +410,22 @@ namespace
 					return Fallback(ContentLoadError::InvalidValue, lineNumber);
 				}
 				builder.stage.enemyPattern.push_back(action);
+			}
+			else if (key == "enemy")
+			{
+				const auto values = Split(value, ',');
+				EnemyDefinition enemy;
+				if (values.size() != 4
+					|| values[0].empty()
+					|| values[1].empty()
+					|| !ParseEnemyVisual(values[2], enemy.visual)
+					|| !ParseFiniteFloat(values[3], enemy.health))
+				{
+					return Fallback(ContentLoadError::InvalidValue, lineNumber);
+				}
+				enemy.id.assign(values[0]);
+				enemy.displayName.assign(values[1]);
+				builder.stage.enemies.push_back(std::move(enemy));
 			}
 			else
 			{

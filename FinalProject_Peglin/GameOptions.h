@@ -55,6 +55,10 @@ inline StageDefinition ApplyDifficulty(
 	{
 	case GameDifficulty::Easy:
 		stage.rules.enemyHealth *= 0.8f;
+		for (EnemyDefinition& enemy : stage.enemies)
+		{
+			enemy.health *= 0.8f;
+		}
 		stage.rules.playerDamage *= 0.75f;
 		stage.rules.enemyStepsBeforeAttack += 2;
 		for (EnemyActionDefinition& action : stage.enemyPattern)
@@ -69,6 +73,10 @@ inline StageDefinition ApplyDifficulty(
 		break;
 	case GameDifficulty::Hard:
 		stage.rules.enemyHealth *= 1.5f;
+		for (EnemyDefinition& enemy : stage.enemies)
+		{
+			enemy.health *= 1.5f;
+		}
 		stage.rules.playerDamage *= 1.25f;
 		stage.rules.enemyStepsBeforeAttack = (std::max)(
 			1,

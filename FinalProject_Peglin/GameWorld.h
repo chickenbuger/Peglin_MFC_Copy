@@ -63,6 +63,7 @@ enum class GameEventType
 	TurnResolved,
 	EnemyAdvanced,
 	EnemyFortified,
+	EnemyDefeated,
 	PlayerDamaged,
 	Victory,
 	Defeat
@@ -100,6 +101,15 @@ struct GameResultSummary
 	int turns = 0;
 };
 
+struct EnemyCombatant
+{
+	Enemy actor;
+	EnemyDefinition definition;
+	float shield = 0.0f;
+
+	bool IsAlive() const noexcept { return actor.GetHp() > 0.0f; }
+};
+
 class GameWorld
 {
 public:
@@ -130,7 +140,15 @@ public:
 	float GetPegRestitution() const noexcept { return _pegRestitution; }
 
 	Player& GetPlayer() noexcept { return _player; }
-	Enemy& GetEnemy() noexcept { return _enemy; }
+	Enemy& GetEnemy() noexcept { return _enemies[_activeEnemyIndex].actor; }
+	const Enemy& GetEnemy() const noexcept { return _enemies[_activeEnemyIndex].actor; }
+	const std::vector<EnemyCombatant>& GetEnemies() const noexcept { return _enemies; }
+	std::size_t GetActiveEnemyIndex() const noexcept { return _activeEnemyIndex; }
+	std::size_t GetLivingEnemyCount() const noexcept;
+	const EnemyDefinition& GetActiveEnemyDefinition() const noexcept
+	{
+		return _enemies[_activeEnemyIndex].definition;
+	}
 	Parent_ball& GetBall() noexcept { return _ball; }
 	TargetBallList& GetTargets() noexcept { return _targetBallList; }
 	const PegLayoutDefinition& GetPegLayout() const noexcept { return _stage.pegLayout; }
@@ -145,7 +163,7 @@ public:
 		return _loadout.CalculateModifiers();
 	}
 	EnemyActionDefinition GetNextEnemyAction() const noexcept;
-	float GetEnemyShield() const noexcept { return _enemyShield; }
+	float GetEnemyShield() const noexcept { return _enemies[_activeEnemyIndex].shield; }
 	std::vector<GameEvent> ConsumeEvents();
 	std::optional<GameResultSummary> GetResultSummary() const;
 
@@ -156,18 +174,22 @@ private:
 	void ApplyBombEffect(const TargetBall& bomb);
 	void RestoreRemovedPegs(Vector2 excludedPosition);
 	void ExecuteEnemyAction(const EnemyActionDefinition& action);
+	EnemyCombatant& GetActiveEnemy() noexcept { return _enemies[_activeEnemyIndex]; }
+	const EnemyCombatant& GetActiveEnemy() const noexcept { return _enemies[_activeEnemyIndex]; }
+	bool SelectNextLivingEnemy() noexcept;
 	void ResolveTurn();
 	GameUpdateResult ReportTerminalResult(GameUpdateResult result) noexcept;
 	bool TransitionTo(GameState nextState);
 
 	Player _player;
-	Enemy _enemy;
+	std::vector<EnemyCombatant> _enemies;
+	std::size_t _activeEnemyIndex = 0;
+	int _completedTurns = 0;
 	Parent_ball _ball;
 	TargetBallList _targetBallList;
 	StageDefinition _stage;
 	GameDifficulty _difficulty = GameDifficulty::Normal;
 	float _pendingDamage = 0.0f;
-	float _enemyShield = 0.0f;
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;
 	GameScore _score;

@@ -1192,7 +1192,12 @@ namespace
 			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
 		Check(shipped.UsedExternalContent(), "shipped versioned stage catalog validates");
 		Check(shipped.stages.size() == 3, "shipped external catalog exposes three stages");
+		const StageDefinition* shippedForest = FindContentStage(shipped.stages, "stage-1");
+		const StageDefinition* shippedCavern = FindContentStage(shipped.stages, "stage-2");
+		Check(shippedForest != nullptr && shippedForest->enemies.size() == 3, "shipped forest exposes a three-monster roster");
+		Check(shippedCavern != nullptr && shippedCavern->enemies.size() == 3, "shipped cavern exposes a three-monster roster");
 		const StageDefinition* shippedBoss = FindContentStage(shipped.stages, "stage-3");
+		Check(shippedBoss != nullptr && shippedBoss->enemies.size() == 1, "shipped boss exposes one named boss");
 		Check(shippedBoss != nullptr && shippedBoss->enemyPattern.size() == 4, "shipped external catalog includes the boss pattern");
 
 		const std::filesystem::path testDirectory =
@@ -1241,6 +1246,24 @@ namespace
 		Check(external != nullptr && externalWorld.LoadStage(*external, GameDifficulty::Hard), "game world accepts validated external stage data");
 		Check(Near(externalWorld.GetEnemy().GetHp(), 67.5f), "difficulty applies after external stage validation");
 		Check(Near(externalWorld.GetNextEnemyAction().magnitude, 3.0f), "non-strike external action keeps its magnitude");
+
+		std::string rosterContent = validContent;
+		rosterContent.insert(
+			rosterContent.find("player_damage="),
+			"enemy=crystal-toad,Crystal Toad,CrystalToad,15\n"
+			"enemy=ember-bat,Ember Bat,EmberBat,12\n"
+			"enemy=moss-shaman,Moss Shaman,MossShaman,18\n");
+		WriteContent(rosterContent);
+		const ContentLoadResult roster = LoadContentCatalog(contentPath);
+		Check(roster.UsedExternalContent(), "external content accepts repeated enemy roster entries");
+		const StageDefinition* rosterStage = FindContentStage(roster.stages, "external-stage");
+		Check(rosterStage != nullptr && rosterStage->enemies.size() == 3, "external roster preserves all enemy entries");
+		Check(
+			rosterStage != nullptr && rosterStage->enemies[1].visual == EnemyVisualKind::EmberBat,
+			"external roster parses enemy visual kinds");
+		GameWorld rosterWorld;
+		Check(rosterStage != nullptr && rosterWorld.LoadStage(*rosterStage, GameDifficulty::Hard), "world loads external enemy roster");
+		Check(Near(rosterWorld.GetEnemy().GetHp(), 22.5f), "difficulty scales each roster enemy health");
 
 		const ContentLoadResult missing = LoadContentCatalog(testDirectory / "missing.ini");
 		Check(missing.state == ContentLoadState::BuiltInFallback, "missing content uses built-in fallback");
@@ -1291,6 +1314,71 @@ namespace
 		const ContentLoadResult directoryRead = LoadContentCatalog(testDirectory);
 		Check(directoryRead.error == ContentLoadError::IoFailure, "non-file content path fails safely");
 		std::filesystem::remove_all(testDirectory, cleanupError);
+	}
+
+	void TestMultipleEnemyEncounter()
+	{
+		StageDefinition stage = CreateDefaultStageDefinition();
+		stage.id = "enemy-roster-test";
+		stage.enemies = {
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 8.0f },
+			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 5.0f },
+			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 7.0f }
+		};
+		Check(ValidateStageDefinition(stage).IsValid(), "three-monster encounter validates");
+
+		GameWorld world(stage);
+		Check(world.GetEnemies().size() == 3, "world creates every configured monster");
+		Check(world.GetLivingEnemyCount() == 3, "all configured monsters begin alive");
+		Check(world.GetActiveEnemyIndex() == 0, "first monster begins as the active target");
+		Check(world.GetActiveEnemyDefinition().id == "crystal-toad", "active target keeps its stable monster id");
+		Check(Near(world.GetEnemy().GetHp(), 8.0f), "active target uses its own health");
+		Check(Near(world.GetEnemies()[1].actor.GetX(), GameLayout::EnemyGroupStartX + GameLayout::EnemyGroupSpacing), "monster roster uses distinct stage positions");
+
+		auto DefeatActive = [&world]()
+		{
+			world.GetEnemy().SetHp(0.0f);
+			Launch(world);
+			world.GetBall().SetPosition({ 500.0f, 801.0f });
+			world.Update(0.0f);
+			return world.Update(0.0f);
+		};
+
+		Check(DefeatActive() == GameUpdateResult::None, "first monster defeat keeps encounter running");
+		Check(world.GetState() == GameState::Aiming, "first defeat returns to aiming for the next monster");
+		Check(world.GetActiveEnemyIndex() == 1, "first defeat selects the second monster");
+		Check(world.GetLivingEnemyCount() == 2, "first defeat reduces living monster count");
+		const std::vector<GameEvent> firstDefeatEvents = world.ConsumeEvents();
+		Check(
+			std::any_of(
+				firstDefeatEvents.begin(),
+				firstDefeatEvents.end(),
+				[](const GameEvent& event)
+				{
+					return event.type == GameEventType::EnemyDefeated && event.affectedPegs == 2;
+				}),
+			"monster defeat emits remaining-roster feedback");
+
+		Check(DefeatActive() == GameUpdateResult::None, "second monster defeat keeps final target active");
+		Check(world.GetActiveEnemyIndex() == 2, "second defeat selects the final monster");
+		Check(world.GetActiveEnemyDefinition().visual == EnemyVisualKind::MossShaman, "final target preserves its distinct visual kind");
+		Check(DefeatActive() == GameUpdateResult::Victory, "last monster defeat completes the stage");
+		Check(world.GetLivingEnemyCount() == 0, "victory leaves no living monsters");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "multi-monster victory result remains single-shot");
+
+		world.ResetGame();
+		Check(world.GetActiveEnemyIndex() == 0 && world.GetLivingEnemyCount() == 3, "retry restores the complete monster roster");
+		Check(Near(world.GetEnemy().GetHp(), 8.0f), "retry restores first monster health");
+
+		StageDefinition invalid = stage;
+		invalid.enemies[1].id = invalid.enemies[0].id;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::DuplicateEnemyId, "duplicate monster id is rejected");
+		invalid = stage;
+		invalid.enemies[0].visual = static_cast<EnemyVisualKind>(999);
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyVisual, "unknown monster visual is rejected");
+		invalid = stage;
+		invalid.enemies.push_back({ "fourth", "Fourth", EnemyVisualKind::CrystalToad, 1.0f });
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::TooManyEnemies, "monster roster limit is enforced");
 	}
 
 	void TestCombinedSprintFiveContentRegression()
@@ -1516,6 +1604,7 @@ int main()
 	TestOrbAndRelicProgression();
 	TestBossEnemyActionPattern();
 	TestExternalContentCatalog();
+	TestMultipleEnemyEncounter();
 	TestCombinedSprintFiveContentRegression();
 
 	if (failures == 0)

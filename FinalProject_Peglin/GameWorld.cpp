@@ -104,7 +104,7 @@ void GameWorld::ResetGame()
 	_gameState = GameState::Aiming;
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
-	_enemyShield = 0.0f;
+	_completedTurns = 0;
 	_feedback = {};
 	_score = {};
 	_events.clear();
@@ -116,8 +116,31 @@ void GameWorld::ResetGame()
 	_ball.Init();
 	_player.Init();
 	_player.SetHp(_stage.rules.playerHealth);
-	_enemy.Init();
-	_enemy.SetHp(_stage.rules.enemyHealth);
+	_enemies.clear();
+	std::vector<EnemyDefinition> enemyDefinitions = _stage.enemies;
+	if (enemyDefinitions.empty())
+	{
+		enemyDefinitions.push_back({
+			"legacy-enemy",
+			_stage.isBoss ? "Rootbound Titan" : "Crystal Toad",
+			EnemyVisualKind::CrystalToad,
+			_stage.rules.enemyHealth
+		});
+	}
+	const bool isGroup = enemyDefinitions.size() > 1;
+	for (std::size_t index = 0; index < enemyDefinitions.size(); ++index)
+	{
+		EnemyCombatant combatant;
+		combatant.definition = enemyDefinitions[index];
+		combatant.actor.Init();
+		combatant.actor.SetHp(combatant.definition.health);
+		combatant.actor.SetX(
+			isGroup
+				? GameLayout::EnemyGroupStartX + GameLayout::EnemyGroupSpacing * static_cast<float>(index)
+				: GameLayout::EnemyInitialPosition.x);
+		_enemies.push_back(std::move(combatant));
+	}
+	_activeEnemyIndex = 0;
 	InitializeTargets();
 }
 
@@ -469,16 +492,41 @@ void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
 	});
 }
 
+std::size_t GameWorld::GetLivingEnemyCount() const noexcept
+{
+	return static_cast<std::size_t>(std::count_if(
+		_enemies.begin(),
+		_enemies.end(),
+		[](const EnemyCombatant& enemy)
+		{
+			return enemy.IsAlive();
+		}));
+}
+
+bool GameWorld::SelectNextLivingEnemy() noexcept
+{
+	for (std::size_t index = _activeEnemyIndex + 1; index < _enemies.size(); ++index)
+	{
+		if (_enemies[index].IsAlive())
+		{
+			_activeEnemyIndex = index;
+			return true;
+		}
+	}
+	return false;
+}
+
 EnemyActionDefinition GameWorld::GetNextEnemyAction() const noexcept
 {
+	const Enemy& enemy = GetActiveEnemy().actor;
 	if (!_stage.enemyPattern.empty())
 	{
-		const std::size_t actionIndex = static_cast<std::size_t>(_enemy.GetCount())
+		const std::size_t actionIndex = static_cast<std::size_t>(enemy.GetCount())
 			% _stage.enemyPattern.size();
 		return _stage.enemyPattern[actionIndex];
 	}
 
-	if (_enemy.GetCount() < _stage.rules.enemyStepsBeforeAttack)
+	if (enemy.GetCount() < _stage.rules.enemyStepsBeforeAttack)
 	{
 		return { EnemyActionType::Advance, _stage.rules.enemyStep };
 	}
@@ -487,13 +535,18 @@ EnemyActionDefinition GameWorld::GetNextEnemyAction() const noexcept
 
 void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
 {
+	EnemyCombatant& activeEnemy = GetActiveEnemy();
+	Enemy& enemy = activeEnemy.actor;
+	const float enemyY = _enemies.size() > 1
+		? GameLayout::EnemyGroupY
+		: GameLayout::EnemyInitialPosition.y;
 	switch (action.type)
 	{
 	case EnemyActionType::Advance:
-		_enemy.SetX(_enemy.GetX() - action.magnitude);
+		enemy.SetX(enemy.GetX() - action.magnitude);
 		_events.push_back({
 			GameEventType::EnemyAdvanced,
-			{ _enemy.GetX(), GameLayout::EnemyInitialPosition.y },
+			{ enemy.GetX(), enemyY },
 			PegType::Normal,
 			0,
 			0,
@@ -511,10 +564,10 @@ void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
 		break;
 	}
 	case EnemyActionType::Fortify:
-		_enemyShield += action.magnitude;
+		activeEnemy.shield += action.magnitude;
 		_events.push_back({
 			GameEventType::EnemyFortified,
-			{ _enemy.GetX(), GameLayout::EnemyInitialPosition.y },
+			{ enemy.GetX(), enemyY },
 			PegType::Normal,
 			0,
 			0,
@@ -527,8 +580,14 @@ void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
 
 void GameWorld::ResolveTurn()
 {
-	const float shieldAbsorbed = (std::min)(_enemyShield, _pendingDamage);
-	_enemyShield -= shieldAbsorbed;
+	EnemyCombatant& activeEnemy = GetActiveEnemy();
+	Enemy& enemy = activeEnemy.actor;
+	const float enemyY = _enemies.size() > 1
+		? GameLayout::EnemyGroupY
+		: GameLayout::EnemyInitialPosition.y;
+	const Vector2 defeatedPosition{ enemy.GetX(), enemyY };
+	const float shieldAbsorbed = (std::min)(activeEnemy.shield, _pendingDamage);
+	activeEnemy.shield -= shieldAbsorbed;
 	const float enemyDamage = _pendingDamage - shieldAbsorbed;
 	_feedback.lastEnemyDamage = enemyDamage;
 	_feedback.lastPlayerDamage = 0.0f;
@@ -537,13 +596,15 @@ void GameWorld::ResolveTurn()
 	_score.currentShot = 0;
 	_score.currentCombo = 0;
 
-	_enemy.SetHp(_enemy.GetHp() - enemyDamage);
-	if (_enemy.GetHp() > 0.0f)
+	enemy.SetHp(enemy.GetHp() - enemyDamage);
+	const bool enemyDefeated = enemy.GetHp() <= 0.0f;
+	if (!enemyDefeated)
 	{
 		ExecuteEnemyAction(GetNextEnemyAction());
 	}
-	_enemy.SetCount(_enemy.GetCount() + 1);
-	_feedback.turnNumber = _enemy.GetCount();
+	enemy.SetCount(enemy.GetCount() + 1);
+	++_completedTurns;
+	_feedback.turnNumber = _completedTurns;
 	_events.push_back({
 		GameEventType::TurnResolved,
 		{},
@@ -553,6 +614,18 @@ void GameWorld::ResolveTurn()
 		_feedback.currentShotPegHits,
 		_feedback.lastEnemyDamage
 	});
+	if (enemyDefeated)
+	{
+		_events.push_back({
+			GameEventType::EnemyDefeated,
+			defeatedPosition,
+			PegType::Normal,
+			0,
+			0,
+			static_cast<int>(GetLivingEnemyCount()),
+			enemyDamage
+		});
+	}
 	if (_feedback.lastPlayerDamage > 0.0f)
 	{
 		_events.push_back({
@@ -582,7 +655,7 @@ void GameWorld::ResolveTurn()
 			0.0f
 		});
 	}
-	else if (_enemy.GetHp() <= 0.0f)
+	else if (enemyDefeated && !SelectNextLivingEnemy())
 	{
 		TransitionTo(GameState::Victory);
 		_feedback.type = GameFeedbackType::Victory;
@@ -634,7 +707,7 @@ std::optional<GameResultSummary> GameWorld::GetResultSummary() const
 		_stage.displayName,
 		_score.total,
 		_score.bestCombo,
-		_enemy.GetCount()
+		_completedTurns
 	};
 }
 
