@@ -51,6 +51,7 @@
     <ClCompile Include="PeglinCoreTests.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Enemy.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\GameWorld.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\GameSettingsStore.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Parent_ball.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\PegLayout.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Player.cpp" />

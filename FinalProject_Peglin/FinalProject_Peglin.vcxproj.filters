@@ -69,6 +69,9 @@
 	<ClInclude Include="GameOptions.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="GameSettingsStore.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
 	<ClInclude Include="PegLayout.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
@@ -107,6 +110,9 @@
     <ClCompile Include="GameWorld.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+	<ClCompile Include="GameSettingsStore.cpp">
+	  <Filter>소스 파일</Filter>
+	</ClCompile>
 	<ClCompile Include="PegLayout.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>

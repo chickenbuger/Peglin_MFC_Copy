@@ -2,12 +2,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string_view>
 #include <vector>
 
 #include "GameWorld.h"
 #include "GameLayout.h"
+#include "GameSettingsStore.h"
 #include "PegLayout.h"
 #include "Physics.h"
 
@@ -555,6 +558,100 @@ namespace
 		Check(Near(world.GetEnemy().GetHp(), 20.0f), "normal reload restores base stage rules");
 	}
 
+	void TestGameSettingsPersistence()
+	{
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_SettingsStoreTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path settingsPath = testDirectory / "nested" / "settings.v1.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove(settingsPath, cleanupError);
+		std::filesystem::remove(settingsPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(settingsPath.parent_path(), cleanupError);
+		std::filesystem::remove(testDirectory, cleanupError);
+
+		GameSettingsStore store(settingsPath);
+		const SettingsLoadResult missing = store.Load();
+		Check(missing.state == SettingsLoadState::Missing, "missing settings use a distinct load state");
+		Check(missing.options.difficulty == GameDifficulty::Normal, "missing settings recover normal difficulty");
+		Check(missing.options.soundEnabled, "missing settings recover enabled sound");
+		Check(missing.options.pegColorMode == PegColorMode::Standard, "missing settings recover standard colors");
+
+		GameOptions saved;
+		saved.difficulty = GameDifficulty::Hard;
+		saved.soundEnabled = false;
+		saved.pegColorMode = PegColorMode::HighContrast;
+		std::string saveError;
+		Check(store.Save(saved, &saveError), "settings save creates missing parent directories");
+		Check(saveError.empty(), "successful settings save clears its error");
+		Check(std::filesystem::exists(settingsPath), "settings save creates the versioned file");
+
+		const SettingsLoadResult loaded = store.Load();
+		Check(loaded.state == SettingsLoadState::Loaded, "valid settings load from disk");
+		Check(loaded.options.difficulty == GameDifficulty::Hard, "settings preserve difficulty");
+		Check(!loaded.options.soundEnabled, "settings preserve mute state");
+		Check(loaded.options.pegColorMode == PegColorMode::HighContrast, "settings preserve high contrast mode");
+
+		saved.difficulty = GameDifficulty::Easy;
+		saved.soundEnabled = true;
+		saved.pegColorMode = PegColorMode::Standard;
+		Check(store.Save(saved), "settings save atomically replaces an existing file");
+		const SettingsLoadResult replaced = store.Load();
+		Check(replaced.options.difficulty == GameDifficulty::Easy, "replacement settings update difficulty");
+		Check(replaced.options.soundEnabled, "replacement settings update sound");
+		Check(replaced.options.pegColorMode == PegColorMode::Standard, "replacement settings update colors");
+
+		{
+			std::ofstream invalid(settingsPath, std::ios::trunc);
+			invalid
+				<< "peglin_settings_version=1\n"
+				<< "difficulty=impossible\n"
+				<< "sound_enabled=1\n"
+				<< "peg_color_mode=standard\n";
+		}
+		const SettingsLoadResult unknownValue = store.Load();
+		Check(unknownValue.state == SettingsLoadState::Invalid, "unknown settings value is rejected");
+		Check(unknownValue.options.difficulty == GameDifficulty::Normal, "unknown value recovers default difficulty");
+		Check(unknownValue.options.soundEnabled, "unknown value recovers default sound");
+		Check(unknownValue.options.pegColorMode == PegColorMode::Standard, "unknown value recovers default colors");
+
+		{
+			std::ofstream incompatible(settingsPath, std::ios::trunc);
+			incompatible
+				<< "peglin_settings_version=999\n"
+				<< "difficulty=hard\n"
+				<< "sound_enabled=0\n"
+				<< "peg_color_mode=high_contrast\n";
+		}
+		const SettingsLoadResult unsupportedVersion = store.Load();
+		Check(unsupportedVersion.state == SettingsLoadState::Invalid, "unsupported settings version is rejected");
+		Check(unsupportedVersion.options.difficulty == GameDifficulty::Normal, "unsupported version recovers defaults");
+
+		{
+			std::ofstream incomplete(settingsPath, std::ios::trunc);
+			incomplete << "peglin_settings_version=1\ndifficulty=hard\n";
+		}
+		const SettingsLoadResult incomplete = store.Load();
+		Check(incomplete.state == SettingsLoadState::Invalid, "incomplete settings file is rejected");
+		Check(incomplete.options.soundEnabled, "incomplete settings recover defaults");
+
+		const std::filesystem::path blockedParent = testDirectory / "blocked-parent";
+		{
+			std::ofstream blocker(blockedParent, std::ios::trunc);
+			blocker << "file blocks directory creation";
+		}
+		GameSettingsStore blockedStore(blockedParent / "settings.v1.ini");
+		std::string blockedError;
+		Check(!blockedStore.Save(saved, &blockedError), "settings save fails safely for an unwritable path shape");
+		Check(!blockedError.empty(), "failed settings save reports an error");
+
+		std::filesystem::remove(blockedParent, cleanupError);
+		std::filesystem::remove(settingsPath, cleanupError);
+		std::filesystem::remove(settingsPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(settingsPath.parent_path(), cleanupError);
+		std::filesystem::remove(testDirectory, cleanupError);
+	}
+
 	void TestStageRulesConfigureWorld()
 	{
 		StageDefinition stage = CreateDefaultStageDefinition();
@@ -872,6 +969,7 @@ int main()
 	TestStageCatalogAndValidation();
 	TestStageSelectionAndResultSummary();
 	TestGameOptionsAndDifficulty();
+	TestGameSettingsPersistence();
 	TestStageRulesConfigureWorld();
 	TestScoreCancellationAndContinuation();
 	TestBombDoesNotChainSecondaryEffects();

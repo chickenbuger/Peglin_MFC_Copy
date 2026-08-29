@@ -196,6 +196,7 @@
     <ClInclude Include="GameState.h" />
     <ClInclude Include="GameLayout.h" />
 	<ClInclude Include="GameOptions.h" />
+	<ClInclude Include="GameSettingsStore.h" />
     <ClInclude Include="GameWorld.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Parent_ball.h" />
@@ -215,6 +216,7 @@
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="FinalProject_Peglin.cpp" />
     <ClCompile Include="GameWorld.cpp" />
+	<ClCompile Include="GameSettingsStore.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="Parent_ball.cpp" />
 	<ClCompile Include="PegLayout.cpp" />

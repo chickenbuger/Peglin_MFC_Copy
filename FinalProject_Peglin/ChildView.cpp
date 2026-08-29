@@ -137,7 +137,9 @@ namespace
 // CChildView
 
 CChildView::CChildView()
+	: _settingsStore(GetDefaultGameSettingsPath())
 {
+	_options = _settingsStore.Load().options;
 }
 
 CChildView::~CChildView()
@@ -332,6 +334,7 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 void CChildView::OnDestroy()
 {
 	ReleaseMouseInput(true);
+	SaveOptions();
 
 	if (_gameTimerId != 0)
 	{
@@ -644,10 +647,17 @@ void CChildView::DrawOptions(CDC* deviceContext)
 	guideFont.CreatePointFont(135, _T("맑은 고딕"));
 	deviceContext->SelectObject(&guideFont);
 	deviceContext->SetTextColor(RGB(160, 165, 180));
-	deviceContext->TextOut(490, 610, _T("쉬움: 적 체력 80% · 피해 75% · 이동 +2"));
-	deviceContext->TextOut(490, 650, _T("어려움: 적 체력 150% · 피해 125% · 이동 -2"));
+	deviceContext->TextOut(490, 570, _T("쉬움: 적 체력 80% · 피해 75% · 이동 +2"));
+	deviceContext->TextOut(490, 600, _T("어려움: 적 체력 150% · 피해 125% · 이동 -2"));
 	deviceContext->SetTextColor(RGB(170, 210, 255));
-	deviceContext->TextOut(490, 710, _T("[B] 또는 ESC로 돌아가기"));
+	deviceContext->TextOut(490, 640, _T("[B] 또는 ESC로 돌아가기"));
+	deviceContext->SetTextColor(_settingsSaveFailed ? RGB(255, 120, 120) : RGB(140, 180, 150));
+	deviceContext->TextOut(
+		490,
+		670,
+		_settingsSaveFailed
+			? _T("설정 저장 실패 · 기본 설정으로 계속 실행합니다")
+			: _T("변경 내용은 사용자 폴더에 자동 저장됩니다"));
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -709,6 +719,11 @@ bool CChildView::StartStage(std::string_view stageId)
 	_screenMode = ScreenMode::Playing;
 	SetFocus();
 	return true;
+}
+
+void CChildView::SaveOptions()
+{
+	_settingsSaveFailed = !_settingsStore.Save(_options);
 }
 
 void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
@@ -820,14 +835,17 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		if (nChar == 'D')
 		{
 			_options.CycleDifficulty();
+			SaveOptions();
 		}
 		else if (nChar == 'M')
 		{
 			_options.ToggleSound();
+			SaveOptions();
 		}
 		else if (nChar == 'C')
 		{
 			_options.TogglePegColorMode();
+			SaveOptions();
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)
 		{
@@ -871,6 +889,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if (nChar == 'M')
 	{
 		_options.ToggleSound();
+		SaveOptions();
 		Invalidate();
 	}
 	if (nChar == 'S' && _game.GetState() == GameState::Aiming)

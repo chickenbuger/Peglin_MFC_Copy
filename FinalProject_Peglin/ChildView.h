@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Background.h"
+#include "GameSettingsStore.h"
 #include "GameWorld.h"
 
 // CChildView 창
@@ -79,6 +80,7 @@ private:
 	void DrawResultScreen(CDC* deviceContext);
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
+	void SaveOptions();
 
 	Background _background;
 	GameWorld _game;
@@ -87,6 +89,8 @@ private:
 	double _accumulatedTimeSeconds = 0.0;
 	std::vector<FeedbackAnimation> _feedbackAnimations;
 	GameOptions _options;
+	GameSettingsStore _settingsStore;
+	bool _settingsSaveFailed = false;
 	ScreenMode _screenMode = ScreenMode::StageSelection;
 	std::optional<GameResultSummary> _resultSummary;
 };
