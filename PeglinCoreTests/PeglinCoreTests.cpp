@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <string_view>
+#include <vector>
 
 #include "GameWorld.h"
 #include "GameLayout.h"
@@ -90,6 +91,8 @@ namespace
 		Check(targets.GetCount() == 47, "peg collision removes exactly one peg");
 		Check(world.GetFeedback().type == GameFeedbackType::PegHit, "peg collision emits PegHit feedback");
 		Check(world.GetFeedback().currentShotPegHits == 1, "peg feedback counts current shot hits");
+		Check(world.GetScore().currentCombo == 1, "first peg starts combo at one");
+		Check(world.GetScore().currentShot == 100, "first peg awards base combo score");
 		Check(Near(world.GetBall().GetVelocity().x, -1.0f), "peg normal speed uses restitution");
 		Check(Near(world.GetBall().GetVelocity().y, 3.0f), "peg tangent speed is preserved");
 		const float separation = (world.GetBall().GetPosition() - pegPosition).Length();
@@ -103,7 +106,54 @@ namespace
 		Check(Near(world.GetEnemy().GetHp(), 19.0f), "one removed peg deals exactly one damage");
 		Check(world.GetFeedback().type == GameFeedbackType::TurnResolved, "ordinary turn emits TurnResolved feedback");
 		Check(Near(world.GetFeedback().lastEnemyDamage, 1.0f), "turn feedback reports enemy damage");
+		Check(world.GetScore().lastTurn == 100, "turn stores the completed shot score");
+		Check(world.GetScore().total == 100, "turn adds shot score to total");
+		Check(world.GetScore().currentCombo == 0, "turn resets current combo");
+		Check(world.GetScore().currentShot == 0, "turn resets current shot score");
 		Check(world.GetState() == GameState::Aiming, "ordinary turn returns to Aiming");
+	}
+
+	void TestScoreComboProgression()
+	{
+		GameWorld world;
+		Launch(world);
+
+		std::vector<Vector2> pegPositions;
+		auto scan = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (scan != nullptr && pegPositions.size() < 2)
+		{
+			const auto& candidate = world.GetTargets()._targetBallList.GetNext(scan);
+			if (candidate.position.x > 200.0f && candidate.position.x < 800.0f)
+			{
+				pegPositions.push_back(candidate.position);
+			}
+		}
+
+		Check(pegPositions.size() == 2, "score test finds two interior pegs");
+		for (const Vector2 pegPosition : pegPositions)
+		{
+			world.GetBall().SetPosition(pegPosition + Vector2{ -15.0f, 0.0f });
+			world.GetBall().SetVelocity({ 2.0f, 0.0f });
+			world.Update(0.0f);
+		}
+
+		Check(world.GetScore().currentCombo == 2, "two hits build a two-step combo");
+		Check(world.GetScore().bestCombo == 2, "best combo tracks the shot peak");
+		Check(world.GetScore().currentShot == 300, "combo score awards 100 plus 200");
+		Check(world.GetScore().total == 0, "shot score stays pending until turn resolution");
+
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.GetBall().SetVelocity({ 0.0f, 1.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+		Check(world.GetScore().lastTurn == 300, "turn records combo-weighted shot score");
+		Check(world.GetScore().total == 300, "turn commits combo-weighted score");
+		Check(world.GetScore().currentCombo == 0, "resolved combo returns to zero");
+		Check(world.GetScore().currentShot == 0, "resolved shot score returns to zero");
+
+		world.ResetGame();
+		Check(world.GetScore().total == 0, "new game resets total score");
+		Check(world.GetScore().bestCombo == 0, "new game resets best combo");
 	}
 
 	void TestScreenExitTurn()
@@ -263,6 +313,7 @@ int main()
 	TestZeroLengthShot();
 	TestWallReflection();
 	TestPegReflectionAndSingleDamage();
+	TestScoreComboProgression();
 	TestScreenExitTurn();
 	TestVictoryTransition();
 	TestDefeatTransition();

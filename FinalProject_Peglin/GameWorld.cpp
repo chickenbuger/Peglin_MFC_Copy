@@ -3,6 +3,7 @@
 #include "GameLayout.h"
 #include "Physics.h"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -10,6 +11,7 @@ namespace
 {
 	constexpr float PLAYER_DAMAGE = 20.0f;
 	constexpr float COLLISION_EPSILON = 0.001f;
+	constexpr int SCORE_PER_COMBO_STEP = 100;
 }
 
 
@@ -60,6 +62,7 @@ void GameWorld::ResetGame()
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
 	_feedback = {};
+	_score = {};
 	_terminalResultReported = false;
 	_ball.Init();
 	_player.Init();
@@ -72,6 +75,8 @@ void GameWorld::ResetBallToAiming()
 	_ball.Init();
 	_pendingDamage = 0.0f;
 	_feedback = {};
+	_score.currentShot = 0;
+	_score.currentCombo = 0;
 	_terminalResultReported = false;
 	TransitionTo(GameState::Aiming);
 }
@@ -111,6 +116,8 @@ bool GameWorld::ReleaseShot(Vector2 position)
 		launched = _ball.shooting();
 		if (launched)
 		{
+			_score.currentShot = 0;
+			_score.currentCombo = 0;
 			TransitionTo(GameState::BallInFlight);
 			_feedback.type = GameFeedbackType::ShotLaunched;
 			_feedback.currentShotPegHits = 0;
@@ -203,6 +210,9 @@ void GameWorld::HandlePegCollisions()
 				ReflectVelocity(_ball.GetVelocity(), normal, _pegRestitution));
 			_targetBallList._targetBallList.RemoveAt(current);
 			_pendingDamage += 1.0f;
+			++_score.currentCombo;
+			_score.bestCombo = (std::max)(_score.bestCombo, _score.currentCombo);
+			_score.currentShot += SCORE_PER_COMBO_STEP * _score.currentCombo;
 			_feedback.type = GameFeedbackType::PegHit;
 			++_feedback.currentShotPegHits;
 		}
@@ -213,6 +223,10 @@ void GameWorld::ResolveTurn()
 {
 	_feedback.lastEnemyDamage = _pendingDamage;
 	_feedback.lastPlayerDamage = 0.0f;
+	_score.lastTurn = _score.currentShot;
+	_score.total += _score.lastTurn;
+	_score.currentShot = 0;
+	_score.currentCombo = 0;
 
 	if (_enemy.GetCount() < GameLayout::EnemyStepsBeforeAttack)
 	{

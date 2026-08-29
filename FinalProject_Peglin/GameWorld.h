@@ -35,6 +35,15 @@ struct GameFeedback
 	float lastPlayerDamage = 0.0f;
 };
 
+struct GameScore
+{
+	int total = 0;
+	int currentShot = 0;
+	int lastTurn = 0;
+	int currentCombo = 0;
+	int bestCombo = 0;
+};
+
 class GameWorld
 {
 public:
@@ -59,6 +68,7 @@ public:
 	const PegLayoutDefinition& GetPegLayout() const noexcept { return _pegLayout; }
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
+	const GameScore& GetScore() const noexcept { return _score; }
 
 private:
 	void InitializeTargets();
@@ -75,6 +85,7 @@ private:
 	float _pendingDamage = 0.0f;
 	float _pegRestitution = 0.85f;
 	GameFeedback _feedback;
+	GameScore _score;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 	bool _terminalResultReported = false;

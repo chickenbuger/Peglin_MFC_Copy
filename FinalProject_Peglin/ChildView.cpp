@@ -31,28 +31,45 @@ namespace
 		return _T("상태: 알 수 없음");
 	}
 
-	CString FeedbackText(const GameFeedback& feedback)
+	CString FeedbackText(const GameFeedback& feedback, const GameScore& score)
 	{
 		CString text;
 		switch (feedback.type)
 		{
 		case GameFeedbackType::Ready:
-			return _T("드래그하여 공을 발사하세요");
+			text.Format(_T("발사 준비 · 총 %d · 최고 콤보 %d"), score.total, score.bestCombo);
+			break;
 		case GameFeedbackType::ShotLaunched:
 		case GameFeedbackType::PegHit:
 		case GameFeedbackType::Paused:
-			text.Format(_T("이번 발사 적중: %d"), feedback.currentShotPegHits);
+			text.Format(
+				_T("적중 %d · 콤보 %d · 발사 %d"),
+				feedback.currentShotPegHits,
+				score.currentCombo,
+				score.currentShot);
 			break;
 		case GameFeedbackType::TurnResolved:
-			text.Format(_T("턴 %d: 몬스터 피해 %d"), feedback.turnNumber, static_cast<int>(feedback.lastEnemyDamage));
+			text.Format(
+				_T("턴 %d · 피해 %d · +%d · 총 %d"),
+				feedback.turnNumber,
+				static_cast<int>(feedback.lastEnemyDamage),
+				score.lastTurn,
+				score.total);
 			break;
 		case GameFeedbackType::PlayerDamaged:
-			text.Format(_T("턴 %d: 플레이어 피해 %d"), feedback.turnNumber, static_cast<int>(feedback.lastPlayerDamage));
+			text.Format(
+				_T("턴 %d · 피격 %d · +%d · 총 %d"),
+				feedback.turnNumber,
+				static_cast<int>(feedback.lastPlayerDamage),
+				score.lastTurn,
+				score.total);
 			break;
 		case GameFeedbackType::Victory:
-			return _T("몬스터를 처치했습니다");
+			text.Format(_T("몬스터를 처치했습니다 · 최종 점수 %d"), score.total);
+			break;
 		case GameFeedbackType::Defeat:
-			return _T("플레이어가 쓰러졌습니다");
+			text.Format(_T("플레이어가 쓰러졌습니다 · 최종 점수 %d"), score.total);
+			break;
 		}
 
 		return text;
@@ -183,7 +200,7 @@ void CChildView::OnPaint()
 	memDc.TextOut(
 		static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
 		static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
-		FeedbackText(_game.GetFeedback()));
+		FeedbackText(_game.GetFeedback(), _game.GetScore()));
 	memDc.RestoreDC(textState);
 
 	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
