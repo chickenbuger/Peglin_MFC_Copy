@@ -47,9 +47,24 @@ $msbuild = 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Curr
 | Debug x86 | `Debug/FinalProject_Peglin.exe` |
 | Release x86 | `Release/FinalProject_Peglin.exe` |
 
-## MFC 런타임 정책
+## MFC 런타임 및 배포 정책
 
-프로젝트는 `UseOfMfc=Dynamic`을 사용한다. 개발 PC에서는 Visual Studio에 설치된 MFC 런타임으로 실행한다. 다른 PC에 배포할 때는 대상 아키텍처에 맞는 최신 Visual C++ 재배포 가능 패키지의 설치를 전제로 하며, Sprint 0에서 배포 패키징 방식을 확정하기 전까지 실행 파일만 단독 배포하지 않는다.
+프로젝트는 `UseOfMfc=Dynamic`을 유지한다. Version 4.3부터 Release x64 배포 패키지는 Visual Studio의 정식 `VC/Redist/MSVC` 폴더에서 다음 v143 x64 DLL을 앱 로컬 방식으로 포함한다.
+
+- `mfc140u.dll`
+- `msvcp140.dll`
+- `vcruntime140.dll`
+- `vcruntime140_1.dll`
+
+Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공한다. 배경·캐릭터·아이콘·툴바 비트맵은 EXE 리소스에 포함되므로 외부 이미지 파일은 필요하지 않다.
+
+저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
+
+```powershell
+& '.\tools\Package-Release.ps1' -Version '4.3'
+```
+
+패키징 스크립트는 Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함한다. `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다.
 
 ## 핵심 자동화 테스트
 

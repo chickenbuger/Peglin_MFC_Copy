@@ -41,6 +41,7 @@
 [Dd]ebug/
 [Rr]elease/
 x64/
+dist/
 
 # Visual C++ intermediate and diagnostic files
 *.pdb
