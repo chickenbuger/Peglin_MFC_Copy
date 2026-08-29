@@ -1293,6 +1293,84 @@ namespace
 		std::filesystem::remove_all(testDirectory, cleanupError);
 	}
 
+	void TestCombinedSprintFiveContentRegression()
+	{
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		const ContentLoadResult content = LoadContentCatalog(
+			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
+		const StageDefinition* boss = FindContentStage(content.stages, "stage-3");
+		Check(content.UsedExternalContent() && boss != nullptr, "combined regression starts from shipped external boss content");
+		if (boss == nullptr)
+		{
+			return;
+		}
+
+		GameWorld world;
+		Check(world.SelectOrb("echo-orb"), "combined regression selects echo orb");
+		Check(world.AcquireRelic("combo-lantern"), "combined regression acquires score relic");
+		Check(world.AcquireRelic("thorn-charm"), "combined regression acquires damage relic");
+		Check(world.AcquireRelic("bark-guard"), "combined regression acquires defense relic");
+		Check(world.LoadStage(*boss, GameDifficulty::Normal), "combined regression loads external boss stage");
+		const ProgressionModifiers modifiers = world.GetProgressionModifiers();
+		Check(Near(modifiers.pegDamageMultiplier, 0.96f), "combined orb and relic damage order is deterministic");
+		Check(Near(modifiers.scoreMultiplier, 1.875f), "combined orb and relic score order is deterministic");
+		Check(Near(modifiers.incomingDamageMultiplier, 0.85f), "combined defense relic multiplier is deterministic");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "external boss begins with its telegraphed action");
+
+		world.GetEnemy().SetHp(1.0f);
+		Launch(world);
+		auto scan = world.GetTargets()._targetBallList.GetHeadPosition();
+		Vector2 criticalPeg;
+		while (scan != nullptr)
+		{
+			const TargetBall& candidate = world.GetTargets()._targetBallList.GetNext(scan);
+			if (candidate.type == PegType::Critical)
+			{
+				criticalPeg = candidate.position;
+				break;
+			}
+		}
+		world.GetBall().SetPosition(criticalPeg + Vector2{ -15.0f, 0.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		const std::vector<GameEvent> hitEvents = world.ConsumeEvents();
+		Check(!hitEvents.empty() && Near(hitEvents.front().damage, 1.92f), "combined critical damage uses orb then relic multiplier");
+		Check(world.GetScore().currentShot == 375, "combined critical score uses orb and relic multiplier");
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		Check(world.Update(0.0f) == GameUpdateResult::Victory, "combined external content reaches Victory");
+		Check(world.GetResultSummary().has_value(), "combined victory produces a result summary");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "combined victory result remains single-shot");
+
+		world.ResetGame();
+		Check(world.GetState() == GameState::Aiming, "combined victory retry returns to aiming");
+		Check(Near(world.GetEnemy().GetHp(), 60.0f), "combined retry restores external boss health");
+		Check(world.GetLoadout().GetSelectedOrbId() == "echo-orb", "combined retry preserves selected orb");
+		Check(world.GetLoadout().GetRelicStackCount("bark-guard") == 1, "combined retry preserves relics");
+		Check(world.GetEnemy().GetCount() == 0 && Near(world.GetEnemyShield(), 0.0f), "combined retry resets boss action and shield state");
+
+		GameUpdateResult defeatResult = GameUpdateResult::None;
+		for (int turn = 0; turn < 20 && world.GetState() != GameState::Defeat; ++turn)
+		{
+			world.BeginAim({ 100.0f, 100.0f });
+			world.ReleaseShot({ 90.0f, 100.0f });
+			world.GetBall().SetPosition({ 500.0f, 801.0f });
+			world.Update(0.0f);
+			defeatResult = world.Update(0.0f);
+		}
+		Check(defeatResult == GameUpdateResult::Defeat, "combined boss actions reach Defeat deterministically");
+		Check(world.GetState() == GameState::Defeat, "combined defeat enters terminal state");
+		Check(world.GetEnemy().GetCount() == 15, "combined defeat occurs on the expected boss action turn");
+		Check(world.Update(0.0f) == GameUpdateResult::None, "combined defeat result remains single-shot");
+		world.ResetGame();
+		Check(Near(world.GetPlayer().GetHp(), 110.0f), "combined defeat retry restores external player health");
+		Check(world.GetLoadout().GetAcquiredRelics().size() == 3, "combined defeat retry preserves the complete loadout");
+		world.ResetProgression();
+		Check(world.GetLoadout().GetSelectedOrbId() == "basic-orb", "combined new progression restores basic orb");
+		Check(world.GetLoadout().GetAcquiredRelics().empty(), "combined new progression clears all relics");
+	}
+
 	void TestStageVictoryAndDefeatRegression()
 	{
 		StageDefinition victoryStage = CreateDefaultStageDefinition();
@@ -1438,6 +1516,7 @@ int main()
 	TestOrbAndRelicProgression();
 	TestBossEnemyActionPattern();
 	TestExternalContentCatalog();
+	TestCombinedSprintFiveContentRegression();
 
 	if (failures == 0)
 	{
