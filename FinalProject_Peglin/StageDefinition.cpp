@@ -10,6 +10,10 @@ namespace
 {
 	constexpr std::size_t MAX_STAGE_PEGS = 256;
 	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
+	constexpr std::array<StageCatalogEntry, 2> STAGE_CATALOG = {
+		StageCatalogEntry{ "stage-1", "Forgotten Forest" },
+		StageCatalogEntry{ "stage-2", "Dense Cavern" }
+	};
 
 	bool IsFinitePositive(float value) noexcept
 	{
@@ -167,4 +171,9 @@ StageLoadResult LoadStageDefinition(std::string_view stageId)
 	StageLoadResult result;
 	result.validation.error = StageLoadError::NotFound;
 	return result;
+}
+
+const std::array<StageCatalogEntry, 2>& GetStageCatalog() noexcept
+{
+	return STAGE_CATALOG;
 }

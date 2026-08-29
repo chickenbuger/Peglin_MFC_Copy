@@ -425,6 +425,10 @@ namespace
 
 	void TestStageCatalogAndValidation()
 	{
+		const auto& catalog = GetStageCatalog();
+		Check(catalog.size() == 2, "stage catalog exposes two selectable stages");
+		Check(catalog[0].id == "stage-1" && catalog[1].id == "stage-2", "stage catalog keeps stable selection ids");
+
 		const StageLoadResult defaultResult = LoadStageDefinition("stage-1");
 		Check(defaultResult.IsSuccess(), "stage catalog loads stage-1");
 		Check(defaultResult.stage->id == "stage-1", "loaded default stage keeps its id");
@@ -469,6 +473,42 @@ namespace
 		invalid = CreateDefaultStageDefinition();
 		invalid.rules.pegRestitution = 2.0f;
 		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPegRestitution, "out-of-range stage restitution is rejected");
+	}
+
+	void TestStageSelectionAndResultSummary()
+	{
+		GameWorld world;
+		Check(!world.GetResultSummary().has_value(), "active stage has no result summary");
+		Check(!world.LoadStage("missing-stage"), "stage selection rejects unregistered id");
+		Check(world.GetStage().id == "stage-1", "failed selection preserves current stage");
+		Check(world.LoadStage("stage-2"), "stage selection loads registered challenge stage");
+		Check(world.GetStage().id == "stage-2", "selected stage identity becomes active");
+		Check(world.GetTargets()._targetBallList.GetCount() == 40, "selected challenge stage creates forty pegs");
+		Check(Near(world.GetEnemy().GetHp(), 30.0f), "selected challenge stage applies enemy health");
+		world.ResetGame();
+		Check(world.GetStage().id == "stage-2", "retry preserves selected stage");
+
+		StageDefinition resultStage = CreateDefaultStageDefinition();
+		resultStage.id = "result-stage";
+		resultStage.displayName = "Result Stage";
+		resultStage.pegLayout.pegs = { { { 500.0f, 500.0f }, PegType::Critical } };
+		resultStage.rules.enemyHealth = 2.0f;
+		GameWorld resultWorld(resultStage);
+		Launch(resultWorld);
+		resultWorld.GetBall().SetPosition({ 485.0f, 500.0f });
+		resultWorld.GetBall().SetVelocity({ 2.0f, 0.0f });
+		resultWorld.Update(0.0f);
+		resultWorld.GetBall().SetPosition({ 500.0f, 801.0f });
+		resultWorld.Update(0.0f);
+		Check(resultWorld.Update(0.0f) == GameUpdateResult::Victory, "result stage reaches victory");
+		const std::optional<GameResultSummary> summary = resultWorld.GetResultSummary();
+		Check(summary.has_value(), "terminal stage exposes result summary");
+		Check(summary.has_value() && summary->result == GameUpdateResult::Victory, "result summary preserves outcome");
+		Check(summary.has_value() && summary->stageId == "result-stage", "result summary preserves stage identity");
+		Check(summary.has_value() && summary->totalScore == 200, "result summary preserves final score");
+		Check(summary.has_value() && summary->bestCombo == 1, "result summary preserves best combo");
+		Check(summary.has_value() && summary->turns == 1, "result summary preserves completed turns");
+		Check(resultWorld.Update(0.0f) == GameUpdateResult::None, "result screen source remains single-shot");
 	}
 
 	void TestStageRulesConfigureWorld()
@@ -786,6 +826,7 @@ int main()
 	TestBombPegEffect();
 	TestRefreshPegEffect();
 	TestStageCatalogAndValidation();
+	TestStageSelectionAndResultSummary();
 	TestStageRulesConfigureWorld();
 	TestScoreCancellationAndContinuation();
 	TestBombDoesNotChainSecondaryEffects();

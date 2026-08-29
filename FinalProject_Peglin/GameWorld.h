@@ -9,6 +9,9 @@
 #include "TargetBall.h"
 
 #include <array>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 enum class GameUpdateResult
@@ -81,6 +84,16 @@ struct AimPreview
 	std::array<Vector2, PointCount> points{};
 };
 
+struct GameResultSummary
+{
+	GameUpdateResult result = GameUpdateResult::None;
+	std::string stageId;
+	std::string stageName;
+	int totalScore = 0;
+	int bestCombo = 0;
+	int turns = 0;
+};
+
 class GameWorld
 {
 public:
@@ -91,6 +104,7 @@ public:
 	GameUpdateResult Update(float deltaSeconds);
 	void ResetGame();
 	void ResetBallToAiming();
+	bool LoadStage(std::string_view stageId);
 
 	bool BeginAim(Vector2 position);
 	void UpdateAim(Vector2 position);
@@ -111,6 +125,7 @@ public:
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 	const GameScore& GetScore() const noexcept { return _score; }
 	std::vector<GameEvent> ConsumeEvents();
+	std::optional<GameResultSummary> GetResultSummary() const;
 
 private:
 	void InitializeTargets();

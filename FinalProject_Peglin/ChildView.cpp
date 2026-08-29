@@ -88,6 +88,20 @@ namespace
 
 		return RGB(255, 255, 255);
 	}
+
+	CString StageNameText(std::string_view stageId)
+	{
+		if (stageId == "stage-1")
+		{
+			return _T("Forgotten Forest");
+		}
+		if (stageId == "stage-2")
+		{
+			return _T("Dense Cavern");
+		}
+
+		return _T("Unknown Stage");
+	}
 }
 
 // CChildView
@@ -123,15 +137,17 @@ END_MESSAGE_MAP()
 
 void CChildView::gameclear()
 {
-	AfxMessageBox(_T("Game Clear!!"));
-	_game.ResetGame();
+	_resultSummary = _game.GetResultSummary();
+	_screenMode = ScreenMode::Result;
+	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
 }
 
 void CChildView::gameover()
 {
-	AfxMessageBox(_T("Game Over!!"));
-	_game.ResetGame();
+	_resultSummary = _game.GetResultSummary();
+	_screenMode = ScreenMode::Result;
+	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
 }
 
@@ -139,6 +155,8 @@ void CChildView::restart()
 {
 	_game.ResetGame();
 	_feedbackAnimations.clear();
+	_resultSummary.reset();
+	_screenMode = ScreenMode::Playing;
 }
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
@@ -169,6 +187,21 @@ void CChildView::OnPaint()
 	CBitmap* previousBitmap = memDc.SelectObject(&bitmap);
 	
 	_background.draw(&memDc);
+
+	if (_screenMode == ScreenMode::StageSelection)
+	{
+		DrawStageSelection(&memDc);
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+		memDc.SelectObject(previousBitmap);
+		return;
+	}
+	if (_screenMode == ScreenMode::Result)
+	{
+		DrawResultScreen(&memDc);
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+		memDc.SelectObject(previousBitmap);
+		return;
+	}
 
 	//player
 	_game.GetPlayer().draw(&memDc);
@@ -295,6 +328,12 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
+	if (_screenMode != ScreenMode::Playing)
+	{
+		UpdateFeedbackAnimations(deltaSeconds);
+		return;
+	}
+
 	const GameUpdateResult result = _game.Update(deltaSeconds);
 	ConsumeGameEvents();
 	UpdateFeedbackAnimations(deltaSeconds);
@@ -461,6 +500,102 @@ void CChildView::DrawAimPreview(CDC* deviceContext)
 	deviceContext->RestoreDC(savedDc);
 }
 
+void CChildView::DrawStageSelection(CDC* deviceContext)
+{
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->FillSolidRect(
+		0,
+		0,
+		static_cast<int>(std::lround(GameLayout::SceneWidth)),
+		static_cast<int>(std::lround(GameLayout::WindowHeight)),
+		RGB(18, 22, 32));
+	deviceContext->SetBkMode(TRANSPARENT);
+	deviceContext->SetTextAlign(TA_CENTER);
+
+	CFont titleFont;
+	titleFont.CreatePointFont(280, _T("맑은 고딕"));
+	deviceContext->SelectObject(&titleFont);
+	deviceContext->SetTextColor(RGB(255, 215, 80));
+	deviceContext->TextOut(490, 145, _T("SELECT STAGE"));
+
+	CFont bodyFont;
+	bodyFont.CreatePointFont(170, _T("맑은 고딕"));
+	deviceContext->SelectObject(&bodyFont);
+	deviceContext->SetTextColor(RGB(235, 235, 245));
+	deviceContext->TextOut(490, 285, _T("[1] Forgotten Forest"));
+	deviceContext->TextOut(490, 355, _T("48 Pegs · Enemy HP 20 · 8 Steps"));
+	deviceContext->SetTextColor(RGB(170, 210, 255));
+	deviceContext->TextOut(490, 455, _T("[2] Dense Cavern"));
+	deviceContext->TextOut(490, 525, _T("40 Pegs · Enemy HP 30 · 6 Steps"));
+
+	CFont guideFont;
+	guideFont.CreatePointFont(130, _T("맑은 고딕"));
+	deviceContext->SelectObject(&guideFont);
+	deviceContext->SetTextColor(RGB(160, 165, 180));
+	deviceContext->TextOut(490, 650, _T("숫자 키 1 또는 2로 시작"));
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawResultScreen(CDC* deviceContext)
+{
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->FillSolidRect(
+		0,
+		0,
+		static_cast<int>(std::lround(GameLayout::SceneWidth)),
+		static_cast<int>(std::lround(GameLayout::WindowHeight)),
+		RGB(18, 22, 32));
+	deviceContext->SetBkMode(TRANSPARENT);
+	deviceContext->SetTextAlign(TA_CENTER);
+
+	const bool victory = _resultSummary.has_value()
+		&& _resultSummary->result == GameUpdateResult::Victory;
+	CFont titleFont;
+	titleFont.CreatePointFont(300, _T("맑은 고딕"));
+	deviceContext->SelectObject(&titleFont);
+	deviceContext->SetTextColor(victory ? RGB(80, 220, 120) : RGB(240, 90, 90));
+	deviceContext->TextOut(490, 135, victory ? _T("STAGE CLEAR") : _T("GAME OVER"));
+
+	CFont bodyFont;
+	bodyFont.CreatePointFont(170, _T("맑은 고딕"));
+	deviceContext->SelectObject(&bodyFont);
+	deviceContext->SetTextColor(RGB(235, 235, 245));
+	if (_resultSummary.has_value())
+	{
+		deviceContext->TextOut(490, 260, StageNameText(_resultSummary->stageId));
+		CString scoreText;
+		scoreText.Format(_T("SCORE  %d"), _resultSummary->totalScore);
+		deviceContext->TextOut(490, 345, scoreText);
+		CString comboText;
+		comboText.Format(_T("BEST COMBO  %d"), _resultSummary->bestCombo);
+		deviceContext->TextOut(490, 415, comboText);
+		CString turnText;
+		turnText.Format(_T("TURNS  %d"), _resultSummary->turns);
+		deviceContext->TextOut(490, 485, turnText);
+	}
+
+	CFont guideFont;
+	guideFont.CreatePointFont(140, _T("맑은 고딕"));
+	deviceContext->SelectObject(&guideFont);
+	deviceContext->SetTextColor(RGB(170, 210, 255));
+	deviceContext->TextOut(490, 620, _T("[R] 다시 도전    [S] 스테이지 선택"));
+	deviceContext->RestoreDC(savedDc);
+}
+
+bool CChildView::StartStage(std::string_view stageId)
+{
+	if (!_game.LoadStage(stageId))
+	{
+		return false;
+	}
+
+	_feedbackAnimations.clear();
+	_resultSummary.reset();
+	_screenMode = ScreenMode::Playing;
+	SetFocus();
+	return true;
+}
+
 void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 {
 	if (!_soundEnabled)
@@ -488,6 +623,12 @@ void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 
 void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
+	if (_screenMode != ScreenMode::Playing)
+	{
+		CWnd::OnLButtonDown(nFlags, point);
+		return;
+	}
+
 	if (_game.BeginAim({ static_cast<float>(point.x), static_cast<float>(point.y) }))
 	{
 		SetFocus();
@@ -499,6 +640,12 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
+	if (_screenMode != ScreenMode::Playing)
+	{
+		CWnd::OnLButtonUp(nFlags, point);
+		return;
+	}
+
 	_game.ReleaseShot({ static_cast<float>(point.x), static_cast<float>(point.y) });
 	ReleaseMouseInput(false);
 	CWnd::OnLButtonUp(nFlags, point);
@@ -515,6 +662,12 @@ BOOL CChildView::OnEraseBkgnd(CDC* pDC)
 
 void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 {
+	if (_screenMode != ScreenMode::Playing)
+	{
+		CWnd::OnMouseMove(nFlags, point);
+		return;
+	}
+
 	//드래그 처리
 	if (_game.GetBall().GetClick())
 	{
@@ -528,6 +681,39 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 
 void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
+	if (_screenMode == ScreenMode::StageSelection)
+	{
+		if (nChar == '1')
+		{
+			StartStage("stage-1");
+		}
+		else if (nChar == '2')
+		{
+			StartStage("stage-2");
+		}
+		Invalidate();
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+
+	if (_screenMode == ScreenMode::Result)
+	{
+		if (nChar == 'R')
+		{
+			restart();
+		}
+		else if (nChar == 'S')
+		{
+			_game.ResetGame();
+			_feedbackAnimations.clear();
+			_resultSummary.reset();
+			_screenMode = ScreenMode::StageSelection;
+		}
+		Invalidate();
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 	if (nChar == VK_SPACE)
 	{
@@ -543,6 +729,15 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if (nChar == 'M')
 	{
 		_soundEnabled = !_soundEnabled;
+		Invalidate();
+	}
+	if (nChar == 'S' && _game.GetState() == GameState::Aiming)
+	{
+		ReleaseMouseInput(true);
+		_game.ResetGame();
+		_feedbackAnimations.clear();
+		_resultSummary.reset();
+		_screenMode = ScreenMode::StageSelection;
 		Invalidate();
 	}
 

@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 3 |
-| 현재 버전 | Version 3.2 |
+| 현재 버전 | Version 3.3 |
 | 스프린트 목표 | 플레이 의사결정·결과 전달 강화와 콘텐츠 선택 경로 완성 |
-| 상태 | Sprint 3 진행 중 — P0 2/4 완료 |
+| 상태 | Sprint 3 진행 중 — P0 3/4 완료 |
 
 ## 문서
 
@@ -54,6 +54,7 @@
 - [Version 2.5 — Sprint 2 최종 검증 완료](./Version_2.5.md)
 - [Version 3.1 — 애니메이션과 음소거 가능한 사운드 피드백](./Version_3.1.md)
 - [Version 3.2 — 조준 예상선과 발사 세기 시각화](./Version_3.2.md)
+- [Version 3.3 — 스테이지 선택과 결과 화면](./Version_3.3.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

@@ -135,6 +135,19 @@ void GameWorld::ResetBallToAiming()
 	TransitionTo(GameState::Aiming);
 }
 
+bool GameWorld::LoadStage(std::string_view stageId)
+{
+	StageLoadResult result = LoadStageDefinition(stageId);
+	if (!result.IsSuccess())
+	{
+		return false;
+	}
+
+	_stage = std::move(*result.stage);
+	ResetGame();
+	return true;
+}
+
 bool GameWorld::BeginAim(Vector2 position)
 {
 	if (_gameState != GameState::Aiming || _ball.GetActive())
@@ -517,6 +530,32 @@ std::vector<GameEvent> GameWorld::ConsumeEvents()
 	std::vector<GameEvent> events;
 	events.swap(_events);
 	return events;
+}
+
+std::optional<GameResultSummary> GameWorld::GetResultSummary() const
+{
+	GameUpdateResult result = GameUpdateResult::None;
+	if (_gameState == GameState::Victory)
+	{
+		result = GameUpdateResult::Victory;
+	}
+	else if (_gameState == GameState::Defeat)
+	{
+		result = GameUpdateResult::Defeat;
+	}
+	else
+	{
+		return std::nullopt;
+	}
+
+	return GameResultSummary{
+		result,
+		_stage.id,
+		_stage.displayName,
+		_score.total,
+		_score.bestCombo,
+		_enemy.GetCount()
+	};
 }
 
 GameUpdateResult GameWorld::ReportTerminalResult(GameUpdateResult result) noexcept

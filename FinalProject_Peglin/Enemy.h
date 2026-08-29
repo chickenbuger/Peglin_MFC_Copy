@@ -18,9 +18,9 @@ public:
 	void SetX(float newX)		{ x = newX; }
 
 	//getter
-	int		GetCount()	{ return count; }
-	float	GetHp()		{ return hp; }
-	float	GetX()		{ return x; }
+	int		GetCount() const noexcept	{ return count; }
+	float	GetHp() const noexcept		{ return hp; }
+	float	GetX() const noexcept		{ return x; }
 public:
 	void draw(CDC* pDC);
 	void Init();

@@ -2,6 +2,7 @@
 
 #include "PegLayout.h"
 
+#include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -59,7 +60,14 @@ struct StageLoadResult
 	bool IsSuccess() const noexcept { return stage.has_value() && validation.IsValid(); }
 };
 
+struct StageCatalogEntry
+{
+	std::string_view id;
+	std::string_view displayName;
+};
+
 StageDefinition CreateDefaultStageDefinition();
 StageDefinition CreateChallengeStageDefinition();
 StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept;
 StageLoadResult LoadStageDefinition(std::string_view stageId);
+const std::array<StageCatalogEntry, 2>& GetStageCatalog() noexcept;

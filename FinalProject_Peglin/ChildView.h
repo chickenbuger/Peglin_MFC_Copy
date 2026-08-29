@@ -6,6 +6,8 @@
 #pragma once
 
 #include <chrono>
+#include <optional>
+#include <string_view>
 #include <vector>
 
 #include "Background.h"
@@ -49,6 +51,13 @@ protected:
 	afx_msg void On32771();
 
 private:
+	enum class ScreenMode
+	{
+		StageSelection,
+		Playing,
+		Result
+	};
+
 	struct FeedbackAnimation
 	{
 		CString text;
@@ -64,7 +73,10 @@ private:
 	void UpdateFeedbackAnimations(float deltaSeconds);
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
+	void DrawStageSelection(CDC* deviceContext);
+	void DrawResultScreen(CDC* deviceContext);
 	void PlayEventSound(GameEventType eventType, PegType pegType);
+	bool StartStage(std::string_view stageId);
 
 	Background _background;
 	GameWorld _game;
@@ -73,5 +85,7 @@ private:
 	double _accumulatedTimeSeconds = 0.0;
 	std::vector<FeedbackAnimation> _feedbackAnimations;
 	bool _soundEnabled = true;
+	ScreenMode _screenMode = ScreenMode::StageSelection;
+	std::optional<GameResultSummary> _resultSummary;
 };
 
