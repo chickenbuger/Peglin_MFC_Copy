@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+$')]
-    [string]$Version = '4.3',
+    [string]$Version = '4.5',
 
     [Parameter()]
     [string]$OutputRoot = 'dist',
@@ -25,36 +25,36 @@ else {
 $repositoryPrefix = $repositoryRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 $outputPrefix = $resolvedOutputRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 if ($resolvedOutputRoot -eq $repositoryRoot -or -not $resolvedOutputRoot.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'OutputRoot는 저장소 내부의 전용 하위 폴더여야 합니다.'
+    throw 'OutputRoot must be a dedicated subdirectory inside the repository.'
 }
 
 $packageName = "PeglinMFC-$Version-win-x64"
 $packageDirectory = [System.IO.Path]::GetFullPath((Join-Path $resolvedOutputRoot $packageName))
 $zipPath = [System.IO.Path]::GetFullPath((Join-Path $resolvedOutputRoot "$packageName.zip"))
 if (-not $packageDirectory.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-    throw '패키지 경로가 OutputRoot를 벗어났습니다.'
+    throw 'The package path escaped OutputRoot.'
 }
 
 $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswherePath -PathType Leaf)) {
-    throw 'vswhere.exe를 찾지 못했습니다. Visual Studio 2022 Build Tools가 필요합니다.'
+    throw 'vswhere.exe was not found. Visual Studio 2022 Build Tools are required.'
 }
 $visualStudioPath = (& $vswherePath -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath).Trim()
 if ([string]::IsNullOrWhiteSpace($visualStudioPath)) {
-    throw 'MSBuild가 설치된 Visual Studio 2022 인스턴스를 찾지 못했습니다.'
+    throw 'No Visual Studio 2022 installation with MSBuild was found.'
 }
 
 $msbuildPath = Join-Path $visualStudioPath 'MSBuild\Current\Bin\MSBuild.exe'
 if (-not $SkipBuild) {
-    & $msbuildPath (Join-Path $repositoryRoot 'FinalProject_Peglin.sln') /m /t:Build /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal
+    & $msbuildPath (Join-Path $repositoryRoot 'FinalProject_Peglin.sln') /m:1 /nr:false /t:Build /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal
     if ($LASTEXITCODE -ne 0) {
-        throw "Release x64 빌드가 실패했습니다. ExitCode=$LASTEXITCODE"
+        throw "Release x64 build failed. ExitCode=$LASTEXITCODE"
     }
 }
 
 $executablePath = Join-Path $repositoryRoot 'x64\Release\FinalProject_Peglin.exe'
 if (-not (Test-Path -LiteralPath $executablePath -PathType Leaf)) {
-    throw 'Release x64 실행 파일을 찾지 못했습니다.'
+    throw 'The Release x64 executable was not found.'
 }
 
 $redistRoot = Join-Path $visualStudioPath 'VC\Redist\MSVC'
@@ -76,7 +76,7 @@ foreach ($candidate in $redistCandidates) {
     }
 }
 if ($null -eq $redistDirectory) {
-    throw 'Visual C++ v143 x64 CRT/MFC 재배포 파일을 찾지 못했습니다.'
+    throw 'Visual C++ v143 x64 CRT/MFC redistributable files were not found.'
 }
 
 New-Item -ItemType Directory -Path $resolvedOutputRoot -Force | Out-Null
@@ -97,14 +97,14 @@ $runtimeSources = @{
 }
 foreach ($runtime in $runtimeSources.GetEnumerator()) {
     if (-not (Test-Path -LiteralPath $runtime.Value -PathType Leaf)) {
-        throw "재배포 파일이 없습니다: $($runtime.Value)"
+        throw "A redistributable file is missing: $($runtime.Value)"
     }
     Copy-Item -LiteralPath $runtime.Value -Destination (Join-Path $packageDirectory $runtime.Key)
 }
 
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\Preflight.ps1') -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\README.txt') -Destination $packageDirectory
-Set-Content -LiteralPath (Join-Path $packageDirectory 'PACKAGE_VERSION.txt') -Value $Version -Encoding utf8NoBOM
+Set-Content -LiteralPath (Join-Path $packageDirectory 'PACKAGE_VERSION.txt') -Value $Version -Encoding ascii
 
 $hashTargets = Get-ChildItem -LiteralPath $packageDirectory -File | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object Name
 $hashLines = foreach ($file in $hashTargets) {

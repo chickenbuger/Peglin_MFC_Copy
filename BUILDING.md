@@ -61,10 +61,10 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
 
 ```powershell
-& '.\tools\Package-Release.ps1' -Version '4.3'
+& '.\tools\Package-Release.ps1' -Version '4.5'
 ```
 
-패키징 스크립트는 Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함한다. `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다.
+패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함한다. `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 정상 추출뿐 아니라 경로 탈출, 파일 변조와 필수 MFC 런타임 누락 탐지를 자동 검증한다.
 
 ## 핵심 자동화 테스트
 
@@ -79,4 +79,4 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 
 ## 현재 검증 상태
 
-2026-08-29 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. Version 0.15에서 전체 플레이 흐름과 10분 GDI 안정성 검증(기준 31개, 마지막 34개, 증가 3개, 후반 지속 상승 없음)을 통과했으며 Sprint 0 빌드·실행 기준선을 확정했다.
+2026-08-30 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. Version 4.5에서 구성별 360개, 총 1,440개 자동 검증과 전체 플레이를 통과했다. 10분 GDI 검증은 기준 33개, 마지막 33개로 후반 지속 상승이 없었으며 PowerShell 5에서 최종 Release x64 패키지의 생성·사전 검사·실패 경로 검증까지 완료했다.

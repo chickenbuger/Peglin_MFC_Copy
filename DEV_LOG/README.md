@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 4 |
-| 현재 버전 | Version 4.4 |
+| 현재 버전 | Version 4.5 |
 | 스프린트 목표 | 사용자 설정·플레이 기록 보존과 배포 가능한 실행 환경 확립 |
-| 상태 | Sprint 4 P0 4/4 구현 완료 — 최종 실행·GDI·패키지 검증 예정 |
+| 상태 | Sprint 4 완료 — P0 4/4, 최종 게이트 7/7 통과; Sprint 5 계획만 작성 |
 
 ## 문서
 
@@ -61,11 +61,13 @@
 - [Version 4.2 — 스테이지별 최고 기록](./Version_4.2.md)
 - [Version 4.3 — Release x64 배포 패키징·사전 검사](./Version_4.3.md)
 - [Version 4.4 — 저장·배포 자동화 테스트 확장](./Version_4.4.md)
+- [Version 4.5 — Sprint 4 최종 배포 검증 완료](./Version_4.5.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
 - [Next Version Plan 3 — Sprint 3 완료 기록](./Next_Version_Plan_3.md)
 - [Next Version Plan 4 — Sprint 4 계획](./Next_Version_Plan_4.md)
+- [Next Version Plan 5 — Sprint 5 계획](./Next_Version_Plan_5.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차
