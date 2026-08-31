@@ -13,6 +13,7 @@
 #include "GameLayout.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
+#include "GameplayCatalog.h"
 #include "PegLayout.h"
 #include "Physics.h"
 #include "Progression.h"
@@ -1292,6 +1293,14 @@ namespace
 		invalid.rules.enemyStep = 0.0f;
 		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyStep, "non-positive enemy step is rejected");
 
+		invalid = CreateDefaultStageDefinition();
+		invalid.enemies = {
+			{ "effect-target", "Effect Target", EnemyVisualKind::CrystalToad, 10.0f, 0.0f }
+		};
+		Check(
+			ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyDamageTakenMultiplier,
+			"out-of-range enemy damage effect is rejected");
+
 		const StageLoadResult first = LoadStageDefinition("stage-2");
 		const StageLoadResult repeated = LoadStageDefinition("stage-2");
 		bool deterministic = first.IsSuccess()
@@ -1526,6 +1535,117 @@ namespace
 
 		const ContentLoadResult directoryRead = LoadContentCatalog(testDirectory);
 		Check(directoryRead.error == ContentLoadError::IoFailure, "non-file content path fails safely");
+		std::filesystem::remove_all(testDirectory, cleanupError);
+	}
+
+	void TestExternalGameplayCatalog()
+	{
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		const ContentLoadResult stageCatalog = LoadContentCatalog(
+			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
+		const std::filesystem::path shippedPath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "gameplay.v1.ini";
+		const GameplayCatalogLoadResult shipped = LoadGameplayCatalog(
+			shippedPath,
+			stageCatalog.stages);
+		Check(shipped.UsedExternalContent(), "shipped gameplay definition catalog validates");
+		Check(shipped.catalog.progression.orbs.size() == 3, "external gameplay catalog provides three orbs");
+		Check(shipped.catalog.progression.relics.size() == 3, "external gameplay catalog provides three relics");
+		Check(shipped.catalog.enemies.size() == 7, "external gameplay catalog covers every shipped enemy id");
+
+		std::vector<StageDefinition> activatedStages = stageCatalog.stages;
+		Check(ActivateGameplayCatalog(shipped, activatedStages), "validated gameplay catalog activates atomically");
+		const OrbDefinition* iron = FindOrbDefinition("iron-orb");
+		Check(iron != nullptr && Near(iron->pegDamageMultiplier, 1.5f), "external orb effect resolves by stable id");
+		const RelicDefinition* bark = FindRelicDefinition("bark-guard");
+		Check(bark != nullptr && Near(bark->incomingDamageMultiplier, 0.85f), "external relic effect resolves by stable id");
+		const StageDefinition* forest = FindContentStage(activatedStages, "stage-1");
+		const StageDefinition* boss = FindContentStage(activatedStages, "stage-3");
+		Check(forest != nullptr && Near(forest->enemies[0].damageTakenMultiplier, 0.9f), "enemy effect is applied through the stage enemy id");
+		Check(boss != nullptr && Near(boss->enemies[0].damageTakenMultiplier, 0.81f), "included enemy effects compose deterministically");
+
+		if (forest != nullptr)
+		{
+			GameWorld effectWorld(*forest);
+			Launch(effectWorld);
+			auto scan = effectWorld.GetTargets()._targetBallList.GetHeadPosition();
+			Vector2 normalPeg;
+			while (scan != nullptr)
+			{
+				const TargetBall& candidate = effectWorld.GetTargets()._targetBallList.GetNext(scan);
+				if (candidate.type == PegType::Normal)
+				{
+					normalPeg = candidate.position;
+					break;
+				}
+			}
+			effectWorld.GetBall().SetPosition(normalPeg + Vector2{ -15.0f, 0.0f });
+			effectWorld.GetBall().SetVelocity({ 2.0f, 0.0f });
+			effectWorld.Update(0.0f);
+			effectWorld.GetBall().SetPosition({ 500.0f, 801.0f });
+			effectWorld.Update(0.0f);
+			effectWorld.Update(0.0f);
+			Check(Near(effectWorld.GetEnemy().GetHp(), 7.1f), "enemy damage-taken effect changes resolved combat damage");
+		}
+
+		std::ifstream shippedInput(shippedPath, std::ios::binary);
+		const std::string validContent{
+			std::istreambuf_iterator<char>(shippedInput),
+			std::istreambuf_iterator<char>() };
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_GameplayCatalogTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path contentPath = testDirectory / "gameplay.v1.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove_all(testDirectory, cleanupError);
+		std::filesystem::create_directories(testDirectory, cleanupError);
+		Check(!cleanupError, "gameplay catalog test directory is available");
+		auto WriteContent = [&contentPath](std::string_view content)
+		{
+			std::ofstream output(contentPath, std::ios::binary | std::ios::trunc);
+			output.write(content.data(), static_cast<std::streamsize>(content.size()));
+		};
+
+		std::string duplicateId = validContent;
+		const std::size_t firstEffectEnd = duplicateId.find("[/effect]") + std::string("[/effect]\n").size();
+		duplicateId.insert(firstEffectEnd, validContent.substr(validContent.find("[effect]"), firstEffectEnd - validContent.find("[effect]")));
+		WriteContent(duplicateId);
+		Check(LoadGameplayCatalog(contentPath, stageCatalog.stages).error == GameplayCatalogLoadError::DuplicateId,
+			"duplicate external effect id is rejected");
+
+		std::string unknownEffect = validContent;
+		unknownEffect.replace(
+			unknownEffect.find("effect=orb-traveler-damage"),
+			std::string("effect=orb-traveler-damage").size(),
+			"effect=unknown-effect");
+		WriteContent(unknownEffect);
+		Check(LoadGameplayCatalog(contentPath, stageCatalog.stages).error == GameplayCatalogLoadError::UnknownEffectReference,
+			"unknown external effect reference is rejected");
+
+		std::string circular = validContent;
+		const std::string firstEffect = "id=orb-traveler-damage\nkind=PegDamageMultiplier\nvalue=1.0\n";
+		const std::string secondEffect = "id=orb-traveler-score\nkind=ScoreMultiplier\nvalue=1.0\n";
+		circular.insert(circular.find(firstEffect) + firstEffect.size(), "include=orb-traveler-score\n");
+		circular.insert(circular.find(secondEffect) + secondEffect.size(), "include=orb-traveler-damage\n");
+		WriteContent(circular);
+		Check(LoadGameplayCatalog(contentPath, stageCatalog.stages).error == GameplayCatalogLoadError::CircularEffectReference,
+			"circular external effect references are rejected");
+
+		std::vector<StageDefinition> unknownEnemyStages = stageCatalog.stages;
+		unknownEnemyStages[0].enemies[0].id = "unknown-enemy";
+		WriteContent(validContent);
+		Check(LoadGameplayCatalog(contentPath, unknownEnemyStages).error == GameplayCatalogLoadError::UnknownEnemyReference,
+			"unknown stage enemy reference rejects the external gameplay catalog");
+
+		const GameplayCatalogLoadResult missing = LoadGameplayCatalog(testDirectory / "missing.ini", stageCatalog.stages);
+		Check(missing.state == GameplayCatalogLoadState::BuiltInFallback, "missing gameplay catalog uses built-in fallback");
+		Check(missing.error == GameplayCatalogLoadError::MissingFile, "missing gameplay catalog reports its cause");
+		std::vector<StageDefinition> fallbackStages = stageCatalog.stages;
+		Check(ActivateGameplayCatalog(missing, fallbackStages), "built-in progression fallback activates safely");
+		Check(Near(FindOrbDefinition("iron-orb")->pegDamageMultiplier, 1.5f), "built-in fallback preserves the default orb catalog");
+
+		ResetProgressionCatalog();
 		std::filesystem::remove_all(testDirectory, cleanupError);
 	}
 
@@ -1948,6 +2068,7 @@ int main()
 	TestAttackTypesAndTargets();
 	TestBossEnemyActionPattern();
 	TestExternalContentCatalog();
+	TestExternalGameplayCatalog();
 	TestMultipleEnemyEncounter();
 	TestCombinedSprintFiveContentRegression();
 

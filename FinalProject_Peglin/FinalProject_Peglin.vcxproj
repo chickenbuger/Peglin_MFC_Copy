@@ -197,6 +197,7 @@
     <ClInclude Include="GameState.h" />
     <ClInclude Include="GameLayout.h" />
 	<ClInclude Include="GameOptions.h" />
+	<ClInclude Include="GameplayCatalog.h" />
 	<ClInclude Include="GameRecordStore.h" />
 	<ClInclude Include="GameSettingsStore.h" />
     <ClInclude Include="GameWorld.h" />
@@ -226,6 +227,7 @@
     <ClCompile Include="GameWorld.cpp" />
 	<ClCompile Include="GameRecordStore.cpp" />
 	<ClCompile Include="GameSettingsStore.cpp" />
+	<ClCompile Include="GameplayCatalog.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="Parent_ball.cpp" />
 	<ClCompile Include="PegLayout.cpp" />
@@ -251,6 +253,9 @@
   <ItemGroup>
     <None Include="res\FinalProjectPeglin.rc2" />
 	<None Include="content\stages.v1.ini">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
+	<None Include="content\gameplay.v1.ini">
 	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
 	<None Include="res\ui-adventure-frame-v1.prompt.md" />

@@ -102,13 +102,16 @@ foreach ($runtime in $runtimeSources.GetEnumerator()) {
     Copy-Item -LiteralPath $runtime.Value -Destination (Join-Path $packageDirectory $runtime.Key)
 }
 
-$contentSource = Join-Path $repositoryRoot 'FinalProject_Peglin\content\stages.v1.ini'
-if (-not (Test-Path -LiteralPath $contentSource -PathType Leaf)) {
-    throw 'The versioned stage content file was not found.'
-}
 $contentDirectory = Join-Path $packageDirectory 'content'
 New-Item -ItemType Directory -Path $contentDirectory | Out-Null
-Copy-Item -LiteralPath $contentSource -Destination (Join-Path $contentDirectory 'stages.v1.ini')
+$contentFiles = @('stages.v1.ini', 'gameplay.v1.ini')
+foreach ($contentFile in $contentFiles) {
+    $contentSource = Join-Path $repositoryRoot "FinalProject_Peglin\content\$contentFile"
+    if (-not (Test-Path -LiteralPath $contentSource -PathType Leaf)) {
+        throw "A versioned content file was not found: $contentFile"
+    }
+    Copy-Item -LiteralPath $contentSource -Destination (Join-Path $contentDirectory $contentFile)
+}
 
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\Preflight.ps1') -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\README.txt') -Destination $packageDirectory

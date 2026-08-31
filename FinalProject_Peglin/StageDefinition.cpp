@@ -237,6 +237,12 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 		{
 			return { StageLoadError::InvalidEnemyRosterHealth, index };
 		}
+		if (!std::isfinite(enemy.damageTakenMultiplier)
+			|| enemy.damageTakenMultiplier < 0.1f
+			|| enemy.damageTakenMultiplier > 5.0f)
+		{
+			return { StageLoadError::InvalidEnemyDamageTakenMultiplier, index };
+		}
 		for (std::size_t earlier = 0; earlier < index; ++earlier)
 		{
 			if (stage.enemies[earlier].id == enemy.id)

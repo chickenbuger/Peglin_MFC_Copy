@@ -60,6 +60,7 @@ try {
     $tamperedRoot = Join-Path $temporaryRoot 'tampered'
     $missingRoot = Join-Path $temporaryRoot 'missing'
     $missingContentRoot = Join-Path $temporaryRoot 'missing-content'
+    $missingGameplayRoot = Join-Path $temporaryRoot 'missing-gameplay-content'
     New-Item -ItemType Directory -Path $originalRoot -Force | Out-Null
     Expand-Archive -LiteralPath $resolvedZipPath -DestinationPath $originalRoot
 
@@ -84,8 +85,13 @@ try {
     Remove-Item -LiteralPath (Join-Path $missingContentRoot 'content\stages.v1.ini') -Force
     Assert-PreflightFailure -PackageRoot $missingContentRoot -Scenario 'missing versioned stage content'
 
+    New-Item -ItemType Directory -Path $missingGameplayRoot | Out-Null
+    Copy-Item -Path (Join-Path $originalRoot '*') -Destination $missingGameplayRoot -Recurse
+    Remove-Item -LiteralPath (Join-Path $missingGameplayRoot 'content\gameplay.v1.ini') -Force
+    Assert-PreflightFailure -PackageRoot $missingGameplayRoot -Scenario 'missing gameplay definition content'
+
     Write-Output "PACKAGE TEST PASS: $resolvedZipPath"
-    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, and missing-content checks completed.'
+    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, and both missing-content checks completed.'
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {

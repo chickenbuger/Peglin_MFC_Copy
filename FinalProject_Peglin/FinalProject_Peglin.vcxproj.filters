@@ -78,6 +78,9 @@
 	<ClInclude Include="GameSettingsStore.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="GameplayCatalog.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
 	<ClInclude Include="PegLayout.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
@@ -140,6 +143,9 @@
 	<ClCompile Include="GameSettingsStore.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
+	<ClCompile Include="GameplayCatalog.cpp">
+	  <Filter>소스 파일</Filter>
+	</ClCompile>
 	<ClCompile Include="PegLayout.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
@@ -175,6 +181,7 @@
       <Filter>리소스 파일</Filter>
     </None>
 	<None Include="content\stages.v1.ini" />
+	<None Include="content\gameplay.v1.ini" />
 	<None Include="res\ui-adventure-frame-v1.prompt.md" />
   </ItemGroup>
   <ItemGroup>

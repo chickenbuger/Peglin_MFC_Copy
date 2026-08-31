@@ -28,8 +28,8 @@ enum class AttackTarget
 
 struct OrbDefinition
 {
-	std::string_view id;
-	std::string_view displayName;
+	std::string id;
+	std::string displayName;
 	float pegDamageMultiplier = 1.0f;
 	float scoreMultiplier = 1.0f;
 	AttackDelivery attackDelivery = AttackDelivery::Projectile;
@@ -38,8 +38,8 @@ struct OrbDefinition
 
 struct RelicDefinition
 {
-	std::string_view id;
-	std::string_view displayName;
+	std::string id;
+	std::string displayName;
 	RelicDuplicatePolicy duplicatePolicy = RelicDuplicatePolicy::Unique;
 	std::size_t maxStacks = 1;
 	float pegDamageMultiplier = 1.0f;
@@ -54,10 +54,20 @@ struct ProgressionModifiers
 	float incomingDamageMultiplier = 1.0f;
 };
 
+struct ProgressionCatalog
+{
+	std::vector<OrbDefinition> orbs;
+	std::vector<RelicDefinition> relics;
+};
+
 const std::vector<OrbDefinition>& GetOrbDefinitions() noexcept;
 const std::vector<RelicDefinition>& GetRelicDefinitions() noexcept;
 const OrbDefinition* FindOrbDefinition(std::string_view id) noexcept;
 const RelicDefinition* FindRelicDefinition(std::string_view id) noexcept;
+ProgressionCatalog CreateBuiltInProgressionCatalog();
+bool ValidateProgressionCatalog(const ProgressionCatalog& catalog) noexcept;
+bool InstallProgressionCatalog(const ProgressionCatalog& catalog);
+void ResetProgressionCatalog();
 
 class PlayerLoadout
 {

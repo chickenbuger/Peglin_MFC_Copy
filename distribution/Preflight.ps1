@@ -46,7 +46,8 @@ $requiredFiles = @(
     'Preflight.ps1',
     'README.txt',
     'SHA256SUMS.txt',
-    'content\stages.v1.ini'
+    'content\stages.v1.ini',
+    'content\gameplay.v1.ini'
 )
 
 if (-not [Environment]::Is64BitOperatingSystem) {

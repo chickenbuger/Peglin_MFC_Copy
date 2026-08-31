@@ -256,6 +256,21 @@ namespace
 		return std::filesystem::path(modulePath.data()).parent_path()
 			/ L"content" / L"stages.v1.ini";
 	}
+
+	std::filesystem::path GetDefaultGameplayCatalogPath()
+	{
+		std::vector<wchar_t> modulePath(1024, L'\0');
+		const DWORD length = GetModuleFileNameW(
+			nullptr,
+			modulePath.data(),
+			static_cast<DWORD>(modulePath.size()));
+		if (length == 0 || length >= modulePath.size())
+		{
+			return std::filesystem::path(L"content") / L"gameplay.v1.ini";
+		}
+		return std::filesystem::path(modulePath.data()).parent_path()
+			/ L"content" / L"gameplay.v1.ini";
+	}
 }
 
 // CChildView
@@ -277,11 +292,19 @@ CChildView::CChildView()
 		_recordSaveFailed = !_recordStore.Save(_records);
 	}
 	_contentCatalog = LoadContentCatalog(GetDefaultContentCatalogPath());
+	_gameplayCatalog = LoadGameplayCatalog(
+		GetDefaultGameplayCatalogPath(),
+		_contentCatalog.stages);
+	if (!ActivateGameplayCatalog(_gameplayCatalog, _contentCatalog.stages))
+	{
+		ResetProgressionCatalog();
+	}
 	BeginNewRun();
 }
 
 CChildView::~CChildView()
 {
+	ResetProgressionCatalog();
 }
 
 
@@ -1222,7 +1245,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), _T("[O] 옵션"));
 
 	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), _T("현재 노드 시작 · ENTER"));
-	if (!_contentCatalog.UsedExternalContent())
+	if (!_contentCatalog.UsedExternalContent() || !_gameplayCatalog.UsedExternalContent())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
 	}

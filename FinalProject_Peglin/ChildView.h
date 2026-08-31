@@ -14,6 +14,7 @@
 #include "ContentCatalog.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
+#include "GameplayCatalog.h"
 #include "GameWorld.h"
 #include "RunProgression.h"
 #include "UiNavigation.h"
@@ -145,6 +146,7 @@ private:
 	GameRecordStore _recordStore;
 	GameRecordBook _records;
 	ContentLoadResult _contentCatalog;
+	GameplayCatalogLoadResult _gameplayCatalog;
 	AdventureRun _run;
 	GameDifficulty _runDifficulty = GameDifficulty::Normal;
 	float _runPlayerHealth = 0.0f;

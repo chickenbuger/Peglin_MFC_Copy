@@ -35,6 +35,7 @@ struct EnemyDefinition
 	std::string displayName;
 	EnemyVisualKind visual = EnemyVisualKind::CrystalToad;
 	float health = 20.0f;
+	float damageTakenMultiplier = 1.0f;
 };
 
 struct StageRules
@@ -82,7 +83,8 @@ enum class StageLoadError
 	DuplicateEnemyId,
 	InvalidEnemyName,
 	InvalidEnemyVisual,
-	InvalidEnemyRosterHealth
+	InvalidEnemyRosterHealth,
+	InvalidEnemyDamageTakenMultiplier
 };
 
 struct StageValidationResult

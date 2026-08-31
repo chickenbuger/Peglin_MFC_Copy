@@ -639,9 +639,10 @@ void GameWorld::ResolveTurn()
 	for (const std::size_t targetIndex : attackTargets)
 	{
 		EnemyCombatant& target = _enemies[targetIndex];
-		const float shieldAbsorbed = (std::min)(target.shield, _pendingDamage);
+		const float modifiedDamage = _pendingDamage * target.definition.damageTakenMultiplier;
+		const float shieldAbsorbed = (std::min)(target.shield, modifiedDamage);
 		target.shield -= shieldAbsorbed;
-		const float appliedDamage = _pendingDamage - shieldAbsorbed;
+		const float appliedDamage = modifiedDamage - shieldAbsorbed;
 		target.actor.SetHp(target.actor.GetHp() - appliedDamage);
 		totalEnemyDamage += appliedDamage;
 		if (!target.IsAlive())

@@ -2,45 +2,49 @@
 #include "Progression.h"
 
 #include <algorithm>
+#include <cmath>
+#include <unordered_set>
 #include <utility>
 
 namespace
 {
-	const std::vector<OrbDefinition> ORB_DEFINITIONS = {
-		{ "basic-orb", "Traveler Orb", 1.0f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
-		{ "iron-orb", "Iron Orb", 1.5f, 0.75f, AttackDelivery::Melee, AttackTarget::Single },
-		{ "echo-orb", "Echo Orb", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All }
-	};
-
-	const std::vector<RelicDefinition> RELIC_DEFINITIONS = {
+	const ProgressionCatalog BUILT_IN_CATALOG = {
 		{
-			"combo-lantern",
-			"Combo Lantern",
-			RelicDuplicatePolicy::Unique,
-			1,
-			1.0f,
-			1.25f,
-			1.0f
+			{ "basic-orb", "Traveler Orb", 1.0f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
+			{ "iron-orb", "Iron Orb", 1.5f, 0.75f, AttackDelivery::Melee, AttackTarget::Single },
+			{ "echo-orb", "Echo Orb", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All }
 		},
 		{
-			"thorn-charm",
-			"Thorn Charm",
-			RelicDuplicatePolicy::Unique,
-			1,
-			1.2f,
-			1.0f,
-			1.0f
-		},
-		{
-			"bark-guard",
-			"Bark Guard",
-			RelicDuplicatePolicy::Stackable,
-			2,
-			1.0f,
-			1.0f,
-			0.85f
+			{ "combo-lantern", "Combo Lantern", RelicDuplicatePolicy::Unique, 1, 1.0f, 1.25f, 1.0f },
+			{ "thorn-charm", "Thorn Charm", RelicDuplicatePolicy::Unique, 1, 1.2f, 1.0f, 1.0f },
+			{ "bark-guard", "Bark Guard", RelicDuplicatePolicy::Stackable, 2, 1.0f, 1.0f, 0.85f }
 		}
 	};
+
+	ProgressionCatalog ACTIVE_CATALOG = BUILT_IN_CATALOG;
+
+	bool IsSafeId(std::string_view id) noexcept
+	{
+		if (id.empty() || id.size() > 48)
+		{
+			return false;
+		}
+		for (const char character : id)
+		{
+			const bool lower = character >= 'a' && character <= 'z';
+			const bool digit = character >= '0' && character <= '9';
+			if (!lower && !digit && character != '-')
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool IsValidMultiplier(float value) noexcept
+	{
+		return std::isfinite(value) && value >= 0.1f && value <= 5.0f;
+	}
 
 	float ClampModifier(float value) noexcept
 	{
@@ -55,36 +59,101 @@ PlayerLoadout::PlayerLoadout()
 
 const std::vector<OrbDefinition>& GetOrbDefinitions() noexcept
 {
-	return ORB_DEFINITIONS;
+	return ACTIVE_CATALOG.orbs;
 }
 
 const std::vector<RelicDefinition>& GetRelicDefinitions() noexcept
 {
-	return RELIC_DEFINITIONS;
+	return ACTIVE_CATALOG.relics;
 }
 
 const OrbDefinition* FindOrbDefinition(std::string_view id) noexcept
 {
 	const auto found = std::find_if(
-		ORB_DEFINITIONS.begin(),
-		ORB_DEFINITIONS.end(),
+		ACTIVE_CATALOG.orbs.begin(),
+		ACTIVE_CATALOG.orbs.end(),
 		[id](const OrbDefinition& definition)
 		{
 			return definition.id == id;
 		});
-	return found == ORB_DEFINITIONS.end() ? nullptr : &*found;
+	return found == ACTIVE_CATALOG.orbs.end() ? nullptr : &*found;
 }
 
 const RelicDefinition* FindRelicDefinition(std::string_view id) noexcept
 {
 	const auto found = std::find_if(
-		RELIC_DEFINITIONS.begin(),
-		RELIC_DEFINITIONS.end(),
+		ACTIVE_CATALOG.relics.begin(),
+		ACTIVE_CATALOG.relics.end(),
 		[id](const RelicDefinition& definition)
 		{
 			return definition.id == id;
 		});
-	return found == RELIC_DEFINITIONS.end() ? nullptr : &*found;
+	return found == ACTIVE_CATALOG.relics.end() ? nullptr : &*found;
+}
+
+ProgressionCatalog CreateBuiltInProgressionCatalog()
+{
+	return BUILT_IN_CATALOG;
+}
+
+bool ValidateProgressionCatalog(const ProgressionCatalog& catalog) noexcept
+{
+	if (catalog.orbs.empty() || catalog.relics.empty())
+	{
+		return false;
+	}
+
+	std::unordered_set<std::string> orbIds;
+	for (const OrbDefinition& orb : catalog.orbs)
+	{
+		if (!IsSafeId(orb.id)
+			|| orb.displayName.empty()
+			|| !IsValidMultiplier(orb.pegDamageMultiplier)
+			|| !IsValidMultiplier(orb.scoreMultiplier)
+			|| !orbIds.insert(orb.id).second)
+		{
+			return false;
+		}
+	}
+	for (const std::string_view starterId : { "basic-orb", "iron-orb", "echo-orb" })
+	{
+		if (!orbIds.contains(std::string(starterId)))
+		{
+			return false;
+		}
+	}
+
+	std::unordered_set<std::string> relicIds;
+	for (const RelicDefinition& relic : catalog.relics)
+	{
+		if (!IsSafeId(relic.id)
+			|| relic.displayName.empty()
+			|| relic.maxStacks == 0
+			|| !IsValidMultiplier(relic.pegDamageMultiplier)
+			|| !IsValidMultiplier(relic.scoreMultiplier)
+			|| !IsValidMultiplier(relic.incomingDamageMultiplier)
+			|| !relicIds.insert(relic.id).second)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool InstallProgressionCatalog(const ProgressionCatalog& catalog)
+{
+	if (!ValidateProgressionCatalog(catalog))
+	{
+		return false;
+	}
+	ACTIVE_CATALOG = catalog;
+	return true;
+}
+
+void ResetProgressionCatalog()
+{
+	ACTIVE_CATALOG = BUILT_IN_CATALOG;
 }
 
 bool PlayerLoadout::SelectOrb(std::string_view id)
@@ -153,13 +222,13 @@ void PlayerLoadout::Reset()
 const OrbDefinition& PlayerLoadout::GetSelectedOrb() const noexcept
 {
 	const OrbDefinition* definition = FindOrbDefinition(GetSelectedOrbId());
-	return definition == nullptr ? ORB_DEFINITIONS.front() : *definition;
+	return definition == nullptr ? ACTIVE_CATALOG.orbs.front() : *definition;
 }
 
 const OrbDefinition& PlayerLoadout::GetNextOrb() const noexcept
 {
 	const OrbDefinition* definition = FindOrbDefinition(GetNextOrbId());
-	return definition == nullptr ? ORB_DEFINITIONS.front() : *definition;
+	return definition == nullptr ? ACTIVE_CATALOG.orbs.front() : *definition;
 }
 
 std::string_view PlayerLoadout::GetSelectedOrbId() const noexcept
