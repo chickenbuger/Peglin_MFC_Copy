@@ -4,6 +4,8 @@
 #include "GameLayout.h"
 
 #include <cmath>
+#include <cstdint>
+#include <initializer_list>
 #include <utility>
 
 namespace
@@ -11,9 +13,14 @@ namespace
 	constexpr std::size_t MAX_STAGE_PEGS = 256;
 	constexpr std::size_t MAX_STAGE_ENEMIES = 3;
 	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
-	constexpr std::array<StageCatalogEntry, 3> STAGE_CATALOG = {
+	constexpr std::array<StageCatalogEntry, 8> STAGE_CATALOG = {
 		StageCatalogEntry{ "stage-1", "Forgotten Forest" },
 		StageCatalogEntry{ "stage-2", "Dense Cavern" },
+		StageCatalogEntry{ "stage-4", "Thornwood Thicket" },
+		StageCatalogEntry{ "stage-5", "Fungal Hollow" },
+		StageCatalogEntry{ "stage-6", "Crystal Grotto" },
+		StageCatalogEntry{ "stage-7", "Ember Roost" },
+		StageCatalogEntry{ "stage-8", "Shaman Mire" },
 		StageCatalogEntry{ "stage-3", "Rootbound Citadel" }
 	};
 
@@ -89,6 +96,45 @@ namespace
 			result.stage = std::move(stage);
 		}
 		return result;
+	}
+
+	StageDefinition CreateRouteStage(
+		std::string id,
+		std::string displayName,
+		int columns,
+		int rows,
+		Vector2 start,
+		float spacing,
+		float jitter,
+		std::uint32_t seed,
+		float enemyHealth,
+		float playerDamage,
+		int enemySteps,
+		float enemyStep,
+		float restitution,
+		std::vector<EnemyDefinition> enemies,
+		std::initializer_list<std::pair<std::size_t, PegType>> pegTypes)
+	{
+		StageDefinition stage;
+		stage.id = std::move(id);
+		stage.displayName = std::move(displayName);
+		stage.pegLayout = CreateSeededPegLayout(
+			columns, rows, start, spacing, jitter, seed);
+		for (const auto& [index, type] : pegTypes)
+		{
+			if (index < stage.pegLayout.pegs.size())
+			{
+				stage.pegLayout.pegs[index].type = type;
+			}
+		}
+		stage.rules.playerHealth = 100.0f;
+		stage.rules.enemyHealth = enemyHealth;
+		stage.rules.playerDamage = playerDamage;
+		stage.rules.enemyStepsBeforeAttack = enemySteps;
+		stage.rules.enemyStep = enemyStep;
+		stage.rules.pegRestitution = restitution;
+		stage.enemies = std::move(enemies);
+		return stage;
 	}
 }
 
@@ -168,6 +214,66 @@ StageDefinition CreateBossStageDefinition()
 		{ EnemyActionType::Strike, 24.0f }
 	};
 	return stage;
+}
+
+std::vector<StageDefinition> CreateBuiltInStageDefinitions()
+{
+	std::vector<StageDefinition> stages;
+	stages.reserve(STAGE_CATALOG.size());
+	stages.push_back(CreateDefaultStageDefinition());
+	stages.push_back(CreateChallengeStageDefinition());
+	stages.push_back(CreateRouteStage(
+		"stage-4", "Thornwood Thicket",
+		11, 4, { 60.0f, 390.0f }, 82.0f, 10.0f, 20260901u,
+		24.0f, 22.0f, 7, 60.0f, 0.86f,
+		{
+			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 8.0f },
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f },
+			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 7.0f }
+		},
+		{ { 6, PegType::Critical }, { 17, PegType::Bomb }, { 28, PegType::Refresh }, { 38, PegType::Critical } }));
+	stages.push_back(CreateRouteStage(
+		"stage-5", "Fungal Hollow",
+		9, 5, { 130.0f, 350.0f }, 80.0f, 14.0f, 20260902u,
+		28.0f, 23.0f, 7, 58.0f, 0.88f,
+		{
+			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 11.0f },
+			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 8.0f },
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f }
+		},
+		{ { 3, PegType::Critical }, { 12, PegType::Refresh }, { 23, PegType::Bomb }, { 34, PegType::Critical }, { 41, PegType::Bomb } }));
+	stages.push_back(CreateRouteStage(
+		"stage-6", "Crystal Grotto",
+		10, 4, { 85.0f, 385.0f }, 88.0f, 16.0f, 20260903u,
+		32.0f, 24.0f, 6, 56.0f, 0.91f,
+		{
+			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 13.0f },
+			{ "ember-bat-scout", "Ember Bat Scout", EnemyVisualKind::EmberBat, 9.0f },
+			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 10.0f }
+		},
+		{ { 5, PegType::Critical }, { 14, PegType::Bomb }, { 20, PegType::Refresh }, { 30, PegType::Bomb }, { 37, PegType::Critical } }));
+	stages.push_back(CreateRouteStage(
+		"stage-7", "Ember Roost",
+		11, 4, { 55.0f, 380.0f }, 83.0f, 18.0f, 20260904u,
+		36.0f, 26.0f, 5, 54.0f, 0.93f,
+		{
+			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 10.0f },
+			{ "ember-bat-scout", "Ember Bat Scout", EnemyVisualKind::EmberBat, 11.0f },
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 15.0f }
+		},
+		{ { 4, PegType::Critical }, { 10, PegType::Bomb }, { 19, PegType::Refresh }, { 27, PegType::Bomb }, { 35, PegType::Critical }, { 42, PegType::Bomb } }));
+	stages.push_back(CreateRouteStage(
+		"stage-8", "Shaman Mire",
+		9, 5, { 125.0f, 345.0f }, 81.0f, 18.0f, 20260905u,
+		40.0f, 27.0f, 5, 52.0f, 0.94f,
+		{
+			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 11.0f },
+			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 14.0f },
+			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 15.0f }
+		},
+		{ { 2, PegType::Critical }, { 11, PegType::Refresh }, { 18, PegType::Bomb }, { 26, PegType::Critical }, { 33, PegType::Refresh }, { 40, PegType::Bomb } }));
+	stages.push_back(CreateBossStageDefinition());
+	return stages;
 }
 
 StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept
@@ -296,17 +402,12 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 
 StageLoadResult LoadStageDefinition(std::string_view stageId)
 {
-	if (stageId == "stage-1")
+	for (StageDefinition& stage : CreateBuiltInStageDefinitions())
 	{
-		return ValidateLoadedStage(CreateDefaultStageDefinition());
-	}
-	if (stageId == "stage-2")
-	{
-		return ValidateLoadedStage(CreateChallengeStageDefinition());
-	}
-	if (stageId == "stage-3")
-	{
-		return ValidateLoadedStage(CreateBossStageDefinition());
+		if (stage.id == stageId)
+		{
+			return ValidateLoadedStage(std::move(stage));
+		}
 	}
 
 	StageLoadResult result;
@@ -314,7 +415,7 @@ StageLoadResult LoadStageDefinition(std::string_view stageId)
 	return result;
 }
 
-const std::array<StageCatalogEntry, 3>& GetStageCatalog() noexcept
+const std::array<StageCatalogEntry, 8>& GetStageCatalog() noexcept
 {
 	return STAGE_CATALOG;
 }

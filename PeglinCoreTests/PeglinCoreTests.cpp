@@ -291,9 +291,9 @@ namespace
 	{
 		UiAction action = ResolveUiClick(
 			UiScreenKind::StageSelection,
-			{ 500.0f, 330.0f },
-			3);
-		Check(action.command == UiCommand::SelectStage && action.index == 1, "mouse selects the second stage card");
+			{ 500.0f, 440.0f },
+			2);
+		Check(action.command == UiCommand::SelectStage && action.index == 1, "mouse selects the second route card");
 		Check(
 			ResolveUiClick(UiScreenKind::StageSelection, { 500.0f, 660.0f }, 3).command
 				== UiCommand::StartSelectedStage,
@@ -353,9 +353,33 @@ namespace
 
 	void TestAdventureRunProgression()
 	{
+		const std::vector<RunStageEntry> stageCatalog{
+			{ "stage-1", false },
+			{ "stage-2", false },
+			{ "stage-4", false },
+			{ "stage-5", false },
+			{ "stage-6", false },
+			{ "stage-7", false },
+			{ "stage-8", false },
+			{ "stage-3", true }
+		};
+		const RunStageLayers route = BuildBranchingStageLayers(stageCatalog);
+		Check(route.size() == 5, "branching route creates four encounters and a boss layer");
+		Check(route[0].size() == 1 && route[0][0] == "stage-1", "branching route keeps one fixed opening stage");
+		Check(route[1].size() == 2 && route[1][0] == "stage-2" && route[1][1] == "stage-4",
+			"first cleared stage opens two route choices");
+		Check(route[2].size() == 2 && route[3].size() == 2, "middle route layers each expose two choices");
+		Check(route[4].size() == 1 && route[4][0] == "stage-3", "branching route always ends at the boss");
+		Check(BuildBranchingStageLayers({ { "only", false }, { "boss", true } }).empty(),
+			"route builder rejects an undersized catalog");
+		Check(BuildBranchingStageLayers({ { "a", false }, { "b", false }, { "boss-a", true }, { "boss-b", true } }).empty(),
+			"route builder rejects multiple bosses");
+		Check(BuildBranchingStageLayers({ { "same", false }, { "same", false }, { "boss", true } }).empty(),
+			"route builder rejects duplicate stage ids");
+
 		AdventureRun run;
 		Check(!run.Start({}), "run rejects an empty stage path");
-		Check(run.Start({ "stage-1", "stage-2", "stage-3" }), "run accepts an ordered stage path");
+		Check(run.StartBranching(route), "run accepts a validated branching route");
 		Check(run.GetStatus() == RunStatus::StageReady, "new run begins at a ready stage");
 		Check(run.GetCurrentStageId() == "stage-1", "new run begins at the first stage");
 		Check(run.GetClearedStageCount() == 0, "new run begins with no cleared stages");
@@ -370,18 +394,35 @@ namespace
 		Check(!run.SelectReward(3).has_value(), "run rejects an invalid reward index");
 		const auto firstReward = run.SelectReward(0);
 		Check(firstReward.has_value() && firstReward->id == "iron-orb", "run returns the selected reward");
-		Check(run.GetCurrentStageId() == "stage-2", "reward unlocks the next stage");
+		Check(run.GetStatus() == RunStatus::StageChoice, "reward opens the next route choice");
+		Check(run.GetAvailableStageIds().size() == 2, "first route choice exposes two stages");
+		Check(!run.SelectNextStage(2), "run rejects an invalid route choice");
+		Check(run.SelectNextStage(1), "run accepts the selected branch");
+		Check(run.GetCurrentStageId() == "stage-4", "selected branch becomes the current stage");
 
-		Check(run.CompleteCurrentStage(), "second stage victory advances the run");
-		Check(run.SelectReward(2).has_value(), "second stage reward can be selected");
-		Check(run.GetCurrentStageId() == "stage-3", "second reward unlocks the boss");
+		Check(run.CompleteCurrentStage(), "second encounter victory advances the run");
+		Check(run.SelectReward(2).has_value(), "second encounter reward can be selected");
+		Check(run.SelectNextStage(0), "run accepts a stage from the second branch layer");
+		Check(run.GetCurrentStageId() == "stage-5", "second branch selection is retained");
+		Check(run.CompleteCurrentStage(), "third encounter victory advances the run");
+		Check(run.SelectReward(1).has_value(), "third encounter reward can be selected");
+		Check(run.SelectNextStage(1), "run accepts a stage from the final branch layer");
+		Check(run.GetCurrentStageId() == "stage-8", "final branch selection is retained");
+		Check(run.CompleteCurrentStage(), "fourth encounter victory advances to the boss route");
+		Check(run.SelectReward(2).has_value(), "pre-boss reward can be selected");
+		Check(run.GetAvailableStageIds().size() == 1 && run.GetAvailableStageIds()[0] == "stage-3",
+			"pre-boss route exposes only the boss");
+		Check(run.SelectNextStage(0), "boss route can be selected");
+		Check(run.GetCurrentStageId() == "stage-3", "selected boss becomes the current stage");
 		run.MarkDefeated();
 		Check(run.GetStatus() == RunStatus::Defeated, "defeat marks the run failed");
 		Check(run.RetryCurrentStage(), "failed run can retry the current stage");
 		Check(run.GetStatus() == RunStatus::StageReady, "retry restores stage-ready state");
 		Check(run.CompleteCurrentStage(), "boss victory completes the final stage");
 		Check(run.GetStatus() == RunStatus::Complete, "final victory completes the run");
-		Check(run.GetClearedStageCount() == 3, "completed run records every cleared stage");
+		Check(run.GetClearedStageCount() == 5, "completed run records every visited encounter");
+		Check(run.HasClearedStage("stage-4") && !run.HasClearedStage("stage-2"),
+			"run history records the chosen branch without marking skipped stages");
 		Check(run.GetRewardChoices().empty(), "final victory does not offer a next-stage reward");
 	}
 
@@ -592,11 +633,12 @@ namespace
 	void TestStageCatalogAndValidation()
 	{
 		const auto& catalog = GetStageCatalog();
-		Check(catalog.size() == 3, "stage catalog exposes three selectable stages");
+		Check(catalog.size() == 8, "stage catalog exposes eight route stages");
 		Check(
 			catalog[0].id == "stage-1"
 			&& catalog[1].id == "stage-2"
-			&& catalog[2].id == "stage-3",
+			&& catalog[2].id == "stage-4"
+			&& catalog[7].id == "stage-3",
 			"stage catalog keeps stable selection ids");
 
 		const StageLoadResult defaultResult = LoadStageDefinition("stage-1");
@@ -610,6 +652,13 @@ namespace
 		Check(challengeResult.stage->pegLayout.pegs.size() == 40, "challenge stage provides a distinct board");
 		Check(Near(challengeResult.stage->rules.enemyHealth, 30.0f), "challenge stage provides stronger enemy");
 		Check(challengeResult.stage->rules.enemyStepsBeforeAttack == 6, "challenge stage provides faster attack timing");
+		for (std::string_view stageId : { "stage-4", "stage-5", "stage-6", "stage-7", "stage-8" })
+		{
+			const StageLoadResult added = LoadStageDefinition(stageId);
+			Check(added.IsSuccess(), "added route stage loads and validates");
+			Check(added.stage.has_value() && added.stage->enemies.size() == 3,
+				"added route stage provides a three-monster encounter");
+		}
 
 		const StageLoadResult bossResult = LoadStageDefinition("stage-3");
 		Check(bossResult.IsSuccess(), "stage catalog loads stage-3");
@@ -1441,7 +1490,7 @@ namespace
 		const ContentLoadResult shipped = LoadContentCatalog(
 			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
 		Check(shipped.UsedExternalContent(), "shipped versioned stage catalog validates");
-		Check(shipped.stages.size() == 3, "shipped external catalog exposes three stages");
+		Check(shipped.stages.size() == 8, "shipped external catalog exposes eight route stages");
 		const StageDefinition* shippedForest = FindContentStage(shipped.stages, "stage-1");
 		const StageDefinition* shippedCavern = FindContentStage(shipped.stages, "stage-2");
 		Check(shippedForest != nullptr && shippedForest->enemies.size() == 3, "shipped forest exposes a three-monster roster");
@@ -1449,6 +1498,13 @@ namespace
 		const StageDefinition* shippedBoss = FindContentStage(shipped.stages, "stage-3");
 		Check(shippedBoss != nullptr && shippedBoss->enemies.size() == 1, "shipped boss exposes one named boss");
 		Check(shippedBoss != nullptr && shippedBoss->enemyPattern.size() == 4, "shipped external catalog includes the boss pattern");
+		std::vector<RunStageEntry> shippedEntries;
+		for (const StageDefinition& stage : shipped.stages)
+		{
+			shippedEntries.push_back({ stage.id, stage.isBoss });
+		}
+		const RunStageLayers shippedRoute = BuildBranchingStageLayers(shippedEntries);
+		Check(shippedRoute.size() == 5, "shipped content supports a five-layer boss route");
 
 		const std::filesystem::path testDirectory =
 			std::filesystem::temp_directory_path()
@@ -1518,13 +1574,13 @@ namespace
 		const ContentLoadResult missing = LoadContentCatalog(testDirectory / "missing.ini");
 		Check(missing.state == ContentLoadState::BuiltInFallback, "missing content uses built-in fallback");
 		Check(missing.error == ContentLoadError::MissingFile, "missing content reports its cause");
-		Check(missing.stages.size() == 3, "missing content recovers the complete built-in catalog");
+		Check(missing.stages.size() == 8, "missing content recovers the complete built-in route catalog");
 		Check(FindContentStage(missing.stages, "stage-3") != nullptr, "fallback includes the boss stage");
 
 		WriteContent("version=99\n");
 		const ContentLoadResult unsupported = LoadContentCatalog(contentPath);
 		Check(unsupported.error == ContentLoadError::UnsupportedVersion, "unsupported content version is rejected");
-		Check(unsupported.stages.size() == 3, "unsupported version exposes no partial external data");
+		Check(unsupported.stages.size() == 8, "unsupported version exposes no partial external data");
 
 		WriteContent(validContent + validContent.substr(validContent.find("[stage]")));
 		const ContentLoadResult duplicateId = LoadContentCatalog(contentPath);

@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 6 완료 · Sprint 7 준비 |
-| 현재 버전 | Version 6.14 |
-| 스프린트 목표 | 게임플레이 시각 완성도, 런 진행·보상, 외부 콘텐츠와 UI 확장 비용 개선 |
-| 상태 | Sprint 6 완료 — P0 14/14 및 검증 게이트 전체 통과 · Sprint 7 미착수 |
+| 현재 스프린트 | Sprint 7 진행 중 |
+| 현재 버전 | Version 7.1 |
+| 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
+| 상태 | Sprint 7 P0 1/7 완료 — 분기형 스테이지 선택과 보스 경로 검증 완료 |
 
 ## 문서
 
@@ -81,6 +81,7 @@
 - [Version 6.12 — 외부 오브·유물·적 효과 카탈로그](./Version_6.12.md)
 - [Version 6.13 — UTF-8 지역화와 이미지 자산 파이프라인](./Version_6.13.md)
 - [Version 6.14 — Sprint 6 런·GDI·배포 최종 검증](./Version_6.14.md)
+- [Version 7.1 — 분기형 스테이지 맵과 보스 경로](./Version_7.1.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

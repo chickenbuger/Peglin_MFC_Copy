@@ -112,6 +112,7 @@ struct StageCatalogEntry
 StageDefinition CreateDefaultStageDefinition();
 StageDefinition CreateChallengeStageDefinition();
 StageDefinition CreateBossStageDefinition();
+std::vector<StageDefinition> CreateBuiltInStageDefinitions();
 StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept;
 StageLoadResult LoadStageDefinition(std::string_view stageId);
-const std::array<StageCatalogEntry, 3>& GetStageCatalog() noexcept;
+const std::array<StageCatalogEntry, 8>& GetStageCatalog() noexcept;

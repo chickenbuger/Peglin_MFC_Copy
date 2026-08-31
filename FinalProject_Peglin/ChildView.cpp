@@ -1172,7 +1172,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	CString runProgress;
 	runProgress.Format(
 		_T("스테이지 %zu / %zu\n체력 %d"),
-		_run.GetCurrentStageIndex() + 1,
+		(std::min)(_run.GetClearedStageCount() + 1, _run.GetStageCount()),
 		_run.GetStageCount(),
 		static_cast<int>(std::lround(_runPlayerHealth > 0.0f ? _runPlayerHealth : _game.GetPlayer().GetHp())));
 	UiRenderer::DrawText(deviceContext, CRect(42, 215, 208, 275), runProgress, 105, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
@@ -1193,23 +1193,54 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(48, 550, 202, 600), Text("hint.loadout"));
 
-	const std::size_t visibleStageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
-	if (visibleStageCount > 0 && _selectedStageIndex >= visibleStageCount)
+	std::vector<std::string> visibleStageIds;
+	if (_run.GetStatus() == RunStatus::StageChoice)
 	{
-		_selectedStageIndex = 0;
+		visibleStageIds = _run.GetAvailableStageIds();
 	}
+	else if (!_run.GetCurrentStageId().empty())
+	{
+		visibleStageIds.push_back(_run.GetCurrentStageId());
+	}
+	const std::size_t visibleStageCount = (std::min)(std::size_t{ 2 }, visibleStageIds.size());
+	const std::size_t routeStep = (std::min)(
+		_run.GetClearedStageCount() + 1,
+		_run.GetStageCount());
+	CString routeText;
+	routeText.Format(
+		_run.GetStatus() == RunStatus::StageChoice
+			? _T("다음 경로 선택 · %zu / %zu")
+			: _T("전투 준비 · %zu / %zu"),
+		routeStep,
+		_run.GetStageCount());
+	UiRenderer::DrawProgressBar(
+		deviceContext,
+		CRect(285, 125, 715, 148),
+		_run.GetStageCount() == 0
+			? 0.0f
+			: static_cast<float>(_run.GetClearedStageCount())
+				/ static_cast<float>(_run.GetStageCount()),
+		routeText,
+		UiTheme::Gold,
+		UiTheme::Border);
+
 	for (std::size_t index = 0; index < visibleStageCount; ++index)
 	{
-		const StageDefinition configured = ApplyDifficulty(_contentCatalog.stages[index], _options.difficulty);
-		const int top = 150 + static_cast<int>(index) * 160;
-		const CRect card(248, top, 752, top + 135);
-		const bool completed = index < _run.GetClearedStageCount();
-		const bool selected = index == _run.GetCurrentStageIndex()
-			&& _run.GetStatus() == RunStatus::StageReady;
-		const COLORREF stageColor = completed
-			? UiTheme::Green
-			: (configured.isBoss ? UiTheme::Orange : UiTheme::Gold);
-		UiRenderer::DrawPanel(deviceContext, card, selected || completed, stageColor);
+		const StageDefinition* source = FindContentStage(
+			_contentCatalog.stages,
+			visibleStageIds[index]);
+		if (source == nullptr)
+		{
+			continue;
+		}
+		const StageDefinition configured = ApplyDifficulty(*source, _options.difficulty);
+		const int top = visibleStageCount == 1
+			? 245
+			: 165 + static_cast<int>(index) * 200;
+		const CRect card(248, top, 752, top + 155);
+		const bool selected = _run.GetStatus() == RunStatus::StageReady;
+		const COLORREF stageColor = configured.isBoss ? UiTheme::Orange : UiTheme::Gold;
+		UiRenderer::DrawPanel(deviceContext, card, selected, stageColor);
 		CString title;
 		title.Format(
 			_T("[%zu] %s%s"),
@@ -1218,10 +1249,10 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			configured.isBoss ? _T(" · BOSS") : _T(""));
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(card.left + 15, card.top + 10, card.right - 15, card.top + 58),
+			CRect(card.left + 15, card.top + 8, card.right - 15, card.top + 55),
 			title,
 			160,
-			completed ? UiTheme::Green : (selected ? UiTheme::Gold : UiTheme::MutedText));
+			selected ? stageColor : UiTheme::Text);
 		const std::size_t enemyCount = configured.enemies.empty()
 			? std::size_t{ 1 }
 			: configured.enemies.size();
@@ -1241,15 +1272,15 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			configured.isBoss ? _T("행동 패턴") : _T("이동 후 공격"));
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(card.left + 15, card.top + 55, card.right - 15, card.top + 92),
+			CRect(card.left + 15, card.top + 53, card.right - 15, card.top + 92),
 			rules,
 			115,
 			UiTheme::MutedText);
 		const StageRecord record = _records.Get(configured.id, _options.difficulty);
 		CString recordText;
-		const CString nodeState = completed
-			? _T("CLEAR")
-			: (selected ? _T("NEXT") : _T("LOCKED"));
+		const CString nodeState = _run.GetStatus() == RunStatus::StageChoice
+			? _T("CHOOSE")
+			: (configured.isBoss ? _T("BOSS READY") : _T("READY"));
 		recordText.Format(
 			_T("%s · 기록 %d · 콤보 %d · 클리어 %d"),
 			nodeState.GetString(),
@@ -1258,10 +1289,10 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			record.clearCount);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(card.left + 15, card.top + 92, card.right - 15, card.bottom - 8),
+			CRect(card.left + 15, card.top + 96, card.right - 15, card.bottom - 8),
 			recordText,
 			105,
-			UiTheme::Green);
+			_run.GetStatus() == RunStatus::StageChoice ? UiTheme::Blue : UiTheme::Green);
 	}
 
 	UiRenderer::DrawPanel(deviceContext, CRect(778, 150, 968, 625));
@@ -1281,7 +1312,12 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	UiRenderer::DrawText(deviceContext, CRect(792, 380, 954, 445), PegColorModeTextForUi(_options.pegColorMode), 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), Text("hint.options"));
 
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), Text("hint.start"));
+	UiRenderer::DrawKeyHint(
+		deviceContext,
+		CRect(300, 640, 680, 690),
+		_run.GetStatus() == RunStatus::StageChoice
+			? CString(_T("카드 클릭 · 1/2로 다음 경로 선택"))
+			: Text("hint.start"));
 	if (!_contentCatalog.UsedExternalContent() || !_gameplayCatalog.UsedExternalContent())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
@@ -1556,29 +1592,33 @@ bool CChildView::StartStage(std::string_view stageId)
 
 bool CChildView::StartSelectedStage()
 {
-	const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
-	return stageCount > 0
-		&& _run.GetStatus() == RunStatus::StageReady
-		&& _selectedStageIndex == _run.GetCurrentStageIndex()
-		&& _selectedStageIndex < stageCount
-		&& StartStage(_contentCatalog.stages[_selectedStageIndex].id);
+	return _run.GetStatus() == RunStatus::StageReady
+		&& !_run.GetCurrentStageId().empty()
+		&& StartStage(_run.GetCurrentStageId());
 }
 
 void CChildView::BeginNewRun()
 {
-	std::vector<std::string> stageIds;
-	const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
-	stageIds.reserve(stageCount);
-	for (std::size_t index = 0; index < stageCount; ++index)
+	std::vector<RunStageEntry> stageEntries;
+	stageEntries.reserve(_contentCatalog.stages.size());
+	for (const StageDefinition& stage : _contentCatalog.stages)
 	{
-		stageIds.push_back(_contentCatalog.stages[index].id);
+		stageEntries.push_back({ stage.id, stage.isBoss });
 	}
+	RunStageLayers route = BuildBranchingStageLayers(stageEntries);
 
 	_game.ResetProgression();
-	_run.Start(std::move(stageIds));
+	if (!_run.StartBranching(std::move(route)))
+	{
+		std::vector<std::string> fallbackIds;
+		for (const StageDefinition& stage : _contentCatalog.stages)
+		{
+			fallbackIds.push_back(stage.id);
+		}
+		_run.Start(std::move(fallbackIds));
+	}
 	_runDifficulty = _options.difficulty;
 	_runPlayerHealth = 0.0f;
-	_selectedStageIndex = 0;
 	_runNotice.Empty();
 	_resultSummary.reset();
 	_feedbackAnimations.clear();
@@ -1611,7 +1651,6 @@ bool CChildView::SelectRunReward(std::size_t index)
 	}
 
 	_runNotice.Format(_T("%s 선택 완료"), Utf8Text(selected->displayName).GetString());
-	_selectedStageIndex = _run.GetCurrentStageIndex();
 	_screenMode = ScreenMode::StageSelection;
 	return true;
 }
@@ -1710,7 +1749,9 @@ bool CChildView::HandleMenuClick(CPoint point)
 	case ScreenMode::Playing: return false;
 	}
 
-	const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
+	const std::size_t stageCount = _run.GetStatus() == RunStatus::StageChoice
+		? _run.GetAvailableStageIds().size()
+		: (_run.GetStatus() == RunStatus::StageReady ? std::size_t{ 1 } : std::size_t{ 0 });
 	const UiAction action = ResolveUiClick(
 		screen,
 		{ static_cast<float>(point.x), static_cast<float>(point.y) },
@@ -1729,10 +1770,18 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 	switch (action.command)
 	{
 	case UiCommand::SelectStage:
-		if (action.index == _run.GetCurrentStageIndex()
-			&& _run.GetStatus() == RunStatus::StageReady)
+		if (_run.GetStatus() == RunStatus::StageChoice
+			&& _run.SelectNextStage(action.index))
 		{
-			_selectedStageIndex = action.index;
+			const StageDefinition* selected = FindContentStage(
+				_contentCatalog.stages,
+				_run.GetCurrentStageId());
+			if (selected != nullptr)
+			{
+				_runNotice.Format(
+					_T("다음 경로: %s"),
+					Utf8Text(selected->displayName).GetString());
+			}
 		}
 		break;
 	case UiCommand::StartSelectedStage:
@@ -1852,17 +1901,19 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
 	if (_screenMode == ScreenMode::StageSelection)
 	{
-		const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
-		if (nChar == VK_RETURN)
+		if (nChar == VK_RETURN && _run.GetStatus() == RunStatus::StageReady)
 		{
 			StartSelectedStage();
 		}
-		else if (nChar >= '1' && nChar <= '3')
+		else if (nChar >= '1' && nChar <= '2')
 		{
 			const std::size_t requested = static_cast<std::size_t>(nChar - '1');
-			if (requested < stageCount && requested == _run.GetCurrentStageIndex())
+			if (_run.GetStatus() == RunStatus::StageChoice)
 			{
-				_selectedStageIndex = requested;
+				ExecuteUiAction({ UiCommand::SelectStage, requested });
+			}
+			else if (_run.GetStatus() == RunStatus::StageReady && requested == 0)
+			{
 				StartSelectedStage();
 			}
 		}

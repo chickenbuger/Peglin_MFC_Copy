@@ -23,11 +23,13 @@ namespace
 		Vector2 position,
 		std::size_t visibleStageCount) noexcept
 	{
-		const std::size_t safeStageCount = (std::min)(std::size_t{ 3 }, visibleStageCount);
+		const std::size_t safeStageCount = (std::min)(std::size_t{ 2 }, visibleStageCount);
 		for (std::size_t index = 0; index < safeStageCount; ++index)
 		{
-			const float top = 150.0f + static_cast<float>(index) * 160.0f;
-			if (UiRect{ 248.0f, top, 752.0f, top + 135.0f }.Contains(position))
+			const float top = safeStageCount == 1
+				? 245.0f
+				: 165.0f + static_cast<float>(index) * 200.0f;
+			if (UiRect{ 248.0f, top, 752.0f, top + 155.0f }.Contains(position))
 			{
 				return { UiCommand::SelectStage, index };
 			}

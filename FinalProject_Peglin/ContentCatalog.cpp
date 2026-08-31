@@ -455,11 +455,7 @@ namespace
 
 std::vector<StageDefinition> CreateBuiltInContentCatalog()
 {
-	return {
-		CreateDefaultStageDefinition(),
-		CreateChallengeStageDefinition(),
-		CreateBossStageDefinition()
-	};
+	return CreateBuiltInStageDefinitions();
 }
 
 ContentLoadResult LoadContentCatalog(const std::filesystem::path& path)

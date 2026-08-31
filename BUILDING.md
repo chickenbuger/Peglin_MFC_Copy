@@ -62,7 +62,7 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
 
 ```powershell
-& '.\tools\Package-Release.ps1' -Version '6.14'
+& '.\tools\Package-Release.ps1' -Version '7.1'
 ```
 
 패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 이미지 변환·크기·색심도와 외부 스테이지·게임플레이·한국어·영어 카탈로그를 먼저 검증한다. 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함하며, `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 경로 탈출, 파일 변조, MFC 런타임·외부 카탈로그 누락을 자동 탐지한다.
@@ -80,4 +80,4 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 
 ## 현재 검증 상태
 
-2026-09-01 Version 6.14 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 710개·총 2,840개 자동 검증, 한국어↔영어 실제 옵션 화면, PNG→24-bit BMP 변환 검증 7건, 자산·리소스 연결 검증 8건과 Release x64 패키지 누락·변조 검사를 통과했다. 실제 전투 화면의 10분 GDI 검증은 30초 워밍업 후 기준 43개, 마지막 46개(+3), 후반 지속 상승 없음으로 통과했다.
+2026-09-01 Version 7.1 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 744개·총 2,976개 자동 검증과 실제 첫 스테이지 클리어, 보상, 두 갈래 경로 선택, 선택한 두 번째 스테이지 진입을 통과했다. Version 7.1 Release x64 패키지는 PNG→24-bit BMP 변환, 자산·리소스 연결, 경로 안전성, 해시 변조와 런타임·외부 콘텐츠 누락 탐지를 통과했으며 Sprint 6의 10분 GDI 기준선도 유지한다.

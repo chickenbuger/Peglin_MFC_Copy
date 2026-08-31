@@ -164,7 +164,6 @@ private:
 	CBitmap _enemyBatSprite;
 	CBitmap _enemyShamanSprite;
 	CBitmap _orbSprite;
-	std::size_t _selectedStageIndex = 0;
 	CString _loadoutNotice;
 	CString _runNotice;
 	bool _settingsSaveFailed = false;
