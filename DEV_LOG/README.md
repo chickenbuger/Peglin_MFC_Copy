@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.3 |
+| 현재 버전 | Version 7.4 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 3/10 완료 — Refresh Peg 재생성 보장 완료 |
+| 상태 | Sprint 7 P0 4/10 완료 — 축소형 PEG FIELD와 사이드 오브 큐 완료 |
 
 ## 문서
 
@@ -84,6 +84,7 @@
 - [Version 7.1 — 분기형 스테이지 맵과 보스 경로](./Version_7.1.md)
 - [Version 7.2 — 신규 몬스터 시각 타입 확장](./Version_7.2.md)
 - [Version 7.3 — Refresh Peg 재생성 보장](./Version_7.3.md)
+- [Version 7.4 — 축소형 PEG FIELD와 사이드 오브 큐](./Version_7.4.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

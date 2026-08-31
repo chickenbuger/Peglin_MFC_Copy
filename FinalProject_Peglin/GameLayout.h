@@ -9,17 +9,17 @@ struct GameLayout
 	inline static constexpr float SceneWidth = 980.0f;
 	inline static constexpr float HeaderHeight = 200.0f;
 
-	inline static constexpr float BoardLeft = 20.0f;
-	inline static constexpr float BoardRight = 960.0f;
-	inline static constexpr float BoardTop = 200.0f;
-	inline static constexpr float BoardBottom = 700.0f;
-	inline static constexpr float PegFieldLeft = 30.0f;
-	inline static constexpr float PegFieldRight = 970.0f;
-	inline static constexpr float PegFieldTop = 300.0f;
-	inline static constexpr float PegFieldBottom = 680.0f;
+	inline static constexpr float BoardLeft = 160.0f;
+	inline static constexpr float BoardRight = 790.0f;
+	inline static constexpr float BoardTop = 305.0f;
+	inline static constexpr float BoardBottom = 680.0f;
+	inline static constexpr float PegFieldLeft = 170.0f;
+	inline static constexpr float PegFieldRight = 780.0f;
+	inline static constexpr float PegFieldTop = 320.0f;
+	inline static constexpr float PegFieldBottom = 670.0f;
 
 	inline static constexpr float BallRadius = 10.0f;
-	inline static constexpr Vector2 BallInitialPosition{ 490.0f, 330.0f };
+	inline static constexpr Vector2 BallInitialPosition{ 475.0f, 345.0f };
 	inline static constexpr float BallLeftBoundary = PegFieldLeft + BallRadius + 5.0f;
 	inline static constexpr float BallRightBoundary = PegFieldRight - BallRadius - 5.0f;
 	inline static constexpr float BallTopBoundary = PegFieldTop + BallRadius + 5.0f;
@@ -27,8 +27,8 @@ struct GameLayout
 
 	inline static constexpr int PegColumns = 12;
 	inline static constexpr int PegRows = 4;
-	inline static constexpr Vector2 PegStart{ 50.0f, 400.0f };
-	inline static constexpr float PegSpacing = 80.0f;
+	inline static constexpr Vector2 PegStart{ 190.0f, 400.0f };
+	inline static constexpr float PegSpacing = 50.0f;
 	inline static constexpr float PegRadius = 10.0f;
 
 	inline static constexpr Vector2 PlayerPosition{ 125.0f, 112.0f };
@@ -56,4 +56,9 @@ struct GameLayout
 	inline static constexpr Vector2 AimStrengthPosition{ 30.0f, 265.0f };
 	inline static constexpr float AimStrengthWidth = 160.0f;
 	inline static constexpr float AimStrengthHeight = 14.0f;
+
+	inline static constexpr float OrbHudLeft = 800.0f;
+	inline static constexpr float OrbHudRight = 970.0f;
+	inline static constexpr float OrbHudTop = 320.0f;
+	inline static constexpr float OrbHudBottom = 680.0f;
 };

@@ -158,8 +158,8 @@ StageDefinition CreateChallengeStageDefinition()
 	stage.pegLayout = CreateSeededPegLayout(
 		10,
 		4,
-		{ 80.0f, 380.0f },
-		90.0f,
+		{ 195.0f, 390.0f },
+		58.0f,
 		12.0f,
 		20260829u);
 
@@ -188,8 +188,8 @@ StageDefinition CreateBossStageDefinition()
 	stage.pegLayout = CreateSeededPegLayout(
 		9,
 		4,
-		{ 100.0f, 380.0f },
-		100.0f,
+		{ 205.0f, 390.0f },
+		62.0f,
 		16.0f,
 		20260830u);
 
@@ -226,7 +226,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 	stages.push_back(CreateChallengeStageDefinition());
 	stages.push_back(CreateRouteStage(
 		"stage-4", "Thornwood Thicket",
-		11, 4, { 60.0f, 390.0f }, 82.0f, 10.0f, 20260901u,
+		11, 4, { 190.0f, 390.0f }, 54.0f, 10.0f, 20260901u,
 		24.0f, 22.0f, 7, 60.0f, 0.86f,
 		{
 			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 8.0f },
@@ -236,7 +236,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		{ { 6, PegType::Critical }, { 17, PegType::Bomb }, { 28, PegType::Refresh }, { 38, PegType::Critical } }));
 	stages.push_back(CreateRouteStage(
 		"stage-5", "Fungal Hollow",
-		9, 5, { 130.0f, 350.0f }, 80.0f, 14.0f, 20260902u,
+		9, 5, { 210.0f, 360.0f }, 60.0f, 14.0f, 20260902u,
 		28.0f, 23.0f, 7, 58.0f, 0.88f,
 		{
 			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 11.0f },
@@ -246,7 +246,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		{ { 3, PegType::Critical }, { 12, PegType::Refresh }, { 23, PegType::Bomb }, { 34, PegType::Critical }, { 41, PegType::Bomb } }));
 	stages.push_back(CreateRouteStage(
 		"stage-6", "Crystal Grotto",
-		10, 4, { 85.0f, 385.0f }, 88.0f, 16.0f, 20260903u,
+		10, 4, { 195.0f, 385.0f }, 58.0f, 16.0f, 20260903u,
 		32.0f, 24.0f, 6, 56.0f, 0.91f,
 		{
 			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 13.0f },
@@ -256,7 +256,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		{ { 5, PegType::Critical }, { 14, PegType::Bomb }, { 20, PegType::Refresh }, { 30, PegType::Bomb }, { 37, PegType::Critical } }));
 	stages.push_back(CreateRouteStage(
 		"stage-7", "Ember Roost",
-		11, 4, { 55.0f, 380.0f }, 83.0f, 18.0f, 20260904u,
+		11, 4, { 190.0f, 380.0f }, 54.0f, 18.0f, 20260904u,
 		36.0f, 26.0f, 5, 54.0f, 0.93f,
 		{
 			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 10.0f },
@@ -266,7 +266,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		{ { 4, PegType::Critical }, { 10, PegType::Bomb }, { 19, PegType::Refresh }, { 27, PegType::Bomb }, { 35, PegType::Critical }, { 42, PegType::Bomb } }));
 	stages.push_back(CreateRouteStage(
 		"stage-8", "Shaman Mire",
-		9, 5, { 125.0f, 345.0f }, 81.0f, 18.0f, 20260905u,
+		9, 5, { 210.0f, 355.0f }, 60.0f, 18.0f, 20260905u,
 		40.0f, 27.0f, 5, 52.0f, 0.94f,
 		{
 			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 11.0f },

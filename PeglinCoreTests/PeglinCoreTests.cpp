@@ -183,7 +183,9 @@ namespace
 		while (scan != nullptr && pegPositions.size() < 2)
 		{
 			const auto& candidate = world.GetTargets()._targetBallList.GetNext(scan);
-			if (candidate.position.x > 200.0f && candidate.position.x < 800.0f)
+			if (candidate.type == PegType::Normal
+				&& candidate.position.x > GameLayout::PegFieldLeft
+				&& candidate.position.x < GameLayout::PegFieldRight)
 			{
 				pegPositions.push_back(candidate.position);
 			}
@@ -440,6 +442,13 @@ namespace
 		Check(
 			GameLayout::BallTopBoundary >= GameLayout::PegFieldTop + GameLayout::BallRadius,
 			"ball ceiling remains inside displayed peg field");
+		Check(
+			GameLayout::PegFieldRight - GameLayout::PegFieldLeft <= 620.0f,
+			"peg field uses the compact gameplay width");
+		Check(
+			GameLayout::OrbHudLeft > GameLayout::PegFieldRight
+			&& GameLayout::OrbHudRight <= GameLayout::WindowWidth,
+			"orb queue occupies a dedicated side region outside the peg field");
 		Check(Near(world.GetEnemy().GetX(), GameLayout::EnemyInitialPosition.x), "layout controls initial enemy x");
 		Check(world.GetTargets()._targetBallList.GetCount() == GameLayout::PegColumns * GameLayout::PegRows, "layout controls peg count");
 		const auto head = world.GetTargets()._targetBallList.GetHeadPosition();

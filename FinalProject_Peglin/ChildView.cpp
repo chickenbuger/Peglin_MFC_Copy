@@ -467,6 +467,16 @@ void CChildView::OnPaint()
 		return;
 	}
 
+	UiRenderer::DrawPanel(
+		&memDc,
+		CRect(
+			static_cast<int>(std::lround(GameLayout::BoardLeft)),
+			static_cast<int>(std::lround(GameLayout::BoardTop)),
+			static_cast<int>(std::lround(GameLayout::BoardRight)),
+			static_cast<int>(std::lround(GameLayout::BoardBottom))),
+		false,
+		UiTheme::Border);
+
 	//targetball
 	auto& targets = _game.GetTargets()._targetBallList;
 	auto pos = targets.GetHeadPosition();
@@ -1555,29 +1565,55 @@ CBitmap* CChildView::GetEnemySprite(EnemyVisualKind visual) noexcept
 void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 {
 	const PlayerLoadout& loadout = _game.GetLoadout();
-	UiRenderer::DrawPanel(deviceContext, CRect(245, 128, 735, 188));
-	DrawOrbIcon(deviceContext, CRect(262, 137, 290, 165), loadout.GetSelectedOrbId());
-	DrawOrbIcon(deviceContext, CRect(487, 137, 515, 165), loadout.GetNextOrbId());
+	const CRect hud(
+		static_cast<int>(std::lround(GameLayout::OrbHudLeft)),
+		static_cast<int>(std::lround(GameLayout::OrbHudTop)),
+		static_cast<int>(std::lround(GameLayout::OrbHudRight)),
+		static_cast<int>(std::lround(GameLayout::OrbHudBottom)));
+	UiRenderer::DrawPanel(deviceContext, hud, false, UiTheme::Blue);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(hud.left + 10, hud.top + 12, hud.right - 10, hud.top + 42),
+		_T("ORB QUEUE"),
+		120,
+		UiTheme::Gold);
+
+	const CRect currentCard(hud.left + 10, hud.top + 50, hud.right - 10, hud.top + 175);
+	UiRenderer::DrawPanel(deviceContext, currentCard, true, UiTheme::Gold);
+	DrawOrbIcon(deviceContext, CRect(currentCard.left + 10, currentCard.top + 16, currentCard.left + 52, currentCard.top + 58), loadout.GetSelectedOrbId());
 	CString currentText;
 	currentText.Format(
-		_T("%s  %s"),
-		Text("label.current").GetString(),
+		_T("%s"),
+		Text("label.current").GetString());
+	UiRenderer::DrawText(deviceContext, CRect(currentCard.left + 60, currentCard.top + 12, currentCard.right - 8, currentCard.top + 40), currentText, 85, UiTheme::Gold, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	currentText.Format(
+		_T("%s"),
 		Utf8Text(loadout.GetSelectedOrb().displayName).GetString());
-	UiRenderer::DrawText(deviceContext, CRect(298, 132, 478, 165), currentText, 90, UiTheme::Gold, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	UiRenderer::DrawText(deviceContext, CRect(currentCard.left + 8, currentCard.top + 62, currentCard.right - 8, currentCard.top + 92), currentText, 95, UiTheme::Text);
+	UiRenderer::DrawText(deviceContext, CRect(currentCard.left + 8, currentCard.top + 92, currentCard.right - 8, currentCard.bottom - 6), AttackStyleText(loadout.GetSelectedOrb()), 80, UiTheme::MutedText);
+
+	const CRect nextCard(hud.left + 10, hud.top + 185, hud.right - 10, hud.top + 310);
+	UiRenderer::DrawPanel(deviceContext, nextCard, false, UiTheme::Blue);
+	DrawOrbIcon(deviceContext, CRect(nextCard.left + 10, nextCard.top + 16, nextCard.left + 52, nextCard.top + 58), loadout.GetNextOrbId());
 	CString nextText;
 	nextText.Format(
-		_T("%s  %s"),
-		Text("label.next").GetString(),
+		_T("%s"),
+		Text("label.next").GetString());
+	UiRenderer::DrawText(deviceContext, CRect(nextCard.left + 60, nextCard.top + 12, nextCard.right - 8, nextCard.top + 40), nextText, 85, UiTheme::Blue, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	nextText.Format(
+		_T("%s"),
 		Utf8Text(loadout.GetNextOrb().displayName).GetString());
-	UiRenderer::DrawText(deviceContext, CRect(523, 132, 720, 165), nextText, 90, UiTheme::Blue, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	UiRenderer::DrawText(deviceContext, CRect(nextCard.left + 8, nextCard.top + 62, nextCard.right - 8, nextCard.top + 92), nextText, 95, UiTheme::Text);
+	UiRenderer::DrawText(deviceContext, CRect(nextCard.left + 8, nextCard.top + 92, nextCard.right - 8, nextCard.bottom - 6), AttackStyleText(loadout.GetNextOrb()), 80, UiTheme::MutedText);
+
 	CString pileText;
 	pileText.Format(
-		_T("덱 %zu · 버림 %zu · 리필 %zu · %s"),
+		_T("덱 %zu · 버림 %zu · 리필 %zu"),
 		loadout.GetDrawPileCount(),
 		loadout.GetDiscardPileCount(),
-		loadout.GetReloadCount(),
-		RelicSummary(loadout).GetString());
-	UiRenderer::DrawText(deviceContext, CRect(260, 162, 720, 185), pileText, 75, UiTheme::MutedText);
+		loadout.GetReloadCount());
+	UiRenderer::DrawText(deviceContext, CRect(hud.left + 8, hud.top + 318, hud.right - 8, hud.top + 342), pileText, 72, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(hud.left + 8, hud.top + 342, hud.right - 8, hud.bottom - 6), RelicSummary(loadout), 72, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 }
 
 bool CChildView::StartStage(std::string_view stageId)
