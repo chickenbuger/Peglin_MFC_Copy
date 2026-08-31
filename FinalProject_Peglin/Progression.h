@@ -30,6 +30,7 @@ struct OrbDefinition
 {
 	std::string id;
 	std::string displayName;
+	std::string imageKey;
 	float pegDamageMultiplier = 1.0f;
 	float scoreMultiplier = 1.0f;
 	AttackDelivery attackDelivery = AttackDelivery::Projectile;
@@ -40,6 +41,7 @@ struct RelicDefinition
 {
 	std::string id;
 	std::string displayName;
+	std::string imageKey;
 	RelicDuplicatePolicy duplicatePolicy = RelicDuplicatePolicy::Unique;
 	std::size_t maxStacks = 1;
 	float pegDamageMultiplier = 1.0f;

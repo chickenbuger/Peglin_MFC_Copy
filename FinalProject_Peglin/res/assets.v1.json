@@ -83,6 +83,60 @@
       "resourceId": "IDB_ORB_AMBER_TEAL_V2"
     },
     {
+      "source": "FinalProject_Peglin/res/orb-traveler-v1-source.png",
+      "output": "FinalProject_Peglin/res/orb-traveler-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ORB_TRAVELER_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/orb-iron-v1-source.png",
+      "output": "FinalProject_Peglin/res/orb-iron-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ORB_IRON_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/orb-echo-v1-source.png",
+      "output": "FinalProject_Peglin/res/orb-echo-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ORB_ECHO_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/relic-combo-lantern-v1-source.png",
+      "output": "FinalProject_Peglin/res/relic-combo-lantern-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_RELIC_COMBO_LANTERN_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/relic-thorn-charm-v1-source.png",
+      "output": "FinalProject_Peglin/res/relic-thorn-charm-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_RELIC_THORN_CHARM_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/relic-bark-guard-v1-source.png",
+      "output": "FinalProject_Peglin/res/relic-bark-guard-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_RELIC_BARK_GUARD_V1"
+    },
+    {
       "source": null,
       "output": "FinalProject_Peglin/res/ui-adventure-frame-v1.bmp",
       "width": 1000,

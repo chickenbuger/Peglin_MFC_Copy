@@ -42,6 +42,53 @@ void UiRenderer::DrawBackdrop(CDC* deviceContext, CBitmap* bitmap, const CRect& 
 	source.SelectObject(previousBitmap);
 }
 
+bool UiRenderer::DrawTransparentBitmap(
+	CDC* deviceContext,
+	CBitmap* bitmap,
+	const CRect& bounds,
+	COLORREF transparentColor)
+{
+	if (deviceContext == nullptr
+		|| bitmap == nullptr
+		|| bitmap->GetSafeHandle() == nullptr
+		|| bounds.IsRectEmpty())
+	{
+		return false;
+	}
+
+	BITMAP bitmapInfo{};
+	if (bitmap->GetBitmap(&bitmapInfo) == 0
+		|| bitmapInfo.bmWidth <= 0
+		|| bitmapInfo.bmHeight <= 0)
+	{
+		return false;
+	}
+
+	CDC source;
+	if (!source.CreateCompatibleDC(deviceContext))
+	{
+		return false;
+	}
+	CBitmap* previousBitmap = source.SelectObject(bitmap);
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->SetStretchBltMode(HALFTONE);
+	deviceContext->SetBrushOrg(0, 0);
+	const BOOL drawn = deviceContext->TransparentBlt(
+		bounds.left,
+		bounds.top,
+		bounds.Width(),
+		bounds.Height(),
+		&source,
+		0,
+		0,
+		bitmapInfo.bmWidth,
+		bitmapInfo.bmHeight,
+		transparentColor);
+	deviceContext->RestoreDC(savedDc);
+	source.SelectObject(previousBitmap);
+	return drawn != FALSE;
+}
+
 void UiRenderer::DrawPanel(
 	CDC* deviceContext,
 	const CRect& bounds,

@@ -55,6 +55,7 @@ include=enemy-stone-hide
 [orb]
 id=echo-orb
 name=Echo Orb
+icon=orb-echo-v1
 delivery=Projectile
 target=All
 effect=orb-echo-damage
@@ -64,6 +65,7 @@ effect=orb-echo-score
 
 - `delivery`: `Projectile` 또는 `Melee`
 - `target`: `Single` 또는 `All`
+- `icon`: `assets.v1.json`과 런타임 리소스에 연결되는 이미지 키. 키가 없으면 오브 ID를 폴백 키로 사용한다.
 - 오브에는 피해·점수 계열 효과만 연결할 수 있다.
 
 ## 유물 정의
@@ -72,6 +74,7 @@ effect=orb-echo-score
 [relic]
 id=bark-guard
 name=Bark Guard
+icon=relic-bark-guard-v1
 duplicate=Stackable
 max_stacks=2
 effect=relic-bark-guard
@@ -80,6 +83,7 @@ effect=relic-bark-guard
 
 - `duplicate`: `Unique` 또는 `Stackable`
 - `max_stacks`: `1~8`
+- `icon`: `assets.v1.json`과 런타임 리소스에 연결되는 이미지 키. 키가 없으면 유물 ID를 폴백 키로 사용한다.
 - 유물에는 피해·점수·플레이어 피격 계열 효과를 연결할 수 있다.
 
 ## 적 효과 연결

@@ -18,6 +18,7 @@
 #include "PegLayout.h"
 #include "Physics.h"
 #include "Progression.h"
+#include "RewardPresentation.h"
 #include "RunProgression.h"
 #include "SoftPegSound.h"
 #include "TerminalTransitionGate.h"
@@ -1769,8 +1770,10 @@ namespace
 		Check(ActivateGameplayCatalog(shipped, activatedStages), "validated gameplay catalog activates atomically");
 		const OrbDefinition* iron = FindOrbDefinition("iron-orb");
 		Check(iron != nullptr && Near(iron->pegDamageMultiplier, 1.5f), "external orb effect resolves by stable id");
+		Check(iron != nullptr && iron->imageKey == "orb-iron-v1", "external orb catalog retains its image key");
 		const RelicDefinition* bark = FindRelicDefinition("bark-guard");
 		Check(bark != nullptr && Near(bark->incomingDamageMultiplier, 0.85f), "external relic effect resolves by stable id");
+		Check(bark != nullptr && bark->imageKey == "relic-bark-guard-v1", "external relic catalog retains its image key");
 		const StageDefinition* forest = FindContentStage(activatedStages, "stage-1");
 		const StageDefinition* boss = FindContentStage(activatedStages, "stage-3");
 		Check(forest != nullptr && Near(forest->enemies[0].damageTakenMultiplier, 0.9f), "enemy effect is applied through the stage enemy id");
@@ -2130,6 +2133,28 @@ namespace
 		Check(FindOrbDefinition("unknown-orb") == nullptr, "unknown orb id is rejected");
 		Check(FindRelicDefinition("combo-lantern") != nullptr, "combo lantern has a stable id");
 		Check(FindRelicDefinition("unknown-relic") == nullptr, "unknown relic id is rejected");
+		Check(FindOrbDefinition("basic-orb")->imageKey == "orb-traveler-v1", "traveler orb exposes a stable image key");
+		Check(FindOrbDefinition("iron-orb")->imageKey == "orb-iron-v1", "iron orb exposes a stable image key");
+		Check(FindOrbDefinition("echo-orb")->imageKey == "orb-echo-v1", "echo orb exposes a stable image key");
+		Check(FindRelicDefinition("combo-lantern")->imageKey == "relic-combo-lantern-v1", "combo lantern exposes a stable image key");
+		Check(FindRelicDefinition("thorn-charm")->imageKey == "relic-thorn-charm-v1", "thorn charm exposes a stable image key");
+		Check(FindRelicDefinition("bark-guard")->imageKey == "relic-bark-guard-v1", "bark guard exposes a stable image key");
+
+		const std::string ironDescription = DescribeOrbEffect(*FindOrbDefinition("iron-orb"));
+		Check(ironDescription.find("페그 피해 ×1.50 (+50%)") != std::string::npos,
+			"orb reward description reports the exact damage multiplier and percentage");
+		Check(ironDescription.find("획득 점수 ×0.75 (-25%)") != std::string::npos,
+			"orb reward description reports the exact score tradeoff");
+		Check(ironDescription.find("근접 · 단일 대상") != std::string::npos,
+			"orb reward description reports delivery and target type");
+		const std::string barkDescription = DescribeRelicEffect(*FindRelicDefinition("bark-guard"));
+		Check(barkDescription.find("받는 피해 ×0.85 (-15%)") != std::string::npos,
+			"relic reward description reports its per-stack defense precisely");
+		Check(barkDescription.find("2중첩 시 받는 피해 ×0.7225 (-27.75%)") != std::string::npos,
+			"stackable relic description reports multiplicative maximum-stack defense");
+		Check(DescribeRewardEffect({ RunRewardKind::Heal, {}, "Heal 25 HP", 25.0f })
+			.find("최대 체력을 초과하지 않음") != std::string::npos,
+			"healing reward description states its health cap behavior");
 
 		PlayerLoadout loadout;
 		Check(loadout.GetSelectedOrbId() == "basic-orb", "loadout starts with the basic orb");

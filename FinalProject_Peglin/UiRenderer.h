@@ -21,6 +21,11 @@ class UiRenderer
 {
 public:
 	static void DrawBackdrop(CDC* deviceContext, CBitmap* bitmap, const CRect& bounds);
+	static bool DrawTransparentBitmap(
+		CDC* deviceContext,
+		CBitmap* bitmap,
+		const CRect& bounds,
+		COLORREF transparentColor = RGB(255, 0, 255));
 	static void DrawPanel(
 		CDC* deviceContext,
 		const CRect& bounds,

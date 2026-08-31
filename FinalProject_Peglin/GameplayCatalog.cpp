@@ -302,6 +302,10 @@ namespace
 				effects.push_back(std::move(builder.effect));
 				break;
 			case Section::Orb:
+				if (builder.orb.definition.imageKey.empty())
+				{
+					builder.orb.definition.imageKey = builder.orb.definition.id;
+				}
 				if (builder.orb.definition.id.empty()
 					|| builder.orb.definition.displayName.empty()
 					|| !builder.scalarKeys.contains("delivery")
@@ -317,6 +321,10 @@ namespace
 				orbs.push_back(std::move(builder.orb));
 				break;
 			case Section::Relic:
+				if (builder.relic.definition.imageKey.empty())
+				{
+					builder.relic.definition.imageKey = builder.relic.definition.id;
+				}
 				if (builder.relic.definition.id.empty()
 					|| builder.relic.definition.displayName.empty()
 					|| !builder.scalarKeys.contains("duplicate")
@@ -444,10 +452,11 @@ namespace
 			{
 				if (key == "id" && IsSafeId(value)) builder.orb.definition.id.assign(value);
 				else if (key == "name" && !value.empty() && value.size() <= 80) builder.orb.definition.displayName.assign(value);
+				else if (key == "icon" && IsSafeId(value)) builder.orb.definition.imageKey.assign(value);
 				else if (key == "delivery" && ParseAttackDelivery(value, builder.orb.definition.attackDelivery)) {}
 				else if (key == "target" && ParseAttackTarget(value, builder.orb.definition.attackTarget)) {}
 				else if (key == "effect" && IsSafeId(value)) builder.orb.effectIds.emplace_back(value);
-				else return Fallback(key == "id" || key == "name" || key == "delivery" || key == "target" || key == "effect"
+				else return Fallback(key == "id" || key == "name" || key == "icon" || key == "delivery" || key == "target" || key == "effect"
 					? GameplayCatalogLoadError::InvalidValue
 					: GameplayCatalogLoadError::UnknownKey, lineNumber);
 			}
@@ -455,13 +464,14 @@ namespace
 			{
 				if (key == "id" && IsSafeId(value)) builder.relic.definition.id.assign(value);
 				else if (key == "name" && !value.empty() && value.size() <= 80) builder.relic.definition.displayName.assign(value);
+				else if (key == "icon" && IsSafeId(value)) builder.relic.definition.imageKey.assign(value);
 				else if (key == "duplicate" && ParseDuplicatePolicy(value, builder.relic.definition.duplicatePolicy)) {}
 				else if (key == "max_stacks"
 					&& ParseNumber(value, builder.relic.definition.maxStacks)
 					&& builder.relic.definition.maxStacks > 0
 					&& builder.relic.definition.maxStacks <= 8) {}
 				else if (key == "effect" && IsSafeId(value)) builder.relic.effectIds.emplace_back(value);
-				else return Fallback(key == "id" || key == "name" || key == "duplicate" || key == "max_stacks" || key == "effect"
+				else return Fallback(key == "id" || key == "name" || key == "icon" || key == "duplicate" || key == "max_stacks" || key == "effect"
 					? GameplayCatalogLoadError::InvalidValue
 					: GameplayCatalogLoadError::UnknownKey, lineNumber);
 			}

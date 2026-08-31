@@ -7,6 +7,7 @@
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
 #include "GameLayout.h"
+#include "RewardPresentation.h"
 #include "SoftPegSound.h"
 #include <algorithm>
 #include <cmath>
@@ -205,7 +206,7 @@ namespace
 		return text;
 	}
 
-	void DrawOrbIcon(CDC* deviceContext, const CRect& bounds, std::string_view orbId)
+	void DrawFallbackOrbIcon(CDC* deviceContext, const CRect& bounds, std::string_view orbId)
 	{
 		const int savedDc = deviceContext->SaveDC();
 		const COLORREF accent = OrbAccent(orbId);
@@ -220,6 +221,40 @@ namespace
 		deviceContext->SelectObject(&highlightBrush);
 		deviceContext->SelectStockObject(NULL_PEN);
 		deviceContext->Ellipse(highlight);
+		deviceContext->RestoreDC(savedDc);
+	}
+
+	void DrawFallbackRelicIcon(CDC* deviceContext, const CRect& bounds)
+	{
+		const int savedDc = deviceContext->SaveDC();
+		CPen borderPen(PS_SOLID, 2, UiTheme::Gold);
+		CBrush relicBrush(RGB(72, 118, 92));
+		deviceContext->SelectObject(&borderPen);
+		deviceContext->SelectObject(&relicBrush);
+		POINT diamond[] = {
+			{ bounds.CenterPoint().x, bounds.top },
+			{ bounds.right, bounds.CenterPoint().y },
+			{ bounds.CenterPoint().x, bounds.bottom },
+			{ bounds.left, bounds.CenterPoint().y }
+		};
+		deviceContext->Polygon(diamond, 4);
+		deviceContext->RestoreDC(savedDc);
+	}
+
+	void DrawHealIcon(CDC* deviceContext, const CRect& bounds)
+	{
+		const int savedDc = deviceContext->SaveDC();
+		CBrush heartBrush(UiTheme::Green);
+		deviceContext->SelectObject(&heartBrush);
+		deviceContext->SelectStockObject(NULL_PEN);
+		deviceContext->Ellipse(bounds);
+		const int thickness = (std::max)(4, bounds.Width() / 7);
+		CRect horizontal(bounds.left + bounds.Width() / 5, bounds.CenterPoint().y - thickness / 2,
+			bounds.right - bounds.Width() / 5, bounds.CenterPoint().y + thickness / 2);
+		CRect vertical(bounds.CenterPoint().x - thickness / 2, bounds.top + bounds.Height() / 5,
+			bounds.CenterPoint().x + thickness / 2, bounds.bottom - bounds.Height() / 5);
+		deviceContext->FillSolidRect(horizontal, RGB(238, 246, 224));
+		deviceContext->FillSolidRect(vertical, RGB(238, 246, 224));
 		deviceContext->RestoreDC(savedDc);
 	}
 
@@ -364,6 +399,9 @@ END_MESSAGE_MAP()
 void CChildView::gameclear()
 {
 	_terminalTransition.Reset();
+	_acquiredReward.reset();
+	_rewardAcquisitionSeconds = 0.0f;
+	_runNotice.Empty();
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(true);
 	_runPlayerHealth = _game.GetPlayer().GetHp();
@@ -380,6 +418,8 @@ void CChildView::gameclear()
 void CChildView::gameover()
 {
 	_terminalTransition.Reset();
+	_acquiredReward.reset();
+	_rewardAcquisitionSeconds = 0.0f;
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(false);
 	_run.MarkDefeated();
@@ -393,6 +433,8 @@ void CChildView::gameover()
 void CChildView::restart()
 {
 	_terminalTransition.Reset();
+	_acquiredReward.reset();
+	_rewardAcquisitionSeconds = 0.0f;
 	_game.ResetGame();
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
@@ -629,6 +671,12 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_enemyWolfSprite.LoadBitmap(IDB_ENEMY_THORNBACK_WOLF_V1);
 	_enemyWispSprite.LoadBitmap(IDB_ENEMY_AZURE_WISP_V1);
 	_orbSprite.LoadBitmap(IDB_ORB_AMBER_TEAL_V2);
+	_orbTravelerIcon.LoadBitmap(IDB_ORB_TRAVELER_V1);
+	_orbIronIcon.LoadBitmap(IDB_ORB_IRON_V1);
+	_orbEchoIcon.LoadBitmap(IDB_ORB_ECHO_V1);
+	_relicComboLanternIcon.LoadBitmap(IDB_RELIC_COMBO_LANTERN_V1);
+	_relicThornCharmIcon.LoadBitmap(IDB_RELIC_THORN_CHARM_V1);
+	_relicBarkGuardIcon.LoadBitmap(IDB_RELIC_BARK_GUARD_V1);
 
 	CWnd* mainWindow = AfxGetMainWnd();
 	CMenu* mainMenu = mainWindow != nullptr ? mainWindow->GetMenu() : nullptr;
@@ -698,6 +746,19 @@ void CChildView::OnDestroy()
 	{
 		_orbSprite.DeleteObject();
 	}
+	for (CBitmap* itemIcon : {
+		&_orbTravelerIcon,
+		&_orbIronIcon,
+		&_orbEchoIcon,
+		&_relicComboLanternIcon,
+		&_relicThornCharmIcon,
+		&_relicBarkGuardIcon })
+	{
+		if (itemIcon->GetSafeHandle() != nullptr)
+		{
+			itemIcon->DeleteObject();
+		}
+	}
 
 	if (_gameTimerId != 0)
 	{
@@ -741,6 +802,16 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 	{
 		UpdateFeedbackAnimations(deltaSeconds);
 		UpdateAttackAnimations(deltaSeconds);
+		if (_screenMode == ScreenMode::Reward && _acquiredReward.has_value())
+		{
+			_rewardAcquisitionSeconds += deltaSeconds;
+			if (_rewardAcquisitionSeconds >= 1.25f)
+			{
+				_acquiredReward.reset();
+				_rewardAcquisitionSeconds = 0.0f;
+				_screenMode = ScreenMode::StageSelection;
+			}
+		}
 		return;
 	}
 	if (_terminalTransition.IsPending())
@@ -1335,8 +1406,54 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 void CChildView::DrawRewardScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
+	auto DrawRewardIcon = [this, deviceContext](const RunReward& reward, const CRect& bounds)
+	{
+		if (reward.kind == RunRewardKind::Orb)
+		{
+			const OrbDefinition* orb = FindOrbDefinition(reward.id);
+			if (orb != nullptr)
+			{
+				DrawOrbIcon(deviceContext, bounds, *orb);
+				return;
+			}
+		}
+		else if (reward.kind == RunRewardKind::Relic)
+		{
+			const RelicDefinition* relic = FindRelicDefinition(reward.id);
+			if (relic != nullptr)
+			{
+				DrawRelicIcon(deviceContext, bounds, *relic);
+				return;
+			}
+		}
+		DrawHealIcon(deviceContext, bounds);
+	};
+
+	if (_acquiredReward.has_value())
+	{
+		const RunReward& acquired = *_acquiredReward;
+		const COLORREF color = acquired.kind == RunRewardKind::Orb
+			? UiTheme::Blue
+			: (acquired.kind == RunRewardKind::Relic ? UiTheme::Gold : UiTheme::Green);
+		UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("보상 획득 완료"), 300, UiTheme::Gold);
+		UiRenderer::DrawText(deviceContext, CRect(160, 125, 820, 170), _T("효과 적용을 확인한 뒤 다음 경로로 이동합니다"), 125, UiTheme::MutedText);
+		const CRect acquiredCard(270, 190, 730, 540);
+		UiRenderer::DrawPanel(deviceContext, acquiredCard, true, color);
+		DrawRewardIcon(acquired, CRect(450, 220, 550, 320));
+		UiRenderer::DrawText(deviceContext, CRect(300, 325, 700, 375), Utf8Text(acquired.displayName), 180, color);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(310, 385, 690, 510),
+			Utf8Text(DescribeRewardEffect(acquired)),
+			110,
+			UiTheme::Text,
+			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+		UiRenderer::DrawText(deviceContext, CRect(280, 575, 720, 615), _T("획득 효과 적용 완료"), 115, UiTheme::Green);
+		return;
+	}
+
 	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), Text("screen.reward"), 300, UiTheme::Gold);
-	UiRenderer::DrawText(deviceContext, CRect(160, 125, 820, 175), _T("보상 하나를 선택하면 다음 스테이지가 열립니다"), 125, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(120, 120, 880, 175), _T("효과 수치와 보유 한도를 확인한 뒤 보상 하나를 선택하세요"), 125, UiTheme::MutedText);
 
 	const auto& rewards = _run.GetRewardChoices();
 	for (std::size_t index = 0; index < rewards.size(); ++index)
@@ -1357,10 +1474,18 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 		}
 		CString title;
 		title.Format(_T("[%zu] %s"), index + 1, category.GetString());
-		UiRenderer::DrawText(deviceContext, CRect(left + 15, 265, left + 255, 320), title, 160, color);
-		UiRenderer::DrawText(deviceContext, CRect(left + 15, 335, left + 255, 420), Utf8Text(reward.displayName), 145, UiTheme::Text, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+		UiRenderer::DrawText(deviceContext, CRect(left + 15, 253, left + 255, 285), title, 120, color);
+		DrawRewardIcon(reward, CRect(left + 99, 285, left + 171, 357));
+		UiRenderer::DrawText(deviceContext, CRect(left + 12, 358, left + 258, 392), Utf8Text(reward.displayName), 125, UiTheme::Text, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(left + 12, 395, left + 258, 478),
+			Utf8Text(DescribeRewardEffect(reward)),
+			82,
+			UiTheme::MutedText,
+			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
-	UiRenderer::DrawText(deviceContext, CRect(150, 535, 830, 585), _runNotice, 110, UiTheme::Orange);
+	UiRenderer::DrawText(deviceContext, CRect(120, 525, 880, 595), _runNotice, 105, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 720, 690), _T("보상 카드 클릭 · 1/2/3 선택"));
 }
 
@@ -1383,17 +1508,17 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 			ownedOrbs.end(),
 			[&orb](const std::string& id) { return id == orb.id; }));
 		UiRenderer::DrawPanel(deviceContext, card, selected, UiTheme::Gold);
-		DrawOrbIcon(deviceContext, CRect(left + 20, 204, left + 52, 236), orb.id);
+		DrawOrbIcon(deviceContext, CRect(left + 14, 198, left + 68, 252), orb);
 		CString title;
 		title.Format(_T("[%zu] %s · x%zu"), index + 1, Utf8Text(orb.displayName).GetString(), ownedCount);
-		UiRenderer::DrawText(deviceContext, CRect(left + 58, 200, left + 260, 250), title, 125, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
-		CString stats;
-		stats.Format(
-			_T("피해 x%.2f · 점수 x%.2f\n%s"),
-			orb.pegDamageMultiplier,
-			orb.scoreMultiplier,
-			AttackStyleText(orb).GetString());
-		UiRenderer::DrawText(deviceContext, CRect(left + 15, 255, left + 255, 320), stats, 100, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+		UiRenderer::DrawText(deviceContext, CRect(left + 72, 198, left + 260, 252), title, 115, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(left + 12, 255, left + 258, 327),
+			Utf8Text(DescribeOrbEffect(orb)),
+			78,
+			UiTheme::MutedText,
+			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
 
 	const auto& relics = GetRelicDefinitions();
@@ -1406,17 +1531,16 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 		const bool atLimit = stacks >= relic.maxStacks;
 		UiRenderer::DrawPanel(deviceContext, card, atLimit, UiTheme::Green);
 		CString title;
-		title.Format(_T("[%zu] %s"), index + 4, Utf8Text(relic.displayName).GetString());
-		UiRenderer::DrawText(deviceContext, CRect(left + 10, 405, left + 260, 450), title, 140, atLimit ? UiTheme::Green : UiTheme::Text);
-		CString stats;
-		stats.Format(
-			_T("보유 %zu / %zu\n피해 x%.2f · 점수 x%.2f\n받는 피해 x%.2f"),
-			stacks,
-			relic.maxStacks,
-			relic.pegDamageMultiplier,
-			relic.scoreMultiplier,
-			relic.incomingDamageMultiplier);
-		UiRenderer::DrawText(deviceContext, CRect(left + 12, 455, left + 258, 540), stats, 95, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+		title.Format(_T("[%zu] %s · %zu/%zu"), index + 4, Utf8Text(relic.displayName).GetString(), stacks, relic.maxStacks);
+		DrawRelicIcon(deviceContext, CRect(left + 14, 402, left + 68, 456), relic);
+		UiRenderer::DrawText(deviceContext, CRect(left + 72, 400, left + 260, 458), title, 108, atLimit ? UiTheme::Green : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(left + 12, 462, left + 258, 548),
+			Utf8Text(DescribeRelicEffect(relic)),
+			72,
+			UiTheme::MutedText,
+			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
 
 	const ProgressionModifiers modifiers = _game.GetProgressionModifiers();
@@ -1546,6 +1670,68 @@ CBitmap* CChildView::GetEnemySprite(EnemyVisualKind visual) noexcept
 	return nullptr;
 }
 
+CBitmap* CChildView::GetOrbIcon(std::string_view imageKey) noexcept
+{
+	if (imageKey == "orb-traveler-v1")
+	{
+		return _orbTravelerIcon.GetSafeHandle() != nullptr ? &_orbTravelerIcon : nullptr;
+	}
+	if (imageKey == "orb-iron-v1")
+	{
+		return _orbIronIcon.GetSafeHandle() != nullptr ? &_orbIronIcon : nullptr;
+	}
+	if (imageKey == "orb-echo-v1")
+	{
+		return _orbEchoIcon.GetSafeHandle() != nullptr ? &_orbEchoIcon : nullptr;
+	}
+	return nullptr;
+}
+
+CBitmap* CChildView::GetRelicIcon(std::string_view imageKey) noexcept
+{
+	if (imageKey == "relic-combo-lantern-v1")
+	{
+		return _relicComboLanternIcon.GetSafeHandle() != nullptr ? &_relicComboLanternIcon : nullptr;
+	}
+	if (imageKey == "relic-thorn-charm-v1")
+	{
+		return _relicThornCharmIcon.GetSafeHandle() != nullptr ? &_relicThornCharmIcon : nullptr;
+	}
+	if (imageKey == "relic-bark-guard-v1")
+	{
+		return _relicBarkGuardIcon.GetSafeHandle() != nullptr ? &_relicBarkGuardIcon : nullptr;
+	}
+	return nullptr;
+}
+
+void CChildView::DrawOrbIcon(
+	CDC* deviceContext,
+	const CRect& bounds,
+	const OrbDefinition& orb)
+{
+	if (!UiRenderer::DrawTransparentBitmap(
+		deviceContext,
+		GetOrbIcon(orb.imageKey),
+		bounds))
+	{
+		DrawFallbackOrbIcon(deviceContext, bounds, orb.id);
+	}
+}
+
+void CChildView::DrawRelicIcon(
+	CDC* deviceContext,
+	const CRect& bounds,
+	const RelicDefinition& relic)
+{
+	if (!UiRenderer::DrawTransparentBitmap(
+		deviceContext,
+		GetRelicIcon(relic.imageKey),
+		bounds))
+	{
+		DrawFallbackRelicIcon(deviceContext, bounds);
+	}
+}
+
 void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 {
 	const PlayerLoadout& loadout = _game.GetLoadout();
@@ -1564,7 +1750,7 @@ void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 
 	const CRect currentCard(hud.left + 10, hud.top + 50, hud.right - 10, hud.top + 175);
 	UiRenderer::DrawPanel(deviceContext, currentCard, true, UiTheme::Gold);
-	DrawOrbIcon(deviceContext, CRect(currentCard.left + 10, currentCard.top + 16, currentCard.left + 52, currentCard.top + 58), loadout.GetSelectedOrbId());
+	DrawOrbIcon(deviceContext, CRect(currentCard.left + 8, currentCard.top + 10, currentCard.left + 56, currentCard.top + 58), loadout.GetSelectedOrb());
 	CString currentText;
 	currentText.Format(
 		_T("%s"),
@@ -1578,7 +1764,7 @@ void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 
 	const CRect nextCard(hud.left + 10, hud.top + 185, hud.right - 10, hud.top + 310);
 	UiRenderer::DrawPanel(deviceContext, nextCard, false, UiTheme::Blue);
-	DrawOrbIcon(deviceContext, CRect(nextCard.left + 10, nextCard.top + 16, nextCard.left + 52, nextCard.top + 58), loadout.GetNextOrbId());
+	DrawOrbIcon(deviceContext, CRect(nextCard.left + 8, nextCard.top + 10, nextCard.left + 56, nextCard.top + 58), loadout.GetNextOrb());
 	CString nextText;
 	nextText.Format(
 		_T("%s"),
@@ -1655,6 +1841,8 @@ void CChildView::BeginNewRun()
 	_runDifficulty = _options.difficulty;
 	_runPlayerHealth = 0.0f;
 	_runNotice.Empty();
+	_acquiredReward.reset();
+	_rewardAcquisitionSeconds = 0.0f;
 	_resultSummary.reset();
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
@@ -1665,29 +1853,53 @@ void CChildView::BeginNewRun()
 
 bool CChildView::SelectRunReward(std::size_t index)
 {
+	const std::vector<RunReward>& rewards = _run.GetRewardChoices();
+	if (index >= rewards.size())
+	{
+		return false;
+	}
+	const RunReward candidate = rewards[index];
+
+	switch (candidate.kind)
+	{
+	case RunRewardKind::Orb:
+		if (!_game.AddOrb(candidate.id))
+		{
+			_runNotice.Format(
+				_T("%s 획득 불가 · 오브 덱 보유 한도에 도달했습니다"),
+				Utf8Text(candidate.displayName).GetString());
+			return false;
+		}
+		break;
+	case RunRewardKind::Relic:
+		if (!_game.AcquireRelic(candidate.id))
+		{
+			_runNotice.Format(
+				_T("%s 획득 불가 · 이미 유물 보유 한도에 도달했습니다"),
+				Utf8Text(candidate.displayName).GetString());
+			return false;
+		}
+		break;
+	case RunRewardKind::Heal:
+		_runPlayerHealth = (std::min)(
+			_runPlayerHealth + candidate.magnitude,
+			_game.GetStage().rules.playerHealth);
+		break;
+	}
+
 	const std::optional<RunReward> selected = _run.SelectReward(index);
 	if (!selected.has_value())
 	{
 		return false;
 	}
 
-	switch (selected->kind)
-	{
-	case RunRewardKind::Orb:
-		_game.AddOrb(selected->id);
-		break;
-	case RunRewardKind::Relic:
-		_game.AcquireRelic(selected->id);
-		break;
-	case RunRewardKind::Heal:
-		_runPlayerHealth = (std::min)(
-			_runPlayerHealth + selected->magnitude,
-			_game.GetStage().rules.playerHealth);
-		break;
-	}
-
-	_runNotice.Format(_T("%s 선택 완료"), Utf8Text(selected->displayName).GetString());
-	_screenMode = ScreenMode::StageSelection;
+	_acquiredReward = selected;
+	_rewardAcquisitionSeconds = 0.0f;
+	_runNotice.Format(
+		_T("%s 획득 · %s"),
+		Utf8Text(selected->displayName).GetString(),
+		Utf8Text(DescribeRewardEffect(*selected)).GetString());
+	_screenMode = ScreenMode::Reward;
 	return true;
 }
 

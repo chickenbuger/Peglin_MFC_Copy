@@ -10,14 +10,14 @@ namespace
 {
 	const ProgressionCatalog BUILT_IN_CATALOG = {
 		{
-			{ "basic-orb", "Traveler Orb", 1.0f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
-			{ "iron-orb", "Iron Orb", 1.5f, 0.75f, AttackDelivery::Melee, AttackTarget::Single },
-			{ "echo-orb", "Echo Orb", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All }
+			{ "basic-orb", "Traveler Orb", "orb-traveler-v1", 1.0f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
+			{ "iron-orb", "Iron Orb", "orb-iron-v1", 1.5f, 0.75f, AttackDelivery::Melee, AttackTarget::Single },
+			{ "echo-orb", "Echo Orb", "orb-echo-v1", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All }
 		},
 		{
-			{ "combo-lantern", "Combo Lantern", RelicDuplicatePolicy::Unique, 1, 1.0f, 1.25f, 1.0f },
-			{ "thorn-charm", "Thorn Charm", RelicDuplicatePolicy::Unique, 1, 1.2f, 1.0f, 1.0f },
-			{ "bark-guard", "Bark Guard", RelicDuplicatePolicy::Stackable, 2, 1.0f, 1.0f, 0.85f }
+			{ "combo-lantern", "Combo Lantern", "relic-combo-lantern-v1", RelicDuplicatePolicy::Unique, 1, 1.0f, 1.25f, 1.0f },
+			{ "thorn-charm", "Thorn Charm", "relic-thorn-charm-v1", RelicDuplicatePolicy::Unique, 1, 1.2f, 1.0f, 1.0f },
+			{ "bark-guard", "Bark Guard", "relic-bark-guard-v1", RelicDuplicatePolicy::Stackable, 2, 1.0f, 1.0f, 0.85f }
 		}
 	};
 
@@ -108,6 +108,7 @@ bool ValidateProgressionCatalog(const ProgressionCatalog& catalog) noexcept
 	{
 		if (!IsSafeId(orb.id)
 			|| orb.displayName.empty()
+			|| !IsSafeId(orb.imageKey)
 			|| !IsValidMultiplier(orb.pegDamageMultiplier)
 			|| !IsValidMultiplier(orb.scoreMultiplier)
 			|| !orbIds.insert(orb.id).second)
@@ -128,6 +129,7 @@ bool ValidateProgressionCatalog(const ProgressionCatalog& catalog) noexcept
 	{
 		if (!IsSafeId(relic.id)
 			|| relic.displayName.empty()
+			|| !IsSafeId(relic.imageKey)
 			|| relic.maxStacks == 0
 			|| !IsValidMultiplier(relic.pegDamageMultiplier)
 			|| !IsValidMultiplier(relic.scoreMultiplier)
