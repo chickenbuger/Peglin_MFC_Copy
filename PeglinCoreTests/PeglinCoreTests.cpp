@@ -20,6 +20,7 @@
 #include "Progression.h"
 #include "RunProgression.h"
 #include "SoftPegSound.h"
+#include "TerminalTransitionGate.h"
 #include "UiNavigation.h"
 
 namespace
@@ -119,6 +120,31 @@ namespace
 		Check(world.GetState() == GameState::Aiming, "zero shot remains Aiming");
 		Check(!world.GetBall().GetActive(), "zero shot leaves ball inactive");
 		Check(Near(world.GetBall().GetVelocity().LengthSquared(), 0.0f), "zero shot velocity is zero");
+	}
+
+	void TestTerminalTransitionGate()
+	{
+		TerminalTransitionGate gate;
+		Check(!gate.IsPending(), "terminal transition gate starts idle");
+		Check(gate.CompleteIfReady(true, true) == GameUpdateResult::None,
+			"idle terminal transition gate has no result");
+
+		gate.Queue(GameUpdateResult::Victory);
+		Check(gate.IsPending(), "victory queues a terminal transition");
+		Check(gate.CompleteIfReady(false, true) == GameUpdateResult::None,
+			"attack animation delays the terminal transition");
+		Check(gate.CompleteIfReady(true, false) == GameUpdateResult::None,
+			"feedback animation delays the terminal transition");
+		gate.Queue(GameUpdateResult::Defeat);
+		Check(gate.CompleteIfReady(true, true) == GameUpdateResult::Victory,
+			"queued terminal transition completes with the original result");
+		Check(!gate.IsPending(), "completed terminal transition returns to idle");
+		Check(gate.CompleteIfReady(true, true) == GameUpdateResult::None,
+			"completed terminal transition is reported only once");
+
+		gate.Queue(GameUpdateResult::Defeat);
+		gate.Reset();
+		Check(!gate.IsPending(), "terminal transition reset cancels pending state");
 	}
 
 	void TestWallReflection()
@@ -2296,6 +2322,7 @@ namespace
 int main()
 {
 	TestZeroLengthShot();
+	TestTerminalTransitionGate();
 	TestWallReflection();
 	TestPegReflectionAndSingleDamage();
 	TestScoreComboProgression();

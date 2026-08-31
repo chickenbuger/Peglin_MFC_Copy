@@ -363,6 +363,7 @@ END_MESSAGE_MAP()
 
 void CChildView::gameclear()
 {
+	_terminalTransition.Reset();
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(true);
 	_runPlayerHealth = _game.GetPlayer().GetHp();
@@ -378,6 +379,7 @@ void CChildView::gameclear()
 
 void CChildView::gameover()
 {
+	_terminalTransition.Reset();
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(false);
 	_run.MarkDefeated();
@@ -390,6 +392,7 @@ void CChildView::gameover()
 
 void CChildView::restart()
 {
+	_terminalTransition.Reset();
 	_game.ResetGame();
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
@@ -740,6 +743,14 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 		UpdateAttackAnimations(deltaSeconds);
 		return;
 	}
+	if (_terminalTransition.IsPending())
+	{
+		UpdateFeedbackAnimations(deltaSeconds);
+		UpdateAttackAnimations(deltaSeconds);
+		UpdateOrbVisuals(deltaSeconds);
+		FinishPendingTerminalTransition();
+		return;
+	}
 
 	const GameUpdateResult result = _game.Update(deltaSeconds);
 	ConsumeGameEvents();
@@ -747,6 +758,15 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 	UpdateAttackAnimations(deltaSeconds);
 	UpdateOrbVisuals(deltaSeconds);
 
+	_terminalTransition.Queue(result);
+	FinishPendingTerminalTransition();
+}
+
+void CChildView::FinishPendingTerminalTransition()
+{
+	const GameUpdateResult result = _terminalTransition.CompleteIfReady(
+		_attackAnimations.empty(),
+		_feedbackAnimations.empty());
 	switch (result)
 	{
 	case GameUpdateResult::None:
@@ -1258,66 +1278,25 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		{
 			continue;
 		}
-		const StageDefinition configured = ApplyDifficulty(*source, _options.difficulty);
 		const int top = visibleStageCount == 1
 			? 245
 			: 165 + static_cast<int>(index) * 200;
 		const CRect card(248, top, 752, top + 155);
 		const bool selected = _run.GetStatus() == RunStatus::StageReady;
-		const COLORREF stageColor = configured.isBoss ? UiTheme::Orange : UiTheme::Gold;
+		const COLORREF stageColor = source->isBoss ? UiTheme::Orange : UiTheme::Gold;
 		UiRenderer::DrawPanel(deviceContext, card, selected, stageColor);
 		CString title;
 		title.Format(
 			_T("[%zu] %s%s"),
 			index + 1,
-			Utf8Text(configured.displayName).GetString(),
-			configured.isBoss ? _T(" · BOSS") : _T(""));
+			Utf8Text(source->displayName).GetString(),
+			source->isBoss ? _T(" · BOSS") : _T(""));
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(card.left + 15, card.top + 8, card.right - 15, card.top + 55),
+			CRect(card.left + 15, card.top + 18, card.right - 15, card.bottom - 18),
 			title,
-			160,
+			185,
 			selected ? stageColor : UiTheme::Text);
-		const std::size_t enemyCount = configured.enemies.empty()
-			? std::size_t{ 1 }
-			: configured.enemies.size();
-		float totalEnemyHealth = configured.enemies.empty()
-			? configured.rules.enemyHealth
-			: 0.0f;
-		for (const EnemyDefinition& enemy : configured.enemies)
-		{
-			totalEnemyHealth += enemy.health;
-		}
-		CString rules;
-		rules.Format(
-			_T("페그 %zu · 적 %zu · 총 HP %d · %s"),
-			configured.pegLayout.pegs.size(),
-			enemyCount,
-			static_cast<int>(std::lround(totalEnemyHealth)),
-			configured.isBoss ? _T("행동 패턴") : _T("이동 후 공격"));
-		UiRenderer::DrawText(
-			deviceContext,
-			CRect(card.left + 15, card.top + 53, card.right - 15, card.top + 92),
-			rules,
-			115,
-			UiTheme::MutedText);
-		const StageRecord record = _records.Get(configured.id, _options.difficulty);
-		CString recordText;
-		const CString nodeState = _run.GetStatus() == RunStatus::StageChoice
-			? _T("CHOOSE")
-			: (configured.isBoss ? _T("BOSS READY") : _T("READY"));
-		recordText.Format(
-			_T("%s · 기록 %d · 콤보 %d · 클리어 %d"),
-			nodeState.GetString(),
-			record.highScore,
-			record.bestCombo,
-			record.clearCount);
-		UiRenderer::DrawText(
-			deviceContext,
-			CRect(card.left + 15, card.top + 96, card.right - 15, card.bottom - 8),
-			recordText,
-			105,
-			_run.GetStatus() == RunStatus::StageChoice ? UiTheme::Blue : UiTheme::Green);
 	}
 
 	UiRenderer::DrawPanel(deviceContext, CRect(778, 150, 968, 625));
@@ -1631,6 +1610,7 @@ bool CChildView::StartStage(std::string_view stageId)
 
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
+	_terminalTransition.Reset();
 	_orbTrail.clear();
 	_orbTrailSampleSeconds = 0.0f;
 	_gameplayVisualTimeSeconds = 0.0f;
@@ -1678,6 +1658,7 @@ void CChildView::BeginNewRun()
 	_resultSummary.reset();
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
+	_terminalTransition.Reset();
 	_orbTrail.clear();
 	_screenMode = ScreenMode::StageSelection;
 }

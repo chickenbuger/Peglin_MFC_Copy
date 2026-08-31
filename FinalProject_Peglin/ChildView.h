@@ -18,6 +18,7 @@
 #include "GameWorld.h"
 #include "Localization.h"
 #include "RunProgression.h"
+#include "TerminalTransitionGate.h"
 #include "UiNavigation.h"
 #include "UiRenderer.h"
 
@@ -103,6 +104,7 @@ private:
 	void UpdateFeedbackAnimations(float deltaSeconds);
 	void UpdateAttackAnimations(float deltaSeconds);
 	void UpdateOrbVisuals(float deltaSeconds);
+	void FinishPendingTerminalTransition();
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawAttackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
@@ -144,6 +146,7 @@ private:
 	std::vector<FeedbackAnimation> _feedbackAnimations;
 	std::vector<AttackAnimation> _attackAnimations;
 	std::vector<OrbTrailPoint> _orbTrail;
+	TerminalTransitionGate _terminalTransition;
 	float _gameplayVisualTimeSeconds = 0.0f;
 	float _orbTrailSampleSeconds = 0.0f;
 	GameOptions _options;

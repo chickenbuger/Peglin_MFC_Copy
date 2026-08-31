@@ -96,6 +96,9 @@
 	<ClInclude Include="SoftPegSound.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="TerminalTransitionGate.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
     <ClInclude Include="StageDefinition.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>

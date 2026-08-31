@@ -213,6 +213,7 @@
 	<ClInclude Include="Progression.h" />
 	<ClInclude Include="RunProgression.h" />
 	<ClInclude Include="SoftPegSound.h" />
+	<ClInclude Include="TerminalTransitionGate.h" />
     <ClInclude Include="Physics.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />

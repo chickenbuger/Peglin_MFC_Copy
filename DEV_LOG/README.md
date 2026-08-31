@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.5 |
+| 현재 버전 | Version 7.6 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 5/12 완료 — 공격 종료 시 Refresh Peg 최소 보장 완료 |
+| 상태 | Sprint 7 P0 6/12 완료 — 간결한 스테이지 선택과 연출 완료 후 전환 완료 |
 
 ## 문서
 
@@ -86,6 +86,7 @@
 - [Version 7.3 — Refresh Peg 재생성 보장](./Version_7.3.md)
 - [Version 7.4 — 축소형 PEG FIELD와 사이드 오브 큐](./Version_7.4.md)
 - [Version 7.5 — 공격 종료 시 Refresh Peg 최소 보장](./Version_7.5.md)
+- [Version 7.6 — 간결한 스테이지 선택과 연출 완료 후 전환](./Version_7.6.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
