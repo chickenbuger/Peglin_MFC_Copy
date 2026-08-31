@@ -16,6 +16,7 @@
 #include "PegLayout.h"
 #include "Physics.h"
 #include "Progression.h"
+#include "UiNavigation.h"
 
 namespace
 {
@@ -232,6 +233,60 @@ namespace
 		Check(Near(ClampRestitution(2.0f), 1.0f), "restitution above one clamps to one");
 		const Vector2 unchanged = ReflectVelocity({ 2.0f, 3.0f }, { 1.0f, 0.0f }, 0.5f);
 		Check(Near(unchanged.x, 2.0f) && Near(unchanged.y, 3.0f), "separating velocity is not reflected");
+	}
+
+	void TestMouseUiNavigation()
+	{
+		UiAction action = ResolveUiClick(
+			UiScreenKind::StageSelection,
+			{ 500.0f, 330.0f },
+			3);
+		Check(action.command == UiCommand::SelectStage && action.index == 1, "mouse selects the second stage card");
+		Check(
+			ResolveUiClick(UiScreenKind::StageSelection, { 500.0f, 660.0f }, 3).command
+				== UiCommand::StartSelectedStage,
+			"mouse starts the selected stage");
+		Check(
+			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 575.0f }, 3).command
+				== UiCommand::OpenLoadout,
+			"mouse opens loadout management");
+		Check(
+			ResolveUiClick(UiScreenKind::StageSelection, { 850.0f, 575.0f }, 3).command
+				== UiCommand::OpenOptions,
+			"mouse opens options");
+
+		action = ResolveUiClick(UiScreenKind::Loadout, { 400.0f, 250.0f }, 0);
+		Check(action.command == UiCommand::SelectOrb && action.index == 1, "mouse selects an orb card");
+		action = ResolveUiClick(UiScreenKind::Loadout, { 705.0f, 450.0f }, 0);
+		Check(action.command == UiCommand::AcquireRelic && action.index == 2, "mouse acquires a relic card");
+		Check(
+			ResolveUiClick(UiScreenKind::Loadout, { 150.0f, 665.0f }, 0).command
+				== UiCommand::ResetProgression,
+			"mouse resets the loadout");
+		Check(
+			ResolveUiClick(UiScreenKind::Loadout, { 800.0f, 665.0f }, 0).command
+				== UiCommand::BackToStageSelection,
+			"mouse returns from loadout");
+
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 245.0f }, 0).command
+				== UiCommand::ToggleDifficulty,
+			"mouse changes difficulty");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 355.0f }, 0).command
+				== UiCommand::ToggleSound,
+			"mouse toggles sound");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 465.0f }, 0).command
+				== UiCommand::TogglePegColorMode,
+			"mouse changes peg accessibility mode");
+		Check(
+			ResolveUiClick(UiScreenKind::Result, { 350.0f, 665.0f }, 0).command
+				== UiCommand::RetryStage,
+			"mouse retries from result screen");
+		Check(
+			!ResolveUiClick(UiScreenKind::StageSelection, { 10.0f, 10.0f }, 3).IsHandled(),
+			"mouse ignores non-interactive background");
 	}
 
 	void TestLayoutConfiguration()
@@ -1621,6 +1676,7 @@ int main()
 	TestVictoryTransition();
 	TestDefeatTransition();
 	TestStateAndRestitutionRules();
+	TestMouseUiNavigation();
 	TestLayoutConfiguration();
 	TestSeededPegLayout();
 	TestDataDrivenPegLayout();

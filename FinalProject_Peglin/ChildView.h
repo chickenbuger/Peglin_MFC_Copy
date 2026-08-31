@@ -15,6 +15,7 @@
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GameWorld.h"
+#include "UiNavigation.h"
 #include "UiRenderer.h"
 
 // CChildView 창
@@ -101,6 +102,8 @@ private:
 	void DrawResultScreen(CDC* deviceContext);
 	void DrawMenuBackdrop(CDC* deviceContext);
 	void DrawPlayingLoadout(CDC* deviceContext);
+	bool HandleMenuClick(CPoint point);
+	void ExecuteUiAction(const UiAction& action);
 	CBitmap* GetEnemySprite(EnemyVisualKind visual) noexcept;
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);

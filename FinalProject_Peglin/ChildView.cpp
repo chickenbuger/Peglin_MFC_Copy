@@ -1065,7 +1065,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	UiRenderer::DrawText(deviceContext, CRect(792, 380, 954, 445), PegColorModeText(_options.pegColorMode), 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), _T("[O] 옵션"));
 
-	UiRenderer::DrawKeyHint(deviceContext, CRect(180, 640, 800, 690), _T("↑ ↓ 선택 · ENTER 시작 · 1/2/3 빠른 시작"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), _T("선택 스테이지 시작 · ENTER"));
 	if (!_contentCatalog.UsedExternalContent())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
@@ -1126,7 +1126,9 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 		modifiers.incomingDamageMultiplier);
 	UiRenderer::DrawText(deviceContext, CRect(140, 565, 840, 605), total, 115, UiTheme::Green);
 	UiRenderer::DrawText(deviceContext, CRect(140, 605, 840, 635), _loadoutNotice, 100, UiTheme::Orange);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(160, 640, 820, 690), _T("[1-3] 오브 · [4-6] 유물 · [X] 초기화 · [B/ESC] 돌아가기"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(75, 640, 300, 690), _T("초기화 · X"));
+	UiRenderer::DrawText(deviceContext, CRect(305, 642, 675, 688), _T("카드 클릭 또는 1-6 키"), 100, UiTheme::MutedText);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(680, 640, 905, 690), _T("돌아가기 · ESC"));
 }
 
 void CChildView::DrawOptions(CDC* deviceContext)
@@ -1184,7 +1186,8 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 	{
 		UiRenderer::DrawText(deviceContext, CRect(275, 565, 705, 610), _T("기록 저장 실패 · 현재 실행에서만 유지"), 105, UiTheme::Danger);
 	}
-	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 720, 690), _T("[R] 다시 도전 · [S] 스테이지 선택"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 480, 690), _T("다시 도전 · R"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(500, 640, 720, 690), _T("스테이지 선택 · S"));
 }
 
 void CChildView::DrawMenuBackdrop(CDC* deviceContext)
@@ -1302,6 +1305,11 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	if (_screenMode != ScreenMode::Playing)
 	{
+		if (HandleMenuClick(point))
+		{
+			SetFocus();
+			Invalidate(FALSE);
+		}
 		CWnd::OnLButtonDown(nFlags, point);
 		return;
 	}
@@ -1312,6 +1320,102 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 		SetCapture();
 	}
 	CWnd::OnLButtonDown(nFlags, point);
+}
+
+bool CChildView::HandleMenuClick(CPoint point)
+{
+	UiScreenKind screen = UiScreenKind::StageSelection;
+	switch (_screenMode)
+	{
+	case ScreenMode::StageSelection: screen = UiScreenKind::StageSelection; break;
+	case ScreenMode::Loadout: screen = UiScreenKind::Loadout; break;
+	case ScreenMode::Options: screen = UiScreenKind::Options; break;
+	case ScreenMode::Result: screen = UiScreenKind::Result; break;
+	case ScreenMode::Playing: return false;
+	}
+
+	const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
+	const UiAction action = ResolveUiClick(
+		screen,
+		{ static_cast<float>(point.x), static_cast<float>(point.y) },
+		stageCount);
+	if (!action.IsHandled())
+	{
+		return false;
+	}
+
+	ExecuteUiAction(action);
+	return true;
+}
+
+void CChildView::ExecuteUiAction(const UiAction& action)
+{
+	switch (action.command)
+	{
+	case UiCommand::SelectStage:
+		_selectedStageIndex = action.index;
+		break;
+	case UiCommand::StartSelectedStage:
+		StartSelectedStage();
+		break;
+	case UiCommand::OpenLoadout:
+		_loadoutNotice.Empty();
+		_screenMode = ScreenMode::Loadout;
+		break;
+	case UiCommand::OpenOptions:
+		_screenMode = ScreenMode::Options;
+		break;
+	case UiCommand::SelectOrb:
+	{
+		const auto& orbs = GetOrbDefinitions();
+		if (action.index < orbs.size() && _game.SelectOrb(orbs[action.index].id))
+		{
+			_loadoutNotice = _T("선택 오브를 변경했습니다");
+		}
+		break;
+	}
+	case UiCommand::AcquireRelic:
+	{
+		const auto& relics = GetRelicDefinitions();
+		if (action.index < relics.size())
+		{
+			_loadoutNotice = _game.AcquireRelic(relics[action.index].id)
+				? _T("유물을 획득했습니다")
+				: _T("이미 획득 한도에 도달했습니다");
+		}
+		break;
+	}
+	case UiCommand::ResetProgression:
+		_game.ResetProgression();
+		_loadoutNotice = _T("오브와 유물을 기본 상태로 초기화했습니다");
+		break;
+	case UiCommand::BackToStageSelection:
+		if (_screenMode == ScreenMode::Result)
+		{
+			_game.ResetGame();
+			_feedbackAnimations.clear();
+			_resultSummary.reset();
+		}
+		_screenMode = ScreenMode::StageSelection;
+		break;
+	case UiCommand::ToggleDifficulty:
+		_options.CycleDifficulty();
+		SaveOptions();
+		break;
+	case UiCommand::ToggleSound:
+		_options.ToggleSound();
+		SaveOptions();
+		break;
+	case UiCommand::TogglePegColorMode:
+		_options.TogglePegColorMode();
+		SaveOptions();
+		break;
+	case UiCommand::RetryStage:
+		restart();
+		break;
+	case UiCommand::None:
+		break;
+	}
 }
 
 

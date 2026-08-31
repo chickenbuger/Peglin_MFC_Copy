@@ -211,6 +211,7 @@
     <ClInclude Include="StageDefinition.h" />
     <ClInclude Include="TargetBall.h" />
 	<ClInclude Include="UiRenderer.h" />
+	<ClInclude Include="UiNavigation.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Vector2.h" />
   </ItemGroup>
@@ -237,6 +238,7 @@
     <ClCompile Include="StageDefinition.cpp" />
     <ClCompile Include="TargetBall.cpp" />
 	<ClCompile Include="UiRenderer.cpp" />
+	<ClCompile Include="UiNavigation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FinalProjectPeglin.rc" />

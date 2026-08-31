@@ -59,7 +59,8 @@
 	<ClCompile Include="..\FinalProject_Peglin\Progression.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Player.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\StageDefinition.cpp" />
-    <ClCompile Include="..\FinalProject_Peglin\TargetBall.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\TargetBall.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\UiNavigation.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
