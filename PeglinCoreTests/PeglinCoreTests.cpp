@@ -638,6 +638,7 @@ namespace
 		GameOptions options;
 		Check(options.difficulty == GameDifficulty::Normal, "options default to normal difficulty");
 		Check(options.soundEnabled, "options default to sound enabled");
+		Check(options.showGameplayInfo, "options default to visible gameplay information");
 		Check(options.pegColorMode == PegColorMode::Standard, "options default to standard peg colors");
 		options.CycleDifficulty();
 		Check(options.difficulty == GameDifficulty::Hard, "difficulty cycles from normal to hard");
@@ -649,6 +650,10 @@ namespace
 		Check(!options.soundEnabled, "sound option toggles off");
 		options.ToggleSound();
 		Check(options.soundEnabled, "sound option toggles back on");
+		options.ToggleGameplayInfo();
+		Check(!options.showGameplayInfo, "gameplay information toggles off");
+		options.ToggleGameplayInfo();
+		Check(options.showGameplayInfo, "gameplay information toggles back on");
 		options.TogglePegColorMode();
 		Check(options.pegColorMode == PegColorMode::HighContrast, "peg colors toggle to high contrast");
 		options.TogglePegColorMode();
@@ -694,11 +699,13 @@ namespace
 		Check(missing.state == SettingsLoadState::Missing, "missing settings use a distinct load state");
 		Check(missing.options.difficulty == GameDifficulty::Normal, "missing settings recover normal difficulty");
 		Check(missing.options.soundEnabled, "missing settings recover enabled sound");
+		Check(missing.options.showGameplayInfo, "missing settings recover visible gameplay information");
 		Check(missing.options.pegColorMode == PegColorMode::Standard, "missing settings recover standard colors");
 
 		GameOptions saved;
 		saved.difficulty = GameDifficulty::Hard;
 		saved.soundEnabled = false;
+		saved.showGameplayInfo = false;
 		saved.pegColorMode = PegColorMode::HighContrast;
 		std::string saveError;
 		Check(store.Save(saved, &saveError), "settings save creates missing parent directories");
@@ -709,15 +716,18 @@ namespace
 		Check(loaded.state == SettingsLoadState::Loaded, "valid settings load from disk");
 		Check(loaded.options.difficulty == GameDifficulty::Hard, "settings preserve difficulty");
 		Check(!loaded.options.soundEnabled, "settings preserve mute state");
+		Check(!loaded.options.showGameplayInfo, "settings preserve hidden gameplay information");
 		Check(loaded.options.pegColorMode == PegColorMode::HighContrast, "settings preserve high contrast mode");
 
 		saved.difficulty = GameDifficulty::Easy;
 		saved.soundEnabled = true;
+		saved.showGameplayInfo = true;
 		saved.pegColorMode = PegColorMode::Standard;
 		Check(store.Save(saved), "settings save atomically replaces an existing file");
 		const SettingsLoadResult replaced = store.Load();
 		Check(replaced.options.difficulty == GameDifficulty::Easy, "replacement settings update difficulty");
 		Check(replaced.options.soundEnabled, "replacement settings update sound");
+		Check(replaced.options.showGameplayInfo, "replacement settings update gameplay information");
 		Check(replaced.options.pegColorMode == PegColorMode::Standard, "replacement settings update colors");
 
 		{
@@ -733,6 +743,29 @@ namespace
 		Check(unknownValue.options.difficulty == GameDifficulty::Normal, "unknown value recovers default difficulty");
 		Check(unknownValue.options.soundEnabled, "unknown value recovers default sound");
 		Check(unknownValue.options.pegColorMode == PegColorMode::Standard, "unknown value recovers default colors");
+
+		{
+			std::ofstream legacyCurrent(settingsPath, std::ios::trunc);
+			legacyCurrent
+				<< "peglin_settings_version=1\n"
+				<< "difficulty=hard\n"
+				<< "sound_enabled=0\n"
+				<< "peg_color_mode=high_contrast\n";
+		}
+		const SettingsLoadResult compatibleCurrent = store.Load();
+		Check(compatibleCurrent.state == SettingsLoadState::Loaded, "older version one settings remain compatible");
+		Check(compatibleCurrent.options.showGameplayInfo, "older version one settings default gameplay information on");
+
+		{
+			std::ofstream invalidGameplayInfo(settingsPath, std::ios::trunc);
+			invalidGameplayInfo
+				<< "peglin_settings_version=1\n"
+				<< "difficulty=normal\n"
+				<< "sound_enabled=1\n"
+				<< "show_gameplay_info=maybe\n"
+				<< "peg_color_mode=standard\n";
+		}
+		Check(store.Load().state == SettingsLoadState::Invalid, "invalid gameplay information setting is rejected");
 
 		{
 			std::ofstream incompatible(settingsPath, std::ios::trunc);

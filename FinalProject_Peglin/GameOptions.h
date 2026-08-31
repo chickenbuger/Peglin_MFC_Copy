@@ -21,6 +21,7 @@ struct GameOptions
 {
 	GameDifficulty difficulty = GameDifficulty::Normal;
 	bool soundEnabled = true;
+	bool showGameplayInfo = true;
 	PegColorMode pegColorMode = PegColorMode::Standard;
 
 	void CycleDifficulty() noexcept
@@ -36,6 +37,11 @@ struct GameOptions
 	void ToggleSound() noexcept
 	{
 		soundEnabled = !soundEnabled;
+	}
+
+	void ToggleGameplayInfo() noexcept
+	{
+		showGameplayInfo = !showGameplayInfo;
 	}
 
 	void TogglePegColorMode() noexcept

@@ -296,6 +296,8 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
 	ON_WM_KILLFOCUS()
 	ON_WM_CAPTURECHANGED()
 	ON_COMMAND(ID_32771, &CChildView::On32771)
+	ON_COMMAND(ID_GAMEPLAY_INFO, &CChildView::OnToggleGameplayInfo)
+	ON_UPDATE_COMMAND_UI(ID_GAMEPLAY_INFO, &CChildView::OnUpdateGameplayInfo)
 END_MESSAGE_MAP()
 
 
@@ -507,28 +509,31 @@ void CChildView::OnPaint()
 	}
 	memDc.RestoreDC(statusTextState);
 
-	const int textState = memDc.SaveDC();
-	memDc.SetBkMode(TRANSPARENT);
-	memDc.SetTextColor(RGB(238, 232, 211));
-	memDc.TextOut(
-		static_cast<int>(std::lround(GameLayout::StateText.x)),
-		static_cast<int>(std::lround(GameLayout::StateText.y)),
-		StateText(_game.GetState()));
-	memDc.TextOut(
-		static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
-		static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
-		FeedbackText(_game.GetFeedback(), _game.GetScore()));
-	CString optionsText;
-	optionsText.Format(
-		_T("%s · %s (M) · %s"),
-		DifficultyText(_game.GetDifficulty()).GetString(),
-		_options.soundEnabled ? _T("소리") : _T("음소거"),
-		_options.pegColorMode == PegColorMode::HighContrast ? _T("고대비") : _T("표준"));
-	memDc.TextOut(
-		static_cast<int>(std::lround(GameLayout::OptionsText.x)),
-		static_cast<int>(std::lround(GameLayout::OptionsText.y)),
-		optionsText);
-	memDc.RestoreDC(textState);
+	if (_options.showGameplayInfo)
+	{
+		const int textState = memDc.SaveDC();
+		memDc.SetBkMode(TRANSPARENT);
+		memDc.SetTextColor(RGB(238, 232, 211));
+		memDc.TextOut(
+			static_cast<int>(std::lround(GameLayout::StateText.x)),
+			static_cast<int>(std::lround(GameLayout::StateText.y)),
+			StateText(_game.GetState()));
+		memDc.TextOut(
+			static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
+			static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
+			FeedbackText(_game.GetFeedback(), _game.GetScore()));
+		CString optionsText;
+		optionsText.Format(
+			_T("%s · %s (M) · %s"),
+			DifficultyText(_game.GetDifficulty()).GetString(),
+			_options.soundEnabled ? _T("소리") : _T("음소거"),
+			_options.pegColorMode == PegColorMode::HighContrast ? _T("고대비") : _T("표준"));
+		memDc.TextOut(
+			static_cast<int>(std::lround(GameLayout::OptionsText.x)),
+			static_cast<int>(std::lround(GameLayout::OptionsText.y)),
+			optionsText);
+		memDc.RestoreDC(textState);
+	}
 	DrawPlayingLoadout(&memDc);
 
 	DrawFeedbackAnimations(&memDc);
@@ -552,6 +557,19 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_enemyBatSprite.LoadBitmap(IDB_ENEMY_EMBER_BAT_V1);
 	_enemyShamanSprite.LoadBitmap(IDB_ENEMY_MOSS_SHAMAN_V1);
 	_orbSprite.LoadBitmap(IDB_ORB_AMBER_TEAL_V2);
+
+	CWnd* mainWindow = AfxGetMainWnd();
+	CMenu* mainMenu = mainWindow != nullptr ? mainWindow->GetMenu() : nullptr;
+	if (mainMenu != nullptr && mainMenu->GetMenuItemCount() > 0)
+	{
+		CMenu* gameOptionsMenu = mainMenu->GetSubMenu(mainMenu->GetMenuItemCount() - 1);
+		if (gameOptionsMenu != nullptr)
+		{
+			gameOptionsMenu->AppendMenu(MF_SEPARATOR);
+			gameOptionsMenu->AppendMenu(MF_STRING, ID_GAMEPLAY_INFO, _T("인게임 정보 표시"));
+			mainWindow->DrawMenuBar();
+		}
+	}
 
 	constexpr UINT GAME_TIMER_INTERVAL_MS = 10;
 	_gameTimerId = SetTimer(1, GAME_TIMER_INTERVAL_MS, nullptr);
@@ -1892,6 +1910,21 @@ void CChildView::OnCaptureChanged(CWnd* pWnd)
 void CChildView::On32771()
 {
 	BeginNewRun();
+}
+
+void CChildView::OnToggleGameplayInfo()
+{
+	_options.ToggleGameplayInfo();
+	SaveOptions();
+	Invalidate(FALSE);
+}
+
+void CChildView::OnUpdateGameplayInfo(CCmdUI* commandUi)
+{
+	if (commandUi != nullptr)
+	{
+		commandUi->SetCheck(_options.showGameplayInfo ? 1 : 0);
+	}
 }
 
 void CChildView::ReleaseMouseInput(bool cancelDrag)

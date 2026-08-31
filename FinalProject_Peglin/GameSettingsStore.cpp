@@ -210,6 +210,7 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		const auto version = values.find(std::string(SETTINGS_VERSION_KEY));
 		const auto difficulty = values.find("difficulty");
 		const auto sound = values.find("sound_enabled");
+		const auto gameplayInfo = values.find("show_gameplay_info");
 		const auto color = values.find("peg_color_mode");
 		if (version == values.end()
 			|| difficulty == values.end()
@@ -226,6 +227,8 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		{
 			if (!ParseDifficulty(difficulty->second, result.options.difficulty)
 				|| !ParseSound(sound->second, result.options.soundEnabled)
+				|| (gameplayInfo != values.end()
+					&& !ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
 				|| !ParsePegColor(color->second, result.options.pegColorMode))
 			{
 				result.options = GameOptions{};
@@ -297,6 +300,7 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 			<< SETTINGS_VERSION_KEY << '=' << SETTINGS_VERSION << '\n'
 			<< "difficulty=" << DifficultyValue(options.difficulty) << '\n'
 			<< "sound_enabled=" << (options.soundEnabled ? '1' : '0') << '\n'
+			<< "show_gameplay_info=" << (options.showGameplayInfo ? '1' : '0') << '\n'
 			<< "peg_color_mode=" << PegColorValue(options.pegColorMode) << '\n';
 		stream.flush();
 		if (!stream)

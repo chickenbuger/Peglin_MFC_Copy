@@ -55,6 +55,8 @@ protected:
 	afx_msg void OnKillFocus(CWnd* pNewWnd);
 	afx_msg void OnCaptureChanged(CWnd* pWnd);
 	afx_msg void On32771();
+	afx_msg void OnToggleGameplayInfo();
+	afx_msg void OnUpdateGameplayInfo(CCmdUI* commandUi);
 
 private:
 	enum class ScreenMode
