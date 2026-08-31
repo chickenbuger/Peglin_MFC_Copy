@@ -47,7 +47,9 @@ $requiredFiles = @(
     'README.txt',
     'SHA256SUMS.txt',
     'content\stages.v1.ini',
-    'content\gameplay.v1.ini'
+    'content\gameplay.v1.ini',
+    'content\strings.ko-KR.v1.ini',
+    'content\strings.en-US.v1.ini'
 )
 
 if (-not [Environment]::Is64BitOperatingSystem) {

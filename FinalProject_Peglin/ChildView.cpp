@@ -123,25 +123,6 @@ namespace
 		return text;
 	}
 
-	CString DifficultyText(GameDifficulty difficulty)
-	{
-		switch (difficulty)
-		{
-		case GameDifficulty::Easy: return _T("쉬움");
-		case GameDifficulty::Normal: return _T("보통");
-		case GameDifficulty::Hard: return _T("어려움");
-		}
-
-		return _T("보통");
-	}
-
-	CString PegColorModeText(PegColorMode colorMode)
-	{
-		return colorMode == PegColorMode::HighContrast
-			? _T("고대비 + 모양")
-			: _T("표준 색상");
-	}
-
 	CString Utf8Text(std::string_view text)
 	{
 		if (text.empty())
@@ -271,6 +252,24 @@ namespace
 		return std::filesystem::path(modulePath.data()).parent_path()
 			/ L"content" / L"gameplay.v1.ini";
 	}
+
+	std::filesystem::path GetDefaultLocalizationPath(UiLanguage language)
+	{
+		const std::filesystem::path fileName = language == UiLanguage::English
+			? L"strings.en-US.v1.ini"
+			: L"strings.ko-KR.v1.ini";
+		std::vector<wchar_t> modulePath(1024, L'\0');
+		const DWORD length = GetModuleFileNameW(
+			nullptr,
+			modulePath.data(),
+			static_cast<DWORD>(modulePath.size()));
+		if (length == 0 || length >= modulePath.size())
+		{
+			return std::filesystem::path(L"content") / fileName;
+		}
+		return std::filesystem::path(modulePath.data()).parent_path()
+			/ L"content" / fileName;
+	}
 }
 
 // CChildView
@@ -291,6 +290,7 @@ CChildView::CChildView()
 	{
 		_recordSaveFailed = !_recordStore.Save(_records);
 	}
+	ReloadLocalization();
 	_contentCatalog = LoadContentCatalog(GetDefaultContentCatalogPath());
 	_gameplayCatalog = LoadGameplayCatalog(
 		GetDefaultGameplayCatalogPath(),
@@ -305,6 +305,37 @@ CChildView::CChildView()
 CChildView::~CChildView()
 {
 	ResetProgressionCatalog();
+}
+
+void CChildView::ReloadLocalization()
+{
+	_localization = LoadLocalizationCatalog(
+		GetDefaultLocalizationPath(_options.language),
+		_options.language);
+}
+
+CString CChildView::Text(std::string_view key) const
+{
+	return Utf8Text(_localization.catalog.Get(key));
+}
+
+CString CChildView::DifficultyTextForUi(GameDifficulty difficulty) const
+{
+	switch (difficulty)
+	{
+	case GameDifficulty::Easy: return Text("difficulty.easy");
+	case GameDifficulty::Normal: return Text("difficulty.normal");
+	case GameDifficulty::Hard: return Text("difficulty.hard");
+	}
+
+	return Text("difficulty.normal");
+}
+
+CString CChildView::PegColorModeTextForUi(PegColorMode colorMode) const
+{
+	return Text(colorMode == PegColorMode::HighContrast
+		? "peg_color.high_contrast"
+		: "peg_color.standard");
 }
 
 
@@ -551,7 +582,7 @@ void CChildView::OnPaint()
 		CString optionsText;
 		optionsText.Format(
 			_T("%s · %s (M) · %s"),
-			DifficultyText(_game.GetDifficulty()).GetString(),
+			DifficultyTextForUi(_game.GetDifficulty()).GetString(),
 			_options.soundEnabled ? _T("소리") : _T("음소거"),
 			_options.pegColorMode == PegColorMode::HighContrast ? _T("고대비") : _T("표준"));
 		memDc.TextOut(
@@ -1134,7 +1165,7 @@ void CChildView::DrawEnemyHealthBar(
 void CChildView::DrawStageSelection(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("ADVENTURE RUN"), 300, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), Text("screen.stage_selection"), 300, UiTheme::Gold);
 
 	UiRenderer::DrawPanel(deviceContext, CRect(28, 150, 222, 625));
 	UiRenderer::DrawText(deviceContext, CRect(42, 165, 208, 210), _T("RUN STATUS"), 155, UiTheme::Gold);
@@ -1160,7 +1191,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		110,
 		UiTheme::Green,
 		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(48, 550, 202, 600), _T("[L] 장비 관리"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(48, 550, 202, 600), Text("hint.loadout"));
 
 	const std::size_t visibleStageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
 	if (visibleStageCount > 0 && _selectedStageIndex >= visibleStageCount)
@@ -1234,27 +1265,37 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	}
 
 	UiRenderer::DrawPanel(deviceContext, CRect(778, 150, 968, 625));
-	UiRenderer::DrawText(deviceContext, CRect(792, 165, 954, 210), _T("RUN RULES"), 155, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(792, 165, 954, 210), Text("label.run_rules"), 155, UiTheme::Gold);
 	CString difficulty;
-	difficulty.Format(_T("난이도\n%s"), DifficultyText(_options.difficulty).GetString());
+	difficulty.Format(
+		_T("%s\n%s"),
+		Text("option.difficulty").GetString(),
+		DifficultyTextForUi(_options.difficulty).GetString());
 	UiRenderer::DrawText(deviceContext, CRect(792, 235, 954, 310), difficulty, 125, UiTheme::Text, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	CString sound;
-	sound.Format(_T("사운드 %s"), _options.soundEnabled ? _T("켜짐") : _T("꺼짐"));
+	sound.Format(
+		_T("%s %s"),
+		Text("option.sound").GetString(),
+		Text(_options.soundEnabled ? "value.on" : "value.off").GetString());
 	UiRenderer::DrawText(deviceContext, CRect(792, 330, 954, 370), sound, 115, UiTheme::MutedText);
-	UiRenderer::DrawText(deviceContext, CRect(792, 380, 954, 445), PegColorModeText(_options.pegColorMode), 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), _T("[O] 옵션"));
+	UiRenderer::DrawText(deviceContext, CRect(792, 380, 954, 445), PegColorModeTextForUi(_options.pegColorMode), 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), Text("hint.options"));
 
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), _T("현재 노드 시작 · ENTER"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), Text("hint.start"));
 	if (!_contentCatalog.UsedExternalContent() || !_gameplayCatalog.UsedExternalContent())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
+	}
+	else if (!_localization.UsedExternalContent() || _localization.fallbackKeyCount > 0)
+	{
+		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), Text("notice.external_fallback"), 95, UiTheme::Orange);
 	}
 }
 
 void CChildView::DrawRewardScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("STAGE REWARD"), 300, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), Text("screen.reward"), 300, UiTheme::Gold);
 	UiRenderer::DrawText(deviceContext, CRect(160, 125, 820, 175), _T("보상 하나를 선택하면 다음 스테이지가 열립니다"), 125, UiTheme::MutedText);
 
 	const auto& rewards = _run.GetRewardChoices();
@@ -1286,7 +1327,7 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(160, 35, 820, 110), _T("ORB & RELIC LOADOUT"), 285, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(160, 35, 820, 110), Text("screen.loadout"), 285, UiTheme::Gold);
 	UiRenderer::DrawText(deviceContext, CRect(80, 125, 900, 165), _T("보유 오브 목록 · 선택한 오브는 다음 전투의 첫 순서로 우선됩니다"), 115, UiTheme::MutedText);
 
 	const auto& orbs = GetOrbDefinitions();
@@ -1356,23 +1397,44 @@ void CChildView::DrawOptions(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
 	UiRenderer::DrawPanel(deviceContext, CRect(235, 125, 745, 670));
-	UiRenderer::DrawText(deviceContext, CRect(300, 55, 680, 120), _T("OPTIONS"), 300, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(300, 55, 680, 120), Text("screen.options"), 300, UiTheme::Gold);
 	CString difficulty;
-	difficulty.Format(_T("[D] 난이도    %s"), DifficultyText(_options.difficulty).GetString());
+	difficulty.Format(
+		_T("[D] %s    %s"),
+		Text("option.difficulty").GetString(),
+		DifficultyTextForUi(_options.difficulty).GetString());
 	UiRenderer::DrawPanel(deviceContext, CRect(285, 205, 695, 285));
 	UiRenderer::DrawText(deviceContext, CRect(300, 215, 680, 275), difficulty, 165);
 	CString sound;
-	sound.Format(_T("[M] 사운드    %s"), _options.soundEnabled ? _T("켜짐") : _T("꺼짐"));
+	sound.Format(
+		_T("[M] %s    %s"),
+		Text("option.sound").GetString(),
+		Text(_options.soundEnabled ? "value.on" : "value.off").GetString());
 	UiRenderer::DrawPanel(deviceContext, CRect(285, 315, 695, 395));
 	UiRenderer::DrawText(deviceContext, CRect(300, 325, 680, 385), sound, 165);
 	CString colorMode;
-	colorMode.Format(_T("[C] 페그 구분    %s"), PegColorModeText(_options.pegColorMode).GetString());
+	colorMode.Format(
+		_T("[C] %s    %s"),
+		Text("option.peg_color").GetString(),
+		PegColorModeTextForUi(_options.pegColorMode).GetString());
 	UiRenderer::DrawPanel(deviceContext, CRect(285, 425, 695, 505));
 	UiRenderer::DrawText(deviceContext, CRect(300, 435, 680, 495), colorMode, 155);
-	UiRenderer::DrawText(deviceContext, CRect(275, 530, 705, 565), _T("쉬움: 적 체력·공격 75~80% · 행동 지연"), 105, UiTheme::MutedText);
-	UiRenderer::DrawText(deviceContext, CRect(275, 565, 705, 600), _T("어려움: 적 체력 150% · 공격 125%"), 105, UiTheme::MutedText);
-	UiRenderer::DrawText(deviceContext, CRect(275, 610, 705, 645), _settingsSaveFailed ? _T("설정 저장 실패 · 현재 실행은 계속됩니다") : _T("변경 내용 자동 저장"), 105, _settingsSaveFailed ? UiTheme::Danger : UiTheme::Green);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), _T("[B] 또는 ESC로 돌아가기"));
+	CString language;
+	language.Format(
+		_T("[L] %s    %s"),
+		Text("option.language").GetString(),
+		Text(_options.language == UiLanguage::Korean
+			? "language.korean"
+			: "language.english").GetString());
+	UiRenderer::DrawPanel(deviceContext, CRect(285, 520, 695, 600));
+	UiRenderer::DrawText(deviceContext, CRect(300, 530, 680, 590), language, 155);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(275, 605, 705, 635),
+		_settingsSaveFailed ? Text("notice.settings_save_failed") : Text("notice.auto_save"),
+		95,
+		_settingsSaveFailed ? UiTheme::Danger : UiTheme::Green);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), Text("hint.back"));
 }
 
 void CChildView::DrawResultScreen(CDC* deviceContext)
@@ -1381,7 +1443,12 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 	const bool victory = _resultSummary.has_value()
 		&& _resultSummary->result == GameUpdateResult::Victory;
 	UiRenderer::DrawPanel(deviceContext, CRect(250, 135, 730, 650), true, victory ? UiTheme::Green : UiTheme::Danger);
-	UiRenderer::DrawText(deviceContext, CRect(250, 55, 730, 125), victory ? _T("RUN COMPLETE") : _T("RUN FAILED"), 300, victory ? UiTheme::Green : UiTheme::Danger);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(250, 55, 730, 125),
+		Text(victory ? "screen.run_complete" : "screen.run_failed"),
+		300,
+		victory ? UiTheme::Green : UiTheme::Danger);
 	if (_resultSummary.has_value())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(280, 175, 700, 225), Utf8Text(_resultSummary->stageName), 165, UiTheme::Gold);
@@ -1407,8 +1474,8 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 	{
 		UiRenderer::DrawText(deviceContext, CRect(275, 565, 705, 610), _T("기록 저장 실패 · 현재 실행에서만 유지"), 105, UiTheme::Danger);
 	}
-	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 480, 690), _T("다시 도전 · R"));
-	UiRenderer::DrawKeyHint(deviceContext, CRect(500, 640, 720, 690), _T("새 런 · S"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 480, 690), Text("hint.retry"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(500, 640, 720, 690), Text("hint.new_run"));
 }
 
 void CChildView::DrawMenuBackdrop(CDC* deviceContext)
@@ -1442,10 +1509,16 @@ void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 	DrawOrbIcon(deviceContext, CRect(262, 137, 290, 165), loadout.GetSelectedOrbId());
 	DrawOrbIcon(deviceContext, CRect(487, 137, 515, 165), loadout.GetNextOrbId());
 	CString currentText;
-	currentText.Format(_T("현재  %s"), Utf8Text(loadout.GetSelectedOrb().displayName).GetString());
+	currentText.Format(
+		_T("%s  %s"),
+		Text("label.current").GetString(),
+		Utf8Text(loadout.GetSelectedOrb().displayName).GetString());
 	UiRenderer::DrawText(deviceContext, CRect(298, 132, 478, 165), currentText, 90, UiTheme::Gold, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 	CString nextText;
-	nextText.Format(_T("다음  %s"), Utf8Text(loadout.GetNextOrb().displayName).GetString());
+	nextText.Format(
+		_T("%s  %s"),
+		Text("label.next").GetString(),
+		Utf8Text(loadout.GetNextOrb().displayName).GetString());
 	UiRenderer::DrawText(deviceContext, CRect(523, 132, 720, 165), nextText, 90, UiTheme::Blue, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 	CString pileText;
 	pileText.Format(
@@ -1716,6 +1789,11 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		_options.TogglePegColorMode();
 		SaveOptions();
 		break;
+	case UiCommand::ToggleLanguage:
+		_options.ToggleLanguage();
+		ReloadLocalization();
+		SaveOptions();
+		break;
 	case UiCommand::SelectReward:
 		SelectRunReward(action.index);
 		break;
@@ -1853,6 +1931,12 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		else if (nChar == 'C')
 		{
 			_options.TogglePegColorMode();
+			SaveOptions();
+		}
+		else if (nChar == 'L')
+		{
+			_options.ToggleLanguage();
+			ReloadLocalization();
 			SaveOptions();
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)

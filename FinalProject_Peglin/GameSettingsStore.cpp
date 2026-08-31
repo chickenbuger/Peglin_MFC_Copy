@@ -30,6 +30,11 @@ namespace
 			: "standard";
 	}
 
+	std::string LanguageValue(UiLanguage language)
+	{
+		return language == UiLanguage::English ? "en-US" : "ko-KR";
+	}
+
 	bool ParseDifficulty(std::string_view value, GameDifficulty& difficulty) noexcept
 	{
 		if (value == "easy")
@@ -80,6 +85,21 @@ namespace
 			return true;
 		}
 
+		return false;
+	}
+
+	bool ParseLanguage(std::string_view value, UiLanguage& language) noexcept
+	{
+		if (value == "ko-KR")
+		{
+			language = UiLanguage::Korean;
+			return true;
+		}
+		if (value == "en-US")
+		{
+			language = UiLanguage::English;
+			return true;
+		}
 		return false;
 	}
 
@@ -212,6 +232,7 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		const auto sound = values.find("sound_enabled");
 		const auto gameplayInfo = values.find("show_gameplay_info");
 		const auto color = values.find("peg_color_mode");
+		const auto language = values.find("language");
 		if (version == values.end()
 			|| difficulty == values.end()
 			|| sound == values.end()
@@ -229,7 +250,9 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 				|| !ParseSound(sound->second, result.options.soundEnabled)
 				|| (gameplayInfo != values.end()
 					&& !ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
-				|| !ParsePegColor(color->second, result.options.pegColorMode))
+				|| !ParsePegColor(color->second, result.options.pegColorMode)
+				|| (language != values.end()
+					&& !ParseLanguage(language->second, result.options.language)))
 			{
 				result.options = GameOptions{};
 				result.state = SettingsLoadState::Invalid;
@@ -301,7 +324,8 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 			<< "difficulty=" << DifficultyValue(options.difficulty) << '\n'
 			<< "sound_enabled=" << (options.soundEnabled ? '1' : '0') << '\n'
 			<< "show_gameplay_info=" << (options.showGameplayInfo ? '1' : '0') << '\n'
-			<< "peg_color_mode=" << PegColorValue(options.pegColorMode) << '\n';
+			<< "peg_color_mode=" << PegColorValue(options.pegColorMode) << '\n'
+			<< "language=" << LanguageValue(options.language) << '\n';
 		stream.flush();
 		if (!stream)
 		{

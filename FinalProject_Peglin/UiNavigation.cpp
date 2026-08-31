@@ -88,6 +88,10 @@ namespace
 		{
 			return { UiCommand::TogglePegColorMode };
 		}
+		if (UiRect{ 285.0f, 520.0f, 695.0f, 600.0f }.Contains(position))
+		{
+			return { UiCommand::ToggleLanguage };
+		}
 		if (UiRect{ 300.0f, 640.0f, 680.0f, 690.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };

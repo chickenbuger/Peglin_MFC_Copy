@@ -81,6 +81,9 @@
 	<ClInclude Include="GameplayCatalog.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="Localization.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
 	<ClInclude Include="PegLayout.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
@@ -146,6 +149,9 @@
 	<ClCompile Include="GameplayCatalog.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
+	<ClCompile Include="Localization.cpp">
+	  <Filter>소스 파일</Filter>
+	</ClCompile>
 	<ClCompile Include="PegLayout.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
@@ -182,7 +188,10 @@
     </None>
 	<None Include="content\stages.v1.ini" />
 	<None Include="content\gameplay.v1.ini" />
+	<None Include="content\strings.ko-KR.v1.ini" />
+	<None Include="content\strings.en-US.v1.ini" />
 	<None Include="res\ui-adventure-frame-v1.prompt.md" />
+	<None Include="res\assets.v1.json" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\FinalProject_Peglin.ico">

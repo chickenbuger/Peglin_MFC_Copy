@@ -15,6 +15,7 @@
   - 설치 확인 경로: `C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0`
   - 프로젝트가 이 정확한 버전을 사용하므로 새 개발 PC에도 같은 SDK를 설치해야 한다.
 - C++ 언어 표준: C++20 (`/std:c++20`), 모든 구성에 동일 적용
+- 소스 문자 집합: UTF-8 (`/utf-8`), 한국어·영어 리터럴과 외부 문자열 카탈로그 일치
 - 컴파일러 경고 수준: `/W4`, 모든 구성에 동일 적용
 
 Visual Studio Installer의 **개별 구성 요소** 탭에서 위 MFC 구성요소를 검색해 설치한다. 현재 확인된 MFC 라이브러리 위치는 다음과 같다.
@@ -61,10 +62,10 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
 
 ```powershell
-& '.\tools\Package-Release.ps1' -Version '4.5'
+& '.\tools\Package-Release.ps1' -Version '6.13'
 ```
 
-패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함한다. `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 정상 추출뿐 아니라 경로 탈출, 파일 변조와 필수 MFC 런타임 누락 탐지를 자동 검증한다.
+패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 이미지 변환·크기·색심도와 외부 스테이지·게임플레이·한국어·영어 카탈로그를 먼저 검증한다. 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함하며, `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 경로 탈출, 파일 변조, MFC 런타임·외부 카탈로그 누락을 자동 탐지한다.
 
 ## 핵심 자동화 테스트
 
@@ -79,4 +80,4 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 
 ## 현재 검증 상태
 
-2026-08-30 기준 Windows SDK `10.0.26100.0`과 `/W4`를 사용해 네 구성 모두 오류 0개, 자체 코드 경고 0개로 실행 파일을 생성한다. Version 4.5에서 구성별 360개, 총 1,440개 자동 검증과 전체 플레이를 통과했다. 10분 GDI 검증은 기준 33개, 마지막 33개로 후반 지속 상승이 없었으며 PowerShell 5에서 최종 Release x64 패키지의 생성·사전 검사·실패 경로 검증까지 완료했다.
+2026-08-31 Version 6.13 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 710개·총 2,840개 자동 검증, 한국어↔영어 실제 옵션 화면, PNG→24-bit BMP 변환 검증 7건, 자산·리소스 연결 검증 8건과 Release x64 패키지 누락·변조 검사를 통과했다. Sprint 6 최종 10분 GDI 검증은 Version 6.14에서 진행한다.

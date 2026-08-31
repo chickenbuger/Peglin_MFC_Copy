@@ -27,6 +27,7 @@ enum class UiCommand
 	ToggleDifficulty,
 	ToggleSound,
 	TogglePegColorMode,
+	ToggleLanguage,
 	SelectReward,
 	RetryStage
 };

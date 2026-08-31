@@ -61,6 +61,7 @@ try {
     $missingRoot = Join-Path $temporaryRoot 'missing'
     $missingContentRoot = Join-Path $temporaryRoot 'missing-content'
     $missingGameplayRoot = Join-Path $temporaryRoot 'missing-gameplay-content'
+    $missingLocalizationRoot = Join-Path $temporaryRoot 'missing-localization-content'
     New-Item -ItemType Directory -Path $originalRoot -Force | Out-Null
     Expand-Archive -LiteralPath $resolvedZipPath -DestinationPath $originalRoot
 
@@ -90,8 +91,13 @@ try {
     Remove-Item -LiteralPath (Join-Path $missingGameplayRoot 'content\gameplay.v1.ini') -Force
     Assert-PreflightFailure -PackageRoot $missingGameplayRoot -Scenario 'missing gameplay definition content'
 
+    New-Item -ItemType Directory -Path $missingLocalizationRoot | Out-Null
+    Copy-Item -Path (Join-Path $originalRoot '*') -Destination $missingLocalizationRoot -Recurse
+    Remove-Item -LiteralPath (Join-Path $missingLocalizationRoot 'content\strings.ko-KR.v1.ini') -Force
+    Assert-PreflightFailure -PackageRoot $missingLocalizationRoot -Scenario 'missing localization content'
+
     Write-Output "PACKAGE TEST PASS: $resolvedZipPath"
-    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, and both missing-content checks completed.'
+    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, gameplay, stage, and localization checks completed.'
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "source": "FinalProject_Peglin/res/gameplay-cave-v2-source.png",
+      "output": "FinalProject_Peglin/res/gameplay-cave-v2.bmp",
+      "width": 1000,
+      "height": 800,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_GAMEPLAY_CAVE_V2"
+    },
+    {
+      "source": "FinalProject_Peglin/res/gameplay-cave-v3-source.png",
+      "output": "FinalProject_Peglin/res/gameplay-cave-v3.bmp",
+      "width": 1000,
+      "height": 800,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_GAMEPLAY_CAVE_V3"
+    },
+    {
+      "source": "FinalProject_Peglin/res/player-hero-v2-source.png",
+      "output": "FinalProject_Peglin/res/player-hero-v2.bmp",
+      "width": 104,
+      "height": 108,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_PLAYER_HERO_V2"
+    },
+    {
+      "source": "FinalProject_Peglin/res/enemy-crystal-toad-v2-source.png",
+      "output": "FinalProject_Peglin/res/enemy-crystal-toad-v2.bmp",
+      "width": 132,
+      "height": 106,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_CRYSTAL_TOAD_V2"
+    },
+    {
+      "source": "FinalProject_Peglin/res/enemy-ember-bat-v1-source.png",
+      "output": "FinalProject_Peglin/res/enemy-ember-bat-v1.bmp",
+      "width": 100,
+      "height": 84,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_EMBER_BAT_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/enemy-moss-shaman-v1-source.png",
+      "output": "FinalProject_Peglin/res/enemy-moss-shaman-v1.bmp",
+      "width": 96,
+      "height": 88,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_MOSS_SHAMAN_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/orb-amber-teal-v2-source.png",
+      "output": "FinalProject_Peglin/res/orb-amber-teal-v2.bmp",
+      "width": 36,
+      "height": 36,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ORB_AMBER_TEAL_V2"
+    },
+    {
+      "source": null,
+      "output": "FinalProject_Peglin/res/ui-adventure-frame-v1.bmp",
+      "width": 1000,
+      "height": 800,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_UI_ADVENTURE_FRAME"
+    }
+  ]
+}

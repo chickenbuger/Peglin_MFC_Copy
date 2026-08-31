@@ -14,6 +14,7 @@
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GameplayCatalog.h"
+#include "Localization.h"
 #include "PegLayout.h"
 #include "Physics.h"
 #include "Progression.h"
@@ -331,6 +332,10 @@ namespace
 			ResolveUiClick(UiScreenKind::Options, { 500.0f, 465.0f }, 0).command
 				== UiCommand::TogglePegColorMode,
 			"mouse changes peg accessibility mode");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 560.0f }, 0).command
+				== UiCommand::ToggleLanguage,
+			"mouse changes the UI language");
 		Check(
 			ResolveUiClick(UiScreenKind::Result, { 350.0f, 665.0f }, 0).command
 				== UiCommand::RetryStage,
@@ -690,6 +695,7 @@ namespace
 		Check(options.soundEnabled, "options default to sound enabled");
 		Check(options.showGameplayInfo, "options default to visible gameplay information");
 		Check(options.pegColorMode == PegColorMode::Standard, "options default to standard peg colors");
+		Check(options.language == UiLanguage::Korean, "options default to Korean UI text");
 		options.CycleDifficulty();
 		Check(options.difficulty == GameDifficulty::Hard, "difficulty cycles from normal to hard");
 		options.CycleDifficulty();
@@ -708,6 +714,10 @@ namespace
 		Check(options.pegColorMode == PegColorMode::HighContrast, "peg colors toggle to high contrast");
 		options.TogglePegColorMode();
 		Check(options.pegColorMode == PegColorMode::Standard, "peg colors toggle back to standard");
+		options.ToggleLanguage();
+		Check(options.language == UiLanguage::English, "language toggles from Korean to English");
+		options.ToggleLanguage();
+		Check(options.language == UiLanguage::Korean, "language toggles back to Korean");
 
 		const StageDefinition base = CreateDefaultStageDefinition();
 		const StageDefinition easy = ApplyDifficulty(base, GameDifficulty::Easy);
@@ -751,12 +761,14 @@ namespace
 		Check(missing.options.soundEnabled, "missing settings recover enabled sound");
 		Check(missing.options.showGameplayInfo, "missing settings recover visible gameplay information");
 		Check(missing.options.pegColorMode == PegColorMode::Standard, "missing settings recover standard colors");
+		Check(missing.options.language == UiLanguage::Korean, "missing settings recover Korean language");
 
 		GameOptions saved;
 		saved.difficulty = GameDifficulty::Hard;
 		saved.soundEnabled = false;
 		saved.showGameplayInfo = false;
 		saved.pegColorMode = PegColorMode::HighContrast;
+		saved.language = UiLanguage::English;
 		std::string saveError;
 		Check(store.Save(saved, &saveError), "settings save creates missing parent directories");
 		Check(saveError.empty(), "successful settings save clears its error");
@@ -768,17 +780,20 @@ namespace
 		Check(!loaded.options.soundEnabled, "settings preserve mute state");
 		Check(!loaded.options.showGameplayInfo, "settings preserve hidden gameplay information");
 		Check(loaded.options.pegColorMode == PegColorMode::HighContrast, "settings preserve high contrast mode");
+		Check(loaded.options.language == UiLanguage::English, "settings preserve selected language");
 
 		saved.difficulty = GameDifficulty::Easy;
 		saved.soundEnabled = true;
 		saved.showGameplayInfo = true;
 		saved.pegColorMode = PegColorMode::Standard;
+		saved.language = UiLanguage::Korean;
 		Check(store.Save(saved), "settings save atomically replaces an existing file");
 		const SettingsLoadResult replaced = store.Load();
 		Check(replaced.options.difficulty == GameDifficulty::Easy, "replacement settings update difficulty");
 		Check(replaced.options.soundEnabled, "replacement settings update sound");
 		Check(replaced.options.showGameplayInfo, "replacement settings update gameplay information");
 		Check(replaced.options.pegColorMode == PegColorMode::Standard, "replacement settings update colors");
+		Check(replaced.options.language == UiLanguage::Korean, "replacement settings update language");
 
 		{
 			std::ofstream invalid(settingsPath, std::ios::trunc);
@@ -805,6 +820,7 @@ namespace
 		const SettingsLoadResult compatibleCurrent = store.Load();
 		Check(compatibleCurrent.state == SettingsLoadState::Loaded, "older version one settings remain compatible");
 		Check(compatibleCurrent.options.showGameplayInfo, "older version one settings default gameplay information on");
+		Check(compatibleCurrent.options.language == UiLanguage::Korean, "older version one settings default to Korean");
 
 		{
 			std::ofstream invalidGameplayInfo(settingsPath, std::ios::trunc);
@@ -816,6 +832,18 @@ namespace
 				<< "peg_color_mode=standard\n";
 		}
 		Check(store.Load().state == SettingsLoadState::Invalid, "invalid gameplay information setting is rejected");
+
+		{
+			std::ofstream invalidLanguage(settingsPath, std::ios::trunc);
+			invalidLanguage
+				<< "peglin_settings_version=1\n"
+				<< "difficulty=normal\n"
+				<< "sound_enabled=1\n"
+				<< "show_gameplay_info=1\n"
+				<< "peg_color_mode=standard\n"
+				<< "language=unknown\n";
+		}
+		Check(store.Load().state == SettingsLoadState::Invalid, "unknown UI language setting is rejected");
 
 		{
 			std::ofstream incompatible(settingsPath, std::ios::trunc);
@@ -1649,6 +1677,83 @@ namespace
 		std::filesystem::remove_all(testDirectory, cleanupError);
 	}
 
+	void TestLocalizationCatalog()
+	{
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		const std::filesystem::path koreanPath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "strings.ko-KR.v1.ini";
+		const std::filesystem::path englishPath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "strings.en-US.v1.ini";
+		const LocalizationLoadResult korean = LoadLocalizationCatalog(koreanPath, UiLanguage::Korean);
+		const LocalizationLoadResult english = LoadLocalizationCatalog(englishPath, UiLanguage::English);
+		Check(korean.UsedExternalContent(), "shipped Korean UTF-8 string catalog validates");
+		Check(english.UsedExternalContent(), "shipped English UTF-8 string catalog validates");
+		Check(korean.fallbackKeyCount == 0, "shipped Korean catalog defines every required key");
+		Check(english.fallbackKeyCount == 0, "shipped English catalog defines every required key");
+		Check(korean.catalog.Get("screen.options") == "옵션", "Korean catalog preserves non-ASCII text");
+		Check(english.catalog.Get("screen.options") == "OPTIONS", "English catalog selects the matching locale");
+
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_LocalizationTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path localizationPath = testDirectory / "strings.test.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove_all(testDirectory, cleanupError);
+		std::filesystem::create_directories(testDirectory, cleanupError);
+		Check(!cleanupError, "localization test directory is available");
+		auto WriteContent = [&localizationPath](std::string_view content)
+		{
+			std::ofstream output(localizationPath, std::ios::binary | std::ios::trunc);
+			output.write(content.data(), static_cast<std::streamsize>(content.size()));
+		};
+
+		const std::string partial =
+			"version=1\n"
+			"locale=ko-KR\n"
+			"screen.options=테스트 옵션\n";
+		WriteContent(partial);
+		const LocalizationLoadResult merged = LoadLocalizationCatalog(localizationPath, UiLanguage::Korean);
+		Check(merged.state == LocalizationLoadState::ExternalWithFallback, "partial localization merges with built-in fallback");
+		Check(merged.catalog.Get("screen.options") == "테스트 옵션", "external localization overrides a known key");
+		Check(merged.catalog.Get("hint.back") == "[B] 또는 ESC로 돌아가기", "missing localization key recovers built-in text");
+		Check(merged.fallbackKeyCount + 1 == merged.catalog.Size(), "missing key count reports every recovered string");
+
+		WriteContent("version=1\nlocale=en-US\nscreen.options=OPTIONS\n");
+		Check(
+			LoadLocalizationCatalog(localizationPath, UiLanguage::Korean).error == LocalizationLoadError::LocaleMismatch,
+			"mismatched locale file is rejected");
+
+		WriteContent(partial + "screen.options=중복\n");
+		Check(
+			LoadLocalizationCatalog(localizationPath, UiLanguage::Korean).error == LocalizationLoadError::DuplicateKey,
+			"duplicate localization key is rejected");
+
+		WriteContent(partial + "unknown.key=value\n");
+		Check(
+			LoadLocalizationCatalog(localizationPath, UiLanguage::Korean).error == LocalizationLoadError::UnknownKey,
+			"unknown localization key is rejected");
+
+		WriteContent("version=1\nlocale=ko-KR\nscreen.options=bad\\escape\n");
+		Check(
+			LoadLocalizationCatalog(localizationPath, UiLanguage::Korean).error == LocalizationLoadError::InvalidValue,
+			"invalid localization escape sequence is rejected");
+
+		std::string invalidUtf8 = partial;
+		invalidUtf8.push_back(static_cast<char>(0xFF));
+		WriteContent(invalidUtf8);
+		Check(
+			LoadLocalizationCatalog(localizationPath, UiLanguage::Korean).error == LocalizationLoadError::InvalidEncoding,
+			"invalid localization UTF-8 is rejected");
+
+		const LocalizationLoadResult missing = LoadLocalizationCatalog(
+			testDirectory / "missing.ini",
+			UiLanguage::English);
+		Check(missing.state == LocalizationLoadState::BuiltInFallback, "missing localization file uses built-in fallback");
+		Check(missing.catalog.Get("screen.options") == "OPTIONS", "fallback language matches the requested locale");
+		std::filesystem::remove_all(testDirectory, cleanupError);
+	}
+
 	void TestMultipleEnemyEncounter()
 	{
 		StageDefinition stage = CreateDefaultStageDefinition();
@@ -2069,6 +2174,7 @@ int main()
 	TestBossEnemyActionPattern();
 	TestExternalContentCatalog();
 	TestExternalGameplayCatalog();
+	TestLocalizationCatalog();
 	TestMultipleEnemyEncounter();
 	TestCombinedSprintFiveContentRegression();
 

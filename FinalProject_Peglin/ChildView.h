@@ -16,6 +16,7 @@
 #include "GameSettingsStore.h"
 #include "GameplayCatalog.h"
 #include "GameWorld.h"
+#include "Localization.h"
 #include "RunProgression.h"
 #include "UiNavigation.h"
 #include "UiRenderer.h"
@@ -130,6 +131,10 @@ private:
 	bool SelectRunReward(std::size_t index);
 	void SaveOptions();
 	void RecordResult(bool cleared);
+	void ReloadLocalization();
+	CString Text(std::string_view key) const;
+	CString DifficultyTextForUi(GameDifficulty difficulty) const;
+	CString PegColorModeTextForUi(PegColorMode colorMode) const;
 
 	Background _background;
 	GameWorld _game;
@@ -147,6 +152,7 @@ private:
 	GameRecordBook _records;
 	ContentLoadResult _contentCatalog;
 	GameplayCatalogLoadResult _gameplayCatalog;
+	LocalizationLoadResult _localization;
 	AdventureRun _run;
 	GameDifficulty _runDifficulty = GameDifficulty::Normal;
 	float _runPlayerHealth = 0.0f;

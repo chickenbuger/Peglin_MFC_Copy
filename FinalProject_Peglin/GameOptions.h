@@ -17,12 +17,19 @@ enum class PegColorMode
 	HighContrast
 };
 
+enum class UiLanguage
+{
+	Korean,
+	English
+};
+
 struct GameOptions
 {
 	GameDifficulty difficulty = GameDifficulty::Normal;
 	bool soundEnabled = true;
 	bool showGameplayInfo = true;
 	PegColorMode pegColorMode = PegColorMode::Standard;
+	UiLanguage language = UiLanguage::Korean;
 
 	void CycleDifficulty() noexcept
 	{
@@ -49,6 +56,13 @@ struct GameOptions
 		pegColorMode = pegColorMode == PegColorMode::Standard
 			? PegColorMode::HighContrast
 			: PegColorMode::Standard;
+	}
+
+	void ToggleLanguage() noexcept
+	{
+		language = language == UiLanguage::Korean
+			? UiLanguage::English
+			: UiLanguage::Korean;
 	}
 };
 

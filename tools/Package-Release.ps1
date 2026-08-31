@@ -45,6 +45,7 @@ if ([string]::IsNullOrWhiteSpace($visualStudioPath)) {
 }
 
 $msbuildPath = Join-Path $visualStudioPath 'MSBuild\Current\Bin\MSBuild.exe'
+& (Join-Path $PSScriptRoot 'Build-Assets.ps1') -VerifyConversion
 if (-not $SkipBuild) {
     & $msbuildPath (Join-Path $repositoryRoot 'FinalProject_Peglin.sln') /m:1 /nr:false /t:Build /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal
     if ($LASTEXITCODE -ne 0) {
@@ -104,7 +105,12 @@ foreach ($runtime in $runtimeSources.GetEnumerator()) {
 
 $contentDirectory = Join-Path $packageDirectory 'content'
 New-Item -ItemType Directory -Path $contentDirectory | Out-Null
-$contentFiles = @('stages.v1.ini', 'gameplay.v1.ini')
+$contentFiles = @(
+    'stages.v1.ini',
+    'gameplay.v1.ini',
+    'strings.ko-KR.v1.ini',
+    'strings.en-US.v1.ini'
+)
 foreach ($contentFile in $contentFiles) {
     $contentSource = Join-Path $repositoryRoot "FinalProject_Peglin\content\$contentFile"
     if (-not (Test-Path -LiteralPath $contentSource -PathType Leaf)) {
