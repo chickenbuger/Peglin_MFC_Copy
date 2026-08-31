@@ -1319,6 +1319,8 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		visibleStageIds.push_back(_run.GetCurrentStageId());
 	}
 	const std::size_t visibleStageCount = (std::min)(std::size_t{ 2 }, visibleStageIds.size());
+	const std::optional<std::size_t> selectedChoiceIndex =
+		_run.GetSelectedStageChoiceIndex();
 	const std::size_t routeStep = (std::min)(
 		_run.GetClearedStageCount() + 1,
 		_run.GetStageCount());
@@ -1353,7 +1355,10 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			? 245
 			: 165 + static_cast<int>(index) * 200;
 		const CRect card(248, top, 752, top + 155);
-		const bool selected = _run.GetStatus() == RunStatus::StageReady;
+		const bool selected = _run.GetStatus() == RunStatus::StageReady
+			|| (_run.GetStatus() == RunStatus::StageChoice
+				&& selectedChoiceIndex.has_value()
+				&& *selectedChoiceIndex == index);
 		const COLORREF stageColor = source->isBoss ? UiTheme::Orange : UiTheme::Gold;
 		UiRenderer::DrawPanel(deviceContext, card, selected, stageColor);
 		CString title;
@@ -1390,9 +1395,11 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	UiRenderer::DrawKeyHint(
 		deviceContext,
 		CRect(300, 640, 680, 690),
-		_run.GetStatus() == RunStatus::StageChoice
-			? CString(_T("카드 클릭 · 1/2로 다음 경로 선택"))
-			: Text("hint.start"));
+		_run.GetStatus() != RunStatus::StageChoice
+			? Text("hint.start")
+			: (selectedChoiceIndex.has_value()
+				? CString(_T("선택 변경 가능 · ENTER 또는 클릭으로 시작"))
+				: CString(_T("카드 클릭 · 1/2로 다음 경로 선택"))));
 	if (!_contentCatalog.UsedExternalContent() || !_gameplayCatalog.UsedExternalContent())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
@@ -1813,9 +1820,24 @@ bool CChildView::StartStage(std::string_view stageId)
 
 bool CChildView::StartSelectedStage()
 {
-	return _run.GetStatus() == RunStatus::StageReady
-		&& !_run.GetCurrentStageId().empty()
-		&& StartStage(_run.GetCurrentStageId());
+	if (_run.GetStatus() == RunStatus::StageReady)
+	{
+		return !_run.GetCurrentStageId().empty()
+			&& StartStage(_run.GetCurrentStageId());
+	}
+	if (_run.GetStatus() != RunStatus::StageChoice
+		|| _run.GetSelectedStageChoiceId().empty())
+	{
+		return false;
+	}
+
+	const std::string selectedStageId = _run.GetSelectedStageChoiceId();
+	if (!StartStage(selectedStageId))
+	{
+		_runNotice = _T("스테이지를 시작할 수 없습니다");
+		return false;
+	}
+	return _run.ConfirmSelectedStage();
 }
 
 void CChildView::BeginNewRun()
@@ -2023,7 +2045,7 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		{
 			const StageDefinition* selected = FindContentStage(
 				_contentCatalog.stages,
-				_run.GetCurrentStageId());
+				_run.GetSelectedStageChoiceId());
 			if (selected != nullptr)
 			{
 				_runNotice.Format(
@@ -2149,7 +2171,10 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
 	if (_screenMode == ScreenMode::StageSelection)
 	{
-		if (nChar == VK_RETURN && _run.GetStatus() == RunStatus::StageReady)
+		if (nChar == VK_RETURN
+			&& (_run.GetStatus() == RunStatus::StageReady
+				|| (_run.GetStatus() == RunStatus::StageChoice
+					&& !_run.GetSelectedStageChoiceId().empty())))
 		{
 			StartSelectedStage();
 		}

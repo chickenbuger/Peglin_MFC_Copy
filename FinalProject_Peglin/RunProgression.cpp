@@ -95,6 +95,7 @@ bool AdventureRun::StartBranching(RunStageLayers stageLayers)
 	_currentStageId = _stageLayers.front().front();
 	_clearedStageIds.clear();
 	_stageChoices.clear();
+	_selectedStageChoiceIndex.reset();
 	_rewardChoices.clear();
 	_status = RunStatus::StageReady;
 	return true;
@@ -113,6 +114,7 @@ bool AdventureRun::CompleteCurrentStage()
 		_status = RunStatus::Complete;
 		_rewardChoices.clear();
 		_stageChoices.clear();
+		_selectedStageChoiceIndex.reset();
 		return true;
 	}
 
@@ -160,9 +162,23 @@ bool AdventureRun::SelectNextStage(std::size_t index)
 		return false;
 	}
 
-	_currentStageId = _stageChoices[index];
+	_selectedStageChoiceIndex = index;
+	return true;
+}
+
+bool AdventureRun::ConfirmSelectedStage()
+{
+	if (_status != RunStatus::StageChoice
+		|| !_selectedStageChoiceIndex.has_value()
+		|| *_selectedStageChoiceIndex >= _stageChoices.size())
+	{
+		return false;
+	}
+
+	_currentStageId = _stageChoices[*_selectedStageChoiceIndex];
 	++_currentLayer;
 	_stageChoices.clear();
+	_selectedStageChoiceIndex.reset();
 	_status = RunStatus::StageReady;
 	return true;
 }
@@ -180,6 +196,18 @@ const std::string& AdventureRun::GetCurrentStageId() const noexcept
 {
 	static const std::string EMPTY_ID;
 	return _stageLayers.empty() ? EMPTY_ID : _currentStageId;
+}
+
+const std::string& AdventureRun::GetSelectedStageChoiceId() const noexcept
+{
+	static const std::string EMPTY_ID;
+	if (_status != RunStatus::StageChoice
+		|| !_selectedStageChoiceIndex.has_value()
+		|| *_selectedStageChoiceIndex >= _stageChoices.size())
+	{
+		return EMPTY_ID;
+	}
+	return _stageChoices[*_selectedStageChoiceIndex];
 }
 
 bool AdventureRun::HasClearedStage(std::string_view stageId) const noexcept
@@ -214,6 +242,7 @@ void AdventureRun::BuildRewardChoices()
 void AdventureRun::BuildStageChoices()
 {
 	_stageChoices.clear();
+	_selectedStageChoiceIndex.reset();
 	if (_currentLayer + 1 < _stageLayers.size())
 	{
 		_stageChoices = _stageLayers[_currentLayer + 1];

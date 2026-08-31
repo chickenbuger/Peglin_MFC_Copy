@@ -52,6 +52,7 @@ public:
 	bool RetryCurrentStage() noexcept;
 	std::optional<RunReward> SelectReward(std::size_t index);
 	bool SelectNextStage(std::size_t index);
+	bool ConfirmSelectedStage();
 
 	RunStatus GetStatus() const noexcept { return _status; }
 	std::size_t GetStageCount() const noexcept { return _stageLayers.size(); }
@@ -60,6 +61,11 @@ public:
 	const std::string& GetCurrentStageId() const noexcept;
 	const std::vector<RunReward>& GetRewardChoices() const noexcept { return _rewardChoices; }
 	const std::vector<std::string>& GetAvailableStageIds() const noexcept { return _stageChoices; }
+	std::optional<std::size_t> GetSelectedStageChoiceIndex() const noexcept
+	{
+		return _selectedStageChoiceIndex;
+	}
+	const std::string& GetSelectedStageChoiceId() const noexcept;
 	const std::vector<std::string>& GetClearedStageIds() const noexcept { return _clearedStageIds; }
 	bool HasClearedStage(std::string_view stageId) const noexcept;
 
@@ -73,5 +79,6 @@ private:
 	std::string _currentStageId;
 	std::vector<std::string> _clearedStageIds;
 	std::vector<std::string> _stageChoices;
+	std::optional<std::size_t> _selectedStageChoiceIndex;
 	std::vector<RunReward> _rewardChoices;
 };

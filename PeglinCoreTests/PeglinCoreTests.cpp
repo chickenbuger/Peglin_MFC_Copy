@@ -445,23 +445,53 @@ namespace
 		Check(firstReward.has_value() && firstReward->id == "iron-orb", "run returns the selected reward");
 		Check(run.GetStatus() == RunStatus::StageChoice, "reward opens the next route choice");
 		Check(run.GetAvailableStageIds().size() == 2, "first route choice exposes two stages");
+		Check(!run.GetSelectedStageChoiceIndex().has_value(),
+			"route choice starts without an implicit selection");
+		Check(!run.ConfirmSelectedStage(),
+			"route cannot be confirmed before a stage is selected");
 		Check(!run.SelectNextStage(2), "run rejects an invalid route choice");
 		Check(run.SelectNextStage(1), "run accepts the selected branch");
+		Check(run.GetStatus() == RunStatus::StageChoice,
+			"selecting a route keeps both choices editable until start");
+		Check(run.GetAvailableStageIds().size() == 2,
+			"selecting a route preserves every visible candidate");
+		Check(run.GetSelectedStageChoiceIndex() == std::optional<std::size_t>{ 1 }
+			&& run.GetSelectedStageChoiceId() == "stage-4",
+			"route selection records the highlighted candidate");
+		Check(run.GetCurrentStageId() == "stage-1",
+			"unconfirmed route does not replace the current stage");
+		Check(!run.CompleteCurrentStage(),
+			"unconfirmed route cannot advance stage progress");
+		Check(run.SelectNextStage(0)
+			&& run.GetSelectedStageChoiceId() == "stage-2",
+			"route selection can change to the other candidate before start");
+		Check(run.SelectNextStage(1)
+			&& run.GetSelectedStageChoiceId() == "stage-4",
+			"route selection can change back before start");
+		Check(run.ConfirmSelectedStage(),
+			"start confirmation commits the highlighted route");
+		Check(run.GetStatus() == RunStatus::StageReady
+			&& run.GetAvailableStageIds().empty()
+			&& !run.GetSelectedStageChoiceIndex().has_value(),
+			"confirmed route becomes ready and clears temporary choice state");
 		Check(run.GetCurrentStageId() == "stage-4", "selected branch becomes the current stage");
 
 		Check(run.CompleteCurrentStage(), "second encounter victory advances the run");
 		Check(run.SelectReward(2).has_value(), "second encounter reward can be selected");
 		Check(run.SelectNextStage(0), "run accepts a stage from the second branch layer");
+		Check(run.ConfirmSelectedStage(), "second branch selection is confirmed at start");
 		Check(run.GetCurrentStageId() == "stage-5", "second branch selection is retained");
 		Check(run.CompleteCurrentStage(), "third encounter victory advances the run");
 		Check(run.SelectReward(1).has_value(), "third encounter reward can be selected");
 		Check(run.SelectNextStage(1), "run accepts a stage from the final branch layer");
+		Check(run.ConfirmSelectedStage(), "final branch selection is confirmed at start");
 		Check(run.GetCurrentStageId() == "stage-8", "final branch selection is retained");
 		Check(run.CompleteCurrentStage(), "fourth encounter victory advances to the boss route");
 		Check(run.SelectReward(2).has_value(), "pre-boss reward can be selected");
 		Check(run.GetAvailableStageIds().size() == 1 && run.GetAvailableStageIds()[0] == "stage-3",
 			"pre-boss route exposes only the boss");
 		Check(run.SelectNextStage(0), "boss route can be selected");
+		Check(run.ConfirmSelectedStage(), "boss route is confirmed at start");
 		Check(run.GetCurrentStageId() == "stage-3", "selected boss becomes the current stage");
 		run.MarkDefeated();
 		Check(run.GetStatus() == RunStatus::Defeated, "defeat marks the run failed");
