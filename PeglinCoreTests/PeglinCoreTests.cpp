@@ -310,9 +310,11 @@ namespace
 
 	void TestDefeatTransition()
 	{
-		GameWorld world;
+		StageDefinition stage = CreateDefaultStageDefinition();
+		stage.id = "close-range-defeat";
+		stage.rules.enemyStepsBeforeAttack = 1;
+		GameWorld world(stage);
 		world.GetPlayer().SetHp(20.0f);
-		world.GetEnemy().SetCount(8);
 		Launch(world);
 		world.GetBall().SetPosition({ 500.0f, 801.0f });
 		world.Update(0.0f);
@@ -1662,6 +1664,14 @@ namespace
 			ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyDamageTakenMultiplier,
 			"out-of-range enemy damage effect is rejected");
 
+		invalid = CreateDefaultStageDefinition();
+		invalid.enemies = {
+			{ "range-target", "Range Target", EnemyVisualKind::CrystalToad, 10.0f, 1.0f, 0 }
+		};
+		Check(
+			ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyAttackRange,
+			"non-positive enemy attack range is rejected");
+
 		const StageLoadResult first = LoadStageDefinition("stage-2");
 		const StageLoadResult repeated = LoadStageDefinition("stage-2");
 		bool deterministic = first.IsSuccess()
@@ -1682,18 +1692,20 @@ namespace
 		Check(ValidateStageDefinition(boss).IsValid(), "boss stage definition validates");
 		Check(boss.isBoss, "boss stage keeps its boss marker");
 		Check(boss.enemyPattern.size() == 4, "boss pattern has four telegraphed actions");
-		Check(boss.enemyPattern[0].type == EnemyActionType::Advance, "boss opens by advancing");
+		Check(boss.enemyPattern[0].type == EnemyActionType::Strike, "boss opens its in-range pattern with a strike");
 		Check(boss.enemyPattern[1].type == EnemyActionType::Fortify, "boss follows with fortify");
 		Check(boss.enemyPattern[2].type == EnemyActionType::Strike, "boss third action is a strike");
 		Check(boss.enemyPattern[3].type == EnemyActionType::Strike, "boss fourth action is a heavy strike");
+		Check(boss.enemies[0].attackRangeCells == 2, "boss has an explicit two-cell attack range");
 
 		const StageDefinition easy = ApplyDifficulty(boss, GameDifficulty::Easy);
 		const StageDefinition hard = ApplyDifficulty(boss, GameDifficulty::Hard);
+		Check(Near(easy.enemyPattern[0].magnitude, 13.5f), "easy difficulty scales the boss opening strike");
 		Check(Near(easy.enemyPattern[2].magnitude, 13.5f), "easy difficulty scales boss strike damage");
 		Check(Near(easy.enemyPattern[3].magnitude, 18.0f), "easy difficulty scales boss heavy strike damage");
+		Check(Near(hard.enemyPattern[0].magnitude, 22.5f), "hard difficulty scales the boss opening strike");
 		Check(Near(hard.enemyPattern[2].magnitude, 22.5f), "hard difficulty scales boss strike damage");
 		Check(Near(hard.enemyPattern[3].magnitude, 30.0f), "hard difficulty scales boss heavy strike damage");
-		Check(Near(hard.enemyPattern[0].magnitude, 48.0f), "difficulty does not scale boss movement");
 		Check(Near(hard.enemyPattern[1].magnitude, 4.0f), "difficulty does not scale boss shield");
 
 		StageDefinition invalid = boss;
@@ -1702,6 +1714,9 @@ namespace
 		invalid = boss;
 		invalid.enemyPattern[0].type = static_cast<EnemyActionType>(999);
 		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyAction, "unknown enemy action is rejected");
+		invalid = boss;
+		invalid.enemyPattern[0].type = EnemyActionType::Advance;
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyAction, "boss pattern cannot resume movement inside attack range");
 		invalid = boss;
 		invalid.enemyPattern[1].magnitude = 0.0f;
 		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidEnemyActionMagnitude, "non-positive enemy action is rejected");
@@ -1722,12 +1737,23 @@ namespace
 		};
 
 		GameWorld world(boss);
-		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "boss advance is previewed before turn one");
+		Check(world.GetEnemies()[0].distanceToPlayerCells == 4, "boss starts four cells from the player");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "out-of-range boss previews one-cell movement");
 		const float initialEnemyX = world.GetEnemy().GetX();
 		ResolveEmptyTurn(world);
 		Check(Near(world.GetEnemy().GetX(), initialEnemyX - 48.0f), "advance action moves the boss by its magnitude");
-		Check(world.GetNextEnemyAction().type == EnemyActionType::Fortify, "fortify is previewed after advance");
+		Check(world.GetEnemies()[0].distanceToPlayerCells == 3, "first boss move reduces distance by one cell");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "boss keeps moving while outside range");
 		Check(HasEvent(world.ConsumeEvents(), GameEventType::EnemyAdvanced), "advance action emits feedback event");
+
+		ResolveEmptyTurn(world);
+		Check(world.GetEnemies()[0].distanceToPlayerCells == 2, "second boss move reaches its attack range");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Strike, "boss stops moving and previews a strike in range");
+		Check(Near(world.GetPlayer().GetHp(), 110.0f), "entering range does not attack in the same turn");
+
+		ResolveEmptyTurn(world);
+		Check(Near(world.GetPlayer().GetHp(), 92.0f), "boss opening strike applies after range entry");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Fortify, "fortify follows the opening strike");
 
 		ResolveEmptyTurn(world);
 		Check(Near(world.GetEnemyShield(), 4.0f), "fortify action grants boss shield");
@@ -1755,16 +1781,17 @@ namespace
 		world.Update(0.0f);
 		Check(Near(world.GetEnemyShield(), 4.0f - currentOrbDamage), "boss shield absorbs current orb damage first");
 		Check(Near(world.GetEnemy().GetHp(), 60.0f), "absorbed peg damage does not reduce boss health");
-		Check(Near(world.GetPlayer().GetHp(), 92.0f), "boss strike applies its telegraphed damage");
+		Check(Near(world.GetPlayer().GetHp(), 74.0f), "boss strike applies its telegraphed damage");
 		Check(Near(world.GetFeedback().lastEnemyDamage, 0.0f), "absorbed damage is excluded from resolved enemy damage");
 
 		ResolveEmptyTurn(world);
-		Check(Near(world.GetPlayer().GetHp(), 68.0f), "boss heavy strike applies its telegraphed damage");
-		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "boss pattern loops after the fourth action");
+		Check(Near(world.GetPlayer().GetHp(), 50.0f), "boss heavy strike applies its telegraphed damage");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Strike, "boss attack pattern loops without resuming movement");
 		world.ResetGame();
 		Check(Near(world.GetEnemyShield(), 0.0f), "retry clears boss shield");
 		Check(world.GetEnemy().GetCount() == 0, "retry resets boss action index");
-		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "retry restores the first boss action preview");
+		Check(world.GetEnemies()[0].distanceToPlayerCells == 4, "retry restores boss distance");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "retry restores movement outside range");
 	}
 
 	void TestExternalContentCatalog()
@@ -1781,6 +1808,15 @@ namespace
 		const StageDefinition* shippedFungal = FindContentStage(shipped.stages, "stage-5");
 		Check(shippedForest != nullptr && shippedForest->enemies.size() == 3, "shipped forest exposes a three-monster roster");
 		Check(shippedCavern != nullptr && shippedCavern->enemies.size() == 3, "shipped cavern exposes a three-monster roster");
+		Check(
+			shippedForest != nullptr
+			&& shippedForest->enemies[0].attackRangeCells == 1
+			&& shippedForest->enemies[1].attackRangeCells == 3
+			&& shippedForest->enemies[2].attackRangeCells == 2,
+			"shipped forest preserves distinct per-monster attack ranges");
+		Check(
+			shippedForest != nullptr && Near(shippedForest->rules.enemyStep, 32.0f),
+			"shipped group encounters use a non-overlapping visual cell step");
 		Check(
 			shippedThornwood != nullptr
 			&& shippedThornwood->enemies[0].visual == EnemyVisualKind::ThornbackWolf,
@@ -1856,9 +1892,9 @@ namespace
 		std::string rosterContent = validContent;
 		rosterContent.insert(
 			rosterContent.find("player_damage="),
-			"enemy=crystal-toad,Crystal Toad,CrystalToad,15\n"
-			"enemy=ember-bat,Ember Bat,EmberBat,12\n"
-			"enemy=moss-shaman,Moss Shaman,MossShaman,18\n");
+			"enemy=crystal-toad,Crystal Toad,CrystalToad,15,1\n"
+			"enemy=ember-bat,Ember Bat,EmberBat,12,3\n"
+			"enemy=moss-shaman,Moss Shaman,MossShaman,18,2\n");
 		WriteContent(rosterContent);
 		const ContentLoadResult roster = LoadContentCatalog(contentPath);
 		Check(roster.UsedExternalContent(), "external content accepts repeated enemy roster entries");
@@ -1867,6 +1903,9 @@ namespace
 		Check(
 			rosterStage != nullptr && rosterStage->enemies[1].visual == EnemyVisualKind::EmberBat,
 			"external roster parses enemy visual kinds");
+		Check(
+			rosterStage != nullptr && rosterStage->enemies[1].attackRangeCells == 3,
+			"external roster parses per-monster attack ranges");
 		GameWorld rosterWorld;
 		Check(rosterStage != nullptr && rosterWorld.LoadStage(*rosterStage, GameDifficulty::Hard), "world loads external enemy roster");
 		Check(Near(rosterWorld.GetEnemy().GetHp(), 22.5f), "difficulty scales each roster enemy health");
@@ -2190,6 +2229,89 @@ namespace
 		Check(ValidateStageDefinition(invalid).error == StageLoadError::TooManyEnemies, "monster roster limit is enforced");
 	}
 
+	void TestEnemyDistanceAndAttackRanges()
+	{
+		StageDefinition stage = CreateDefaultStageDefinition();
+		stage.id = "enemy-range-test";
+		stage.rules.playerHealth = 100.0f;
+		stage.rules.playerDamage = 10.0f;
+		stage.rules.enemyStepsBeforeAttack = 4;
+		stage.rules.enemyStep = 20.0f;
+		stage.enemies = {
+			{ "range-toad", "Range Toad", EnemyVisualKind::CrystalToad, 100.0f, 1.0f, 1 },
+			{ "range-bat", "Range Bat", EnemyVisualKind::EmberBat, 100.0f, 1.0f, 3 },
+			{ "range-shaman", "Range Shaman", EnemyVisualKind::MossShaman, 100.0f, 1.0f, 2 }
+		};
+		Check(ValidateStageDefinition(stage).IsValid(), "per-monster range stage validates");
+
+		GameWorld world(stage);
+		const auto initialEnemies = world.GetEnemies();
+		Check(initialEnemies[0].distanceToPlayerCells == 4, "front monster starts at the stage distance");
+		Check(initialEnemies[1].distanceToPlayerCells == 5, "second monster starts one cell behind");
+		Check(initialEnemies[2].distanceToPlayerCells == 6, "third monster starts two cells behind");
+		Check(initialEnemies[0].definition.attackRangeCells == 1, "melee monster keeps its one-cell range");
+		Check(initialEnemies[1].definition.attackRangeCells == 3, "ranged monster keeps its three-cell range");
+		Check(initialEnemies[2].definition.attackRangeCells == 2, "mid-range monster keeps its two-cell range");
+
+		auto ResolveEmptyTurn = [](GameWorld& turnWorld)
+		{
+			Launch(turnWorld);
+			turnWorld.GetBall().SetPosition({ 500.0f, 801.0f });
+			turnWorld.Update(0.0f);
+			turnWorld.Update(0.0f);
+			return turnWorld.ConsumeEvents();
+		};
+		auto CountEvents = [](const std::vector<GameEvent>& events, GameEventType type)
+		{
+			return static_cast<int>(std::count_if(
+				events.begin(),
+				events.end(),
+				[type](const GameEvent& event) { return event.type == type; }));
+		};
+
+		const std::vector<GameEvent> firstTurn = ResolveEmptyTurn(world);
+		Check(CountEvents(firstTurn, GameEventType::EnemyAdvanced) == 3, "every living monster advances one cell after the first player attack");
+		Check(CountEvents(firstTurn, GameEventType::PlayerDamaged) == 0, "out-of-range monsters do not attack");
+		for (std::size_t index = 0; index < world.GetEnemies().size(); ++index)
+		{
+			Check(
+				world.GetEnemies()[index].distanceToPlayerCells
+					== initialEnemies[index].distanceToPlayerCells - 1,
+				"one turn subtracts exactly one distance cell from each monster");
+			Check(
+				Near(world.GetEnemies()[index].actor.GetX(), initialEnemies[index].actor.GetX() - 20.0f),
+				"one-cell movement uses the configured visual cell width");
+		}
+
+		const std::vector<GameEvent> secondTurn = ResolveEmptyTurn(world);
+		Check(CountEvents(secondTurn, GameEventType::EnemyAdvanced) == 3, "monsters move on the turn they enter attack range");
+		Check(CountEvents(secondTurn, GameEventType::PlayerDamaged) == 0, "range entry does not also attack in the same turn");
+		Check(world.GetNextEnemyAction(1).type == EnemyActionType::Strike, "three-cell monster previews an attack after entering range");
+
+		const float batXInRange = world.GetEnemies()[1].actor.GetX();
+		const std::vector<GameEvent> thirdTurn = ResolveEmptyTurn(world);
+		Check(CountEvents(thirdTurn, GameEventType::EnemyAdvanced) == 2, "only monsters still outside range advance");
+		Check(CountEvents(thirdTurn, GameEventType::PlayerDamaged) == 1, "the first in-range monster attacks alone");
+		Check(Near(world.GetPlayer().GetHp(), 90.0f), "one ranged monster deals one attack of damage");
+		Check(Near(world.GetEnemies()[1].actor.GetX(), batXInRange), "an in-range monster stops moving while attacking");
+
+		const std::vector<GameEvent> fourthTurn = ResolveEmptyTurn(world);
+		Check(CountEvents(fourthTurn, GameEventType::EnemyAdvanced) == 1, "last out-of-range monster continues advancing alone");
+		Check(CountEvents(fourthTurn, GameEventType::PlayerDamaged) == 2, "two in-range monsters attack on the same turn");
+		Check(Near(world.GetPlayer().GetHp(), 70.0f), "simultaneous in-range attacks accumulate damage");
+
+		const std::vector<GameEvent> fifthTurn = ResolveEmptyTurn(world);
+		Check(CountEvents(fifthTurn, GameEventType::EnemyAdvanced) == 0, "no monster moves after every monster reaches range");
+		Check(CountEvents(fifthTurn, GameEventType::PlayerDamaged) == 3, "every in-range monster attacks independently");
+		Check(Near(world.GetPlayer().GetHp(), 40.0f), "three monster attacks accumulate deterministically");
+
+		world.ResetGame();
+		Check(world.GetEnemies()[0].distanceToPlayerCells == 4, "retry restores the first monster distance");
+		Check(world.GetEnemies()[1].distanceToPlayerCells == 5, "retry restores the second monster distance");
+		Check(world.GetEnemies()[2].distanceToPlayerCells == 6, "retry restores the third monster distance");
+		Check(world.GetEnemies()[1].attackActionCount == 0, "retry clears per-monster attack pattern progress");
+	}
+
 	void TestCombinedSprintFiveContentRegression()
 	{
 		const std::filesystem::path repositoryRoot =
@@ -2213,7 +2335,7 @@ namespace
 		Check(Near(modifiers.pegDamageMultiplier, 0.96f), "combined orb and relic damage order is deterministic");
 		Check(Near(modifiers.scoreMultiplier, 1.875f), "combined orb and relic score order is deterministic");
 		Check(Near(modifiers.incomingDamageMultiplier, 0.85f), "combined defense relic multiplier is deterministic");
-		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "external boss begins with its telegraphed action");
+		Check(world.GetNextEnemyAction().type == EnemyActionType::Advance, "external boss begins outside its attack range");
 
 		world.GetEnemy().SetHp(1.0f);
 		Launch(world);
@@ -2258,7 +2380,7 @@ namespace
 		}
 		Check(defeatResult == GameUpdateResult::Defeat, "combined boss actions reach Defeat deterministically");
 		Check(world.GetState() == GameState::Defeat, "combined defeat enters terminal state");
-		Check(world.GetEnemy().GetCount() == 15, "combined defeat occurs on the expected boss action turn");
+		Check(world.GetEnemy().GetCount() == 11, "combined defeat occurs on the expected range-based boss turn");
 		Check(world.Update(0.0f) == GameUpdateResult::None, "combined defeat result remains single-shot");
 		world.ResetGame();
 		Check(Near(world.GetPlayer().GetHp(), 110.0f), "combined defeat retry restores external player health");
@@ -2412,11 +2534,13 @@ namespace
 		world.ResetGame();
 		Check(world.GetLoadout().GetSelectedOrbId() == "iron-orb", "retry preserves the selected orb");
 		Check(world.GetLoadout().GetRelicStackCount("bark-guard") == 2, "retry preserves acquired relics");
-		world.GetEnemy().SetCount(8);
-		Launch(world);
-		world.GetBall().SetPosition({ 500.0f, 801.0f });
-		world.Update(0.0f);
-		world.Update(0.0f);
+		for (int turn = 0; turn < 8; ++turn)
+		{
+			Launch(world);
+			world.GetBall().SetPosition({ 500.0f, 801.0f });
+			world.Update(0.0f);
+			world.Update(0.0f);
+		}
 		Check(Near(world.GetFeedback().lastPlayerDamage, 14.45f), "two guard relics reduce incoming damage");
 		Check(Near(world.GetPlayer().GetHp(), 85.55f), "reduced incoming damage updates player health");
 
@@ -2566,6 +2690,7 @@ int main()
 	TestExternalGameplayCatalog();
 	TestLocalizationCatalog();
 	TestMultipleEnemyEncounter();
+	TestEnemyDistanceAndAttackRanges();
 	TestCombinedSprintFiveContentRegression();
 
 	if (failures == 0)

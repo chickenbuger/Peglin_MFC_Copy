@@ -37,8 +37,8 @@ struct GameLayout
 
 	inline static constexpr Vector2 EnemyInitialPosition{ 710.0f, 114.0f };
 	inline static constexpr Vector2 EnemySize{ 132.0f, 106.0f };
-	inline static constexpr float EnemyGroupStartX = 640.0f;
-	inline static constexpr float EnemyGroupSpacing = 105.0f;
+	inline static constexpr float EnemyGroupStartX = 520.0f;
+	inline static constexpr float EnemyGroupSpacing = 175.0f;
 	inline static constexpr float EnemyGroupY = 136.0f;
 	inline static constexpr Vector2 EnemyGroupSize{ 96.0f, 84.0f };
 	inline static constexpr float EnemyStep = 64.0f;

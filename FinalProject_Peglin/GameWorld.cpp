@@ -145,6 +145,8 @@ void GameWorld::ResetGame()
 		combatant.definition = enemyDefinitions[index];
 		combatant.actor.Init();
 		combatant.actor.SetHp(combatant.definition.health);
+		combatant.distanceToPlayerCells = _stage.rules.enemyStepsBeforeAttack
+			+ (isGroup ? static_cast<int>(index) : 0);
 		combatant.actor.SetX(
 			isGroup
 				? GameLayout::EnemyGroupStartX + GameLayout::EnemyGroupSpacing * static_cast<float>(index)
@@ -623,42 +625,62 @@ bool GameWorld::SelectNextLivingEnemy() noexcept
 	return false;
 }
 
-EnemyActionDefinition GameWorld::GetNextEnemyAction() const noexcept
+EnemyActionDefinition GameWorld::GetNextEnemyAction(std::size_t enemyIndex) const noexcept
 {
-	const Enemy& enemy = GetActiveEnemy().actor;
-	if (!_stage.enemyPattern.empty())
+	if (enemyIndex >= _enemies.size() || !_enemies[enemyIndex].IsAlive())
 	{
-		const std::size_t actionIndex = static_cast<std::size_t>(enemy.GetCount())
-			% _stage.enemyPattern.size();
-		return _stage.enemyPattern[actionIndex];
+		return {};
 	}
 
-	if (enemy.GetCount() < _stage.rules.enemyStepsBeforeAttack)
+	const EnemyCombatant& combatant = _enemies[enemyIndex];
+	if (!combatant.IsPlayerInRange())
 	{
-		return { EnemyActionType::Advance, _stage.rules.enemyStep };
+		return { EnemyActionType::Advance, 1.0f };
+	}
+
+	if (_stage.isBoss && !_stage.enemyPattern.empty())
+	{
+		const std::size_t actionIndex =
+			static_cast<std::size_t>(combatant.attackActionCount)
+			% _stage.enemyPattern.size();
+		const EnemyActionDefinition action = _stage.enemyPattern[actionIndex];
+		if (action.type != EnemyActionType::Advance)
+		{
+			return action;
+		}
 	}
 	return { EnemyActionType::Strike, _stage.rules.playerDamage };
 }
 
-void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
+void GameWorld::ExecuteEnemyAction(
+	std::size_t enemyIndex,
+	const EnemyActionDefinition& action)
 {
-	EnemyCombatant& activeEnemy = GetActiveEnemy();
-	Enemy& enemy = activeEnemy.actor;
+	EnemyCombatant& combatant = _enemies[enemyIndex];
+	Enemy& enemy = combatant.actor;
 	const float enemyY = _enemies.size() > 1
 		? GameLayout::EnemyGroupY
 		: GameLayout::EnemyInitialPosition.y;
 	switch (action.type)
 	{
 	case EnemyActionType::Advance:
-		enemy.SetX(enemy.GetX() - action.magnitude);
+		if (combatant.IsPlayerInRange())
+		{
+			break;
+		}
+		--combatant.distanceToPlayerCells;
+		enemy.SetX(enemy.GetX() - _stage.rules.enemyStep);
 		_events.push_back({
 			GameEventType::EnemyAdvanced,
 			{ enemy.GetX(), enemyY },
 			PegType::Normal,
 			0,
 			0,
-			0,
-			action.magnitude
+			combatant.distanceToPlayerCells,
+			1.0f,
+			AttackDelivery::Melee,
+			AttackTarget::Single,
+			enemyIndex
 		});
 		break;
 	case EnemyActionType::Strike:
@@ -667,11 +689,26 @@ void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
 		const float incomingDamage = action.magnitude
 			* modifiers.incomingDamageMultiplier;
 		_player.SetHp(_player.GetHp() - incomingDamage);
-		_feedback.lastPlayerDamage = incomingDamage;
+		_feedback.lastPlayerDamage += incomingDamage;
+		const bool rangedAttack = combatant.definition.visual == EnemyVisualKind::EmberBat
+			|| combatant.definition.visual == EnemyVisualKind::MossShaman
+			|| combatant.definition.visual == EnemyVisualKind::AzureWisp;
+		_events.push_back({
+			GameEventType::PlayerDamaged,
+			{ enemy.GetX(), enemyY },
+			PegType::Normal,
+			0,
+			0,
+			0,
+			incomingDamage,
+			rangedAttack ? AttackDelivery::Projectile : AttackDelivery::Melee,
+			AttackTarget::Single,
+			enemyIndex
+		});
 		break;
 	}
 	case EnemyActionType::Fortify:
-		activeEnemy.shield += action.magnitude;
+		combatant.shield += action.magnitude;
 		_events.push_back({
 			GameEventType::EnemyFortified,
 			{ enemy.GetX(), enemyY },
@@ -679,9 +716,17 @@ void GameWorld::ExecuteEnemyAction(const EnemyActionDefinition& action)
 			0,
 			0,
 			0,
-			action.magnitude
+			action.magnitude,
+			AttackDelivery::Melee,
+			AttackTarget::Single,
+			enemyIndex
 		});
 		break;
+	}
+
+	if (action.type != EnemyActionType::Advance)
+	{
+		++combatant.attackActionCount;
 	}
 }
 
@@ -733,11 +778,6 @@ void GameWorld::ResolveTurn()
 	_score.currentCombo = 0;
 
 	const bool enemyDefeated = enemy.GetHp() <= 0.0f;
-	if (!enemyDefeated)
-	{
-		ExecuteEnemyAction(GetNextEnemyAction());
-	}
-	enemy.SetCount(enemy.GetCount() + 1);
 	++_completedTurns;
 	_feedback.turnNumber = _completedTurns;
 	_events.push_back({
@@ -752,15 +792,6 @@ void GameWorld::ResolveTurn()
 		attackOrb.attackTarget,
 		_activeEnemyIndex
 	});
-	_events.push_back({
-		GameEventType::TurnResolved,
-		{},
-		PegType::Normal,
-		_score.lastTurn,
-		_score.bestCombo,
-		_feedback.currentShotPegHits,
-		_feedback.lastEnemyDamage
-	});
 	for (const std::size_t defeatedIndex : defeatedEnemies)
 	{
 		const EnemyCombatant& defeated = _enemies[defeatedIndex];
@@ -774,18 +805,29 @@ void GameWorld::ResolveTurn()
 			totalEnemyDamage
 		});
 	}
-	if (_feedback.lastPlayerDamage > 0.0f)
+
+	if (GetLivingEnemyCount() > 0)
 	{
-		_events.push_back({
-			GameEventType::PlayerDamaged,
-			GameLayout::PlayerPosition,
-			PegType::Normal,
-			0,
-			0,
-			0,
-			_feedback.lastPlayerDamage
-		});
+		for (std::size_t enemyIndex = 0; enemyIndex < _enemies.size(); ++enemyIndex)
+		{
+			EnemyCombatant& combatant = _enemies[enemyIndex];
+			if (!combatant.IsAlive())
+			{
+				continue;
+			}
+			ExecuteEnemyAction(enemyIndex, GetNextEnemyAction(enemyIndex));
+			combatant.actor.SetCount(combatant.actor.GetCount() + 1);
+		}
 	}
+	_events.push_back({
+		GameEventType::TurnResolved,
+		{},
+		PegType::Normal,
+		_score.lastTurn,
+		_score.bestCombo,
+		_feedback.currentShotPegHits,
+		_feedback.lastEnemyDamage
+	});
 	_pendingDamage = 0.0f;
 	_ball.Init();
 	_loadout.AdvanceOrb();

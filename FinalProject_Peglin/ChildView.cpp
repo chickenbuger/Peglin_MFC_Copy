@@ -112,7 +112,7 @@ namespace
 		switch (action.type)
 		{
 		case EnemyActionType::Advance:
-			text.Format(_T("다음: 이동 %d"), static_cast<int>(std::lround(action.magnitude)));
+			text = _T("다음: 1칸 전진");
 			break;
 		case EnemyActionType::Strike:
 			text.Format(_T("다음: 공격 %d"), static_cast<int>(std::lround(action.magnitude)));
@@ -612,7 +612,13 @@ void CChildView::OnPaint()
 			680,
 			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
 			Text1);
-		CString enemyAction = EnemyActionText(_game.GetNextEnemyAction());
+		const EnemyCombatant& activeEnemy = enemyRoster[_game.GetActiveEnemyIndex()];
+		CString enemyAction;
+		enemyAction.Format(
+			_T("거리 %d칸 · 사거리 %d칸 · "),
+			activeEnemy.distanceToPlayerCells,
+			activeEnemy.definition.attackRangeCells);
+		enemyAction += EnemyActionText(_game.GetNextEnemyAction());
 		if (_game.GetEnemyShield() > 0.0f)
 		{
 			CString shieldText;
@@ -944,7 +950,7 @@ void CChildView::ConsumeGameEvents()
 			animation.color = RGB(40, 100, 220);
 			break;
 		case GameEventType::EnemyAdvanced:
-			animation.text.Format(_T("ADVANCE %d"), static_cast<int>(std::lround(event.damage)));
+			animation.text.Format(_T("1칸 전진 · 거리 %d칸"), event.affectedPegs);
 			animation.color = RGB(240, 180, 80);
 			break;
 		case GameEventType::EnemyFortified:
@@ -961,6 +967,26 @@ void CChildView::ConsumeGameEvents()
 			animation.text.Format(_T("HP -%d"), static_cast<int>(event.damage));
 			animation.color = RGB(220, 0, 0);
 			animation.lifetimeSeconds = 1.2f;
+			if (event.targetEnemyIndex < _game.GetEnemies().size())
+			{
+				const bool enemyGroup = _game.GetEnemies().size() > 1;
+				const Vector2 enemySize = enemyGroup
+					? GameLayout::EnemyGroupSize
+					: GameLayout::EnemySize;
+				const float enemyY = enemyGroup
+					? GameLayout::EnemyGroupY
+					: GameLayout::EnemyInitialPosition.y;
+				const EnemyCombatant& attacker = _game.GetEnemies()[event.targetEnemyIndex];
+				_attackAnimations.push_back({
+					event.attackDelivery,
+					AttackTarget::Single,
+					{ attacker.actor.GetX() + enemySize.x * 0.5f, enemyY + enemySize.y * 0.65f },
+					GameLayout::PlayerPosition + Vector2{ GameLayout::PlayerSize.x * 0.55f, GameLayout::PlayerSize.y * 0.65f },
+					RGB(220, 70, 60),
+					0.0f,
+					event.attackDelivery == AttackDelivery::Melee ? 0.45f : 0.65f
+				});
+			}
 			break;
 		case GameEventType::Victory:
 			animation.text = _T("CLEAR!");
@@ -1285,6 +1311,23 @@ void CChildView::DrawEnemyHealthBar(
 		healthText,
 		fillColor,
 		activeTarget ? UiTheme::Gold : UiTheme::Border);
+
+	const int labelTop = static_cast<int>(std::lround(drawY + drawSize.y
+		+ (enemyGroup ? 3.0f : GameLayout::EnemyHealthBarHeight + 8.0f)));
+	CString rangeText;
+	rangeText.Format(
+		_T("거리%d / 범위%d"),
+		combatant.distanceToPlayerCells,
+		combatant.definition.attackRangeCells);
+	const int textState = deviceContext->SaveDC();
+	deviceContext->SetBkMode(TRANSPARENT);
+	deviceContext->SetTextColor(
+		combatant.IsPlayerInRange() ? UiTheme::Danger : RGB(226, 214, 184));
+	deviceContext->DrawText(
+		rangeText,
+		CRect(left - 8, labelTop, right + 8, labelTop + 18),
+		DT_CENTER | DT_SINGLELINE | DT_VCENTER);
+	deviceContext->RestoreDC(textState);
 }
 
 void CChildView::DrawStageSelection(CDC* deviceContext)

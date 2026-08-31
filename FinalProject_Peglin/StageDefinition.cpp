@@ -12,6 +12,7 @@ namespace
 {
 	constexpr std::size_t MAX_STAGE_PEGS = 256;
 	constexpr std::size_t MAX_STAGE_ENEMIES = 3;
+	constexpr int MAX_ENEMY_ATTACK_RANGE_CELLS = 12;
 	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
 	constexpr float MAX_PEG_MOTION_AMPLITUDE = 64.0f;
 	constexpr float MAX_PEG_MOTION_ANGULAR_SPEED = 6.2831855f;
@@ -263,8 +264,11 @@ StageDefinition CreateBossStageDefinition()
 	stage.rules.enemyStep = 48.0f;
 	stage.rules.pegRestitution = 0.92f;
 	stage.isBoss = true;
+	stage.enemies = {
+		{ "rootbound-titan", "Rootbound Titan", EnemyVisualKind::CrystalToad, 60.0f, 1.0f, 2 }
+	};
 	stage.enemyPattern = {
-		{ EnemyActionType::Advance, 48.0f },
+		{ EnemyActionType::Strike, 18.0f },
 		{ EnemyActionType::Fortify, 4.0f },
 		{ EnemyActionType::Strike, 18.0f },
 		{ EnemyActionType::Strike, 24.0f }
@@ -281,21 +285,21 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 	stages.push_back(CreateRouteStage(
 		"stage-4", "Thornwood Thicket",
 		11, 4, { 190.0f, 390.0f }, 54.0f, 10.0f, 20260901u,
-		24.0f, 22.0f, 7, 60.0f, 0.86f,
+		24.0f, 22.0f, 7, 32.0f, 0.86f,
 		{
-			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 8.0f },
-			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f },
-			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 7.0f }
+			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 8.0f, 1.0f, 1 },
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f, 1.0f, 1 },
+			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 7.0f, 1.0f, 3 }
 		},
 		{ { 6, PegType::Critical }, { 17, PegType::Bomb }, { 28, PegType::Refresh }, { 38, PegType::Critical } }));
 	StageDefinition fungal = CreateRouteStage(
 		"stage-5", "Fungal Hollow",
 		9, 5, { 210.0f, 360.0f }, 60.0f, 14.0f, 20260902u,
-		28.0f, 23.0f, 7, 58.0f, 0.88f,
+		28.0f, 23.0f, 7, 32.0f, 0.88f,
 		{
-			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 11.0f },
-			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 8.0f },
-			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f }
+			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 11.0f, 1.0f, 2 },
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 8.0f, 1.0f, 4 },
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f, 1.0f, 1 }
 		},
 		{ { 3, PegType::Critical }, { 12, PegType::Refresh }, { 23, PegType::Bomb }, { 34, PegType::Critical }, { 41, PegType::Bomb } });
 	ApplyPegMotions(fungal, {
@@ -307,21 +311,21 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 	stages.push_back(CreateRouteStage(
 		"stage-6", "Crystal Grotto",
 		10, 4, { 195.0f, 385.0f }, 58.0f, 16.0f, 20260903u,
-		32.0f, 24.0f, 6, 56.0f, 0.91f,
+		32.0f, 24.0f, 6, 32.0f, 0.91f,
 		{
-			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 13.0f },
-			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 9.0f },
-			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 10.0f }
+			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 13.0f, 1.0f, 1 },
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 9.0f, 1.0f, 4 },
+			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 10.0f, 1.0f, 2 }
 		},
 		{ { 5, PegType::Critical }, { 14, PegType::Bomb }, { 20, PegType::Refresh }, { 30, PegType::Bomb }, { 37, PegType::Critical } }));
 	StageDefinition ember = CreateRouteStage(
 		"stage-7", "Ember Roost",
 		11, 4, { 190.0f, 380.0f }, 54.0f, 18.0f, 20260904u,
-		36.0f, 26.0f, 5, 54.0f, 0.93f,
+		36.0f, 26.0f, 5, 32.0f, 0.93f,
 		{
-			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 10.0f },
-			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 11.0f },
-			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 15.0f }
+			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 10.0f, 1.0f, 3 },
+			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 11.0f, 1.0f, 1 },
+			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 15.0f, 1.0f, 1 }
 		},
 		{ { 4, PegType::Critical }, { 10, PegType::Bomb }, { 19, PegType::Refresh }, { 27, PegType::Bomb }, { 35, PegType::Critical }, { 42, PegType::Bomb } });
 	ApplyPegMotions(ember, {
@@ -334,11 +338,11 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 	stages.push_back(CreateRouteStage(
 		"stage-8", "Shaman Mire",
 		9, 5, { 210.0f, 355.0f }, 60.0f, 18.0f, 20260905u,
-		40.0f, 27.0f, 5, 52.0f, 0.94f,
+		40.0f, 27.0f, 5, 32.0f, 0.94f,
 		{
-			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 11.0f },
-			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 14.0f },
-			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 15.0f }
+			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 11.0f, 1.0f, 2 },
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 14.0f, 1.0f, 4 },
+			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 15.0f, 1.0f, 1 }
 		},
 		{ { 2, PegType::Critical }, { 11, PegType::Refresh }, { 18, PegType::Bomb }, { 26, PegType::Critical }, { 33, PegType::Refresh }, { 40, PegType::Bomb } }));
 	stages.push_back(CreateBossStageDefinition());
@@ -418,6 +422,11 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 		{
 			return { StageLoadError::InvalidEnemyDamageTakenMultiplier, index };
 		}
+		if (enemy.attackRangeCells <= 0
+			|| enemy.attackRangeCells > MAX_ENEMY_ATTACK_RANGE_CELLS)
+		{
+			return { StageLoadError::InvalidEnemyAttackRange, index };
+		}
 		for (std::size_t earlier = 0; earlier < index; ++earlier)
 		{
 			if (stage.enemies[earlier].id == enemy.id)
@@ -430,6 +439,10 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 	{
 		const EnemyActionDefinition& action = stage.enemyPattern[index];
 		if (!IsKnownEnemyAction(action.type))
+		{
+			return { StageLoadError::InvalidEnemyAction, index };
+		}
+		if (stage.isBoss && action.type == EnemyActionType::Advance)
 		{
 			return { StageLoadError::InvalidEnemyAction, index };
 		}

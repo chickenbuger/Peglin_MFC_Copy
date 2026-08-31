@@ -447,11 +447,13 @@ namespace
 			{
 				const auto values = Split(value, ',');
 				EnemyDefinition enemy;
-				if (values.size() != 4
+				if ((values.size() != 4 && values.size() != 5)
 					|| values[0].empty()
 					|| values[1].empty()
 					|| !ParseEnemyVisual(values[2], enemy.visual)
-					|| !ParseFiniteFloat(values[3], enemy.health))
+					|| !ParseFiniteFloat(values[3], enemy.health)
+					|| (values.size() == 5
+						&& !ParseNumber(values[4], enemy.attackRangeCells)))
 				{
 					return Fallback(ContentLoadError::InvalidValue, lineNumber);
 				}

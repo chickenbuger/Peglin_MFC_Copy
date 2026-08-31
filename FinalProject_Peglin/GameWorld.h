@@ -118,8 +118,14 @@ struct EnemyCombatant
 	Enemy actor;
 	EnemyDefinition definition;
 	float shield = 0.0f;
+	int distanceToPlayerCells = GameLayout::EnemyStepsBeforeAttack;
+	int attackActionCount = 0;
 
 	bool IsAlive() const noexcept { return actor.GetHp() > 0.0f; }
+	bool IsPlayerInRange() const noexcept
+	{
+		return distanceToPlayerCells <= definition.attackRangeCells;
+	}
 	float HealthFraction() const noexcept
 	{
 		if (definition.health <= 0.0f)
@@ -185,7 +191,11 @@ public:
 	{
 		return _loadout.CalculateModifiers();
 	}
-	EnemyActionDefinition GetNextEnemyAction() const noexcept;
+	EnemyActionDefinition GetNextEnemyAction() const noexcept
+	{
+		return GetNextEnemyAction(_activeEnemyIndex);
+	}
+	EnemyActionDefinition GetNextEnemyAction(std::size_t enemyIndex) const noexcept;
 	float GetEnemyShield() const noexcept { return _enemies[_activeEnemyIndex].shield; }
 	std::vector<GameEvent> ConsumeEvents();
 	std::optional<GameResultSummary> GetResultSummary() const;
@@ -198,7 +208,9 @@ private:
 	void ApplyBombEffect(const TargetBall& bomb);
 	void RestoreRemovedPegs(Vector2 triggerPosition);
 	bool EnsureRefreshPegAfterTurn();
-	void ExecuteEnemyAction(const EnemyActionDefinition& action);
+	void ExecuteEnemyAction(
+		std::size_t enemyIndex,
+		const EnemyActionDefinition& action);
 	EnemyCombatant& GetActiveEnemy() noexcept { return _enemies[_activeEnemyIndex]; }
 	const EnemyCombatant& GetActiveEnemy() const noexcept { return _enemies[_activeEnemyIndex]; }
 	bool SelectNextLivingEnemy() noexcept;
