@@ -211,6 +211,16 @@ namespace
 		return RGB(45, 210, 190);
 	}
 
+	CString AttackStyleText(const OrbDefinition& orb)
+	{
+		CString text;
+		text.Format(
+			_T("%s · %s"),
+			orb.attackDelivery == AttackDelivery::Melee ? _T("근접") : _T("원거리"),
+			orb.attackTarget == AttackTarget::All ? _T("광역") : _T("단일"));
+		return text;
+	}
+
 	void DrawOrbIcon(CDC* deviceContext, const CRect& bounds, std::string_view orbId)
 	{
 		const int savedDc = deviceContext->SaveDC();
@@ -303,6 +313,7 @@ void CChildView::gameclear()
 		: ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
+	_attackAnimations.clear();
 	_orbTrail.clear();
 }
 
@@ -314,6 +325,7 @@ void CChildView::gameover()
 	_screenMode = ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
+	_attackAnimations.clear();
 	_orbTrail.clear();
 }
 
@@ -321,6 +333,7 @@ void CChildView::restart()
 {
 	_game.ResetGame();
 	_feedbackAnimations.clear();
+	_attackAnimations.clear();
 	_orbTrail.clear();
 	_orbTrailSampleSeconds = 0.0f;
 	_gameplayVisualTimeSeconds = 0.0f;
@@ -436,6 +449,7 @@ void CChildView::OnPaint()
 			enemyGroup,
 			index == _game.GetActiveEnemyIndex());
 	}
+	DrawAttackAnimations(&memDc);
 
 	float orbOffsetY = 0.0f;
 	float orbScale = 1.0f;
@@ -627,12 +641,14 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 	if (_screenMode != ScreenMode::Playing)
 	{
 		UpdateFeedbackAnimations(deltaSeconds);
+		UpdateAttackAnimations(deltaSeconds);
 		return;
 	}
 
 	const GameUpdateResult result = _game.Update(deltaSeconds);
 	ConsumeGameEvents();
 	UpdateFeedbackAnimations(deltaSeconds);
+	UpdateAttackAnimations(deltaSeconds);
 	UpdateOrbVisuals(deltaSeconds);
 
 	switch (result)
@@ -678,6 +694,49 @@ void CChildView::ConsumeGameEvents()
 			animation.color = RGB(0, 190, 90);
 			animation.lifetimeSeconds = 1.1f;
 			break;
+		case GameEventType::PlayerAttack:
+		{
+			const CString deliveryText = event.attackDelivery == AttackDelivery::Melee
+				? _T("MELEE")
+				: _T("PROJECTILE");
+			if (event.attackTarget == AttackTarget::All)
+			{
+				animation.text.Format(_T("%s · ALL x%d"), deliveryText.GetString(), event.affectedPegs);
+			}
+			else
+			{
+				animation.text.Format(_T("%s · SINGLE"), deliveryText.GetString());
+			}
+			animation.position = { 490.0f, 220.0f };
+			animation.color = event.attackTarget == AttackTarget::All
+				? RGB(190, 110, 245)
+				: RGB(255, 194, 62);
+			animation.lifetimeSeconds = 1.0f;
+
+			const auto& enemies = _game.GetEnemies();
+			const Vector2 start = GameLayout::PlayerPosition
+				+ Vector2{ GameLayout::PlayerSize.x - 8.0f, GameLayout::PlayerSize.y };
+			for (std::size_t index = 0; index < enemies.size(); ++index)
+			{
+				if (event.attackTarget == AttackTarget::Single && index != event.targetEnemyIndex)
+				{
+					continue;
+				}
+				const bool enemyGroup = enemies.size() > 1;
+				const Vector2 enemySize = enemyGroup ? GameLayout::EnemyGroupSize : GameLayout::EnemySize;
+				const float enemyY = enemyGroup ? GameLayout::EnemyGroupY : GameLayout::EnemyInitialPosition.y;
+				_attackAnimations.push_back({
+					event.attackDelivery,
+					event.attackTarget,
+					start,
+					{ enemies[index].actor.GetX() + enemySize.x * 0.5f, enemyY + enemySize.y * 0.65f },
+					event.attackTarget == AttackTarget::All ? RGB(190, 110, 245) : RGB(255, 194, 62),
+					0.0f,
+					event.attackDelivery == AttackDelivery::Melee ? 0.45f : 0.65f
+				});
+			}
+			break;
+		}
 		case GameEventType::TurnResolved:
 			animation.text.Format(_T("TURN +%d"), event.scoreAwarded);
 			animation.position = GameLayout::TurnEffectPosition;
@@ -717,6 +776,23 @@ void CChildView::ConsumeGameEvents()
 		_feedbackAnimations.push_back(std::move(animation));
 		PlayEventSound(event.type, event.pegType);
 	}
+}
+
+void CChildView::UpdateAttackAnimations(float deltaSeconds)
+{
+	for (AttackAnimation& animation : _attackAnimations)
+	{
+		animation.ageSeconds += deltaSeconds;
+	}
+	_attackAnimations.erase(
+		std::remove_if(
+			_attackAnimations.begin(),
+			_attackAnimations.end(),
+			[](const AttackAnimation& animation)
+			{
+				return animation.ageSeconds >= animation.lifetimeSeconds;
+			}),
+		_attackAnimations.end());
 }
 
 void CChildView::UpdateFeedbackAnimations(float deltaSeconds)
@@ -802,6 +878,52 @@ void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
 			animation.text);
 	}
 
+	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawAttackAnimations(CDC* deviceContext)
+{
+	const int savedDc = deviceContext->SaveDC();
+	deviceContext->SetBkMode(TRANSPARENT);
+	for (const AttackAnimation& animation : _attackAnimations)
+	{
+		const float progress = std::clamp(
+			animation.ageSeconds / animation.lifetimeSeconds,
+			0.0f,
+			1.0f);
+		CPen attackPen(PS_SOLID, animation.delivery == AttackDelivery::Melee ? 6 : 3, animation.color);
+		deviceContext->SelectObject(&attackPen);
+		if (animation.delivery == AttackDelivery::Projectile)
+		{
+			const Vector2 projectile = animation.start
+				+ (animation.end - animation.start) * progress;
+			const Vector2 tail = projectile
+				- (animation.end - animation.start).Normalized() * 22.0f;
+			deviceContext->MoveTo(
+				static_cast<int>(std::lround(tail.x)),
+				static_cast<int>(std::lround(tail.y)));
+			deviceContext->LineTo(
+				static_cast<int>(std::lround(projectile.x)),
+				static_cast<int>(std::lround(projectile.y)));
+			CBrush projectileBrush(animation.color);
+			deviceContext->SelectObject(&projectileBrush);
+			deviceContext->SelectStockObject(NULL_PEN);
+			const int x = static_cast<int>(std::lround(projectile.x));
+			const int y = static_cast<int>(std::lround(projectile.y));
+			deviceContext->Ellipse(x - 8, y - 8, x + 8, y + 8);
+		}
+		else
+		{
+			const float spread = 12.0f + progress * 24.0f;
+			const int centerX = static_cast<int>(std::lround(animation.end.x));
+			const int centerY = static_cast<int>(std::lround(animation.end.y));
+			const int radius = static_cast<int>(std::lround(spread));
+			deviceContext->MoveTo(centerX - radius, centerY + radius);
+			deviceContext->LineTo(centerX + radius, centerY - radius);
+			deviceContext->MoveTo(centerX - radius / 2, centerY - radius);
+			deviceContext->LineTo(centerX + radius, centerY + radius / 2);
+		}
+	}
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -1140,8 +1262,12 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 		title.Format(_T("[%zu] %s · x%zu"), index + 1, Utf8Text(orb.displayName).GetString(), ownedCount);
 		UiRenderer::DrawText(deviceContext, CRect(left + 58, 200, left + 260, 250), title, 125, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 		CString stats;
-		stats.Format(_T("피해 x%.2f\n점수 x%.2f"), orb.pegDamageMultiplier, orb.scoreMultiplier);
-		UiRenderer::DrawText(deviceContext, CRect(left + 15, 255, left + 255, 320), stats, 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+		stats.Format(
+			_T("피해 x%.2f · 점수 x%.2f\n%s"),
+			orb.pegDamageMultiplier,
+			orb.scoreMultiplier,
+			AttackStyleText(orb).GetString());
+		UiRenderer::DrawText(deviceContext, CRect(left + 15, 255, left + 255, 320), stats, 100, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
 
 	const auto& relics = GetRelicDefinitions();
@@ -1295,6 +1421,7 @@ bool CChildView::StartStage(std::string_view stageId)
 	}
 
 	_feedbackAnimations.clear();
+	_attackAnimations.clear();
 	_orbTrail.clear();
 	_orbTrailSampleSeconds = 0.0f;
 	_gameplayVisualTimeSeconds = 0.0f;
@@ -1337,6 +1464,7 @@ void CChildView::BeginNewRun()
 	_runNotice.Empty();
 	_resultSummary.reset();
 	_feedbackAnimations.clear();
+	_attackAnimations.clear();
 	_orbTrail.clear();
 	_screenMode = ScreenMode::StageSelection;
 }

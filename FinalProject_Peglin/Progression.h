@@ -14,12 +14,26 @@ enum class RelicDuplicatePolicy
 	Stackable
 };
 
+enum class AttackDelivery
+{
+	Projectile,
+	Melee
+};
+
+enum class AttackTarget
+{
+	Single,
+	All
+};
+
 struct OrbDefinition
 {
 	std::string_view id;
 	std::string_view displayName;
 	float pegDamageMultiplier = 1.0f;
 	float scoreMultiplier = 1.0f;
+	AttackDelivery attackDelivery = AttackDelivery::Projectile;
+	AttackTarget attackTarget = AttackTarget::Single;
 };
 
 struct RelicDefinition

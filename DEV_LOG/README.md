@@ -75,6 +75,7 @@
 - [Version 6.6 — 순차 스테이지 런과 클리어 보상](./Version_6.6.md)
 - [Version 6.7 — 보유 오브 덱·리필과 다음 오브 미리보기](./Version_6.7.md)
 - [Version 6.8 — 인게임 PEG FIELD 오버레이 제거](./Version_6.8.md)
+- [Version 6.9 — 공격 타입·대상 범위와 전투 애니메이션](./Version_6.9.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

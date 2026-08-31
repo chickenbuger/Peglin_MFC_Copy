@@ -82,12 +82,25 @@ private:
 		float ageSeconds = 0.0f;
 	};
 
+	struct AttackAnimation
+	{
+		AttackDelivery delivery = AttackDelivery::Projectile;
+		AttackTarget target = AttackTarget::Single;
+		Vector2 start;
+		Vector2 end;
+		COLORREF color = RGB(255, 194, 62);
+		float ageSeconds = 0.0f;
+		float lifetimeSeconds = 0.65f;
+	};
+
 	void ReleaseMouseInput(bool cancelDrag);
 	void UpdateGameStep(float deltaSeconds);
 	void ConsumeGameEvents();
 	void UpdateFeedbackAnimations(float deltaSeconds);
+	void UpdateAttackAnimations(float deltaSeconds);
 	void UpdateOrbVisuals(float deltaSeconds);
 	void DrawFeedbackAnimations(CDC* deviceContext);
+	void DrawAttackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
 	void DrawEnemyHealthBar(
@@ -121,6 +134,7 @@ private:
 	std::chrono::steady_clock::time_point _lastFrameTime{};
 	double _accumulatedTimeSeconds = 0.0;
 	std::vector<FeedbackAnimation> _feedbackAnimations;
+	std::vector<AttackAnimation> _attackAnimations;
 	std::vector<OrbTrailPoint> _orbTrail;
 	float _gameplayVisualTimeSeconds = 0.0f;
 	float _orbTrailSampleSeconds = 0.0f;

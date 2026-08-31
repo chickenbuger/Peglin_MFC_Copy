@@ -1732,6 +1732,101 @@ namespace
 		Check(Near(world.GetProgressionModifiers().pegDamageMultiplier, 1.0f), "progression reset restores neutral damage");
 		Check(Near(world.GetPlayer().GetHp(), 100.0f), "progression reset also starts a fresh game");
 	}
+
+	void TestAttackTypesAndTargets()
+	{
+		const OrbDefinition* traveler = FindOrbDefinition("basic-orb");
+		const OrbDefinition* iron = FindOrbDefinition("iron-orb");
+		const OrbDefinition* echo = FindOrbDefinition("echo-orb");
+		Check(traveler != nullptr
+			&& traveler->attackDelivery == AttackDelivery::Projectile
+			&& traveler->attackTarget == AttackTarget::Single,
+			"traveler orb defines a single projectile attack");
+		Check(iron != nullptr
+			&& iron->attackDelivery == AttackDelivery::Melee
+			&& iron->attackTarget == AttackTarget::Single,
+			"iron orb defines a single melee attack");
+		Check(echo != nullptr
+			&& echo->attackDelivery == AttackDelivery::Projectile
+			&& echo->attackTarget == AttackTarget::All,
+			"echo orb defines an all-target projectile attack");
+
+		StageDefinition stage = CreateDefaultStageDefinition();
+		stage.id = "attack-type-test";
+		stage.enemies = {
+			{ "target-a", "Target A", EnemyVisualKind::CrystalToad, 10.0f },
+			{ "target-b", "Target B", EnemyVisualKind::EmberBat, 10.0f },
+			{ "target-c", "Target C", EnemyVisualKind::MossShaman, 10.0f }
+		};
+		GameWorld world(stage);
+		auto ResolveOneNormalPeg = [](GameWorld& targetWorld)
+		{
+			Launch(targetWorld);
+			auto scan = targetWorld.GetTargets()._targetBallList.GetHeadPosition();
+			Vector2 normalPeg;
+			while (scan != nullptr)
+			{
+				const TargetBall& candidate = targetWorld.GetTargets()._targetBallList.GetNext(scan);
+				if (candidate.type == PegType::Normal)
+				{
+					normalPeg = candidate.position;
+					break;
+				}
+			}
+			targetWorld.GetBall().SetPosition(normalPeg + Vector2{ -15.0f, 0.0f });
+			targetWorld.GetBall().SetVelocity({ 2.0f, 0.0f });
+			targetWorld.Update(0.0f);
+			targetWorld.GetBall().SetPosition({ 500.0f, 801.0f });
+			targetWorld.Update(0.0f);
+			targetWorld.Update(0.0f);
+			return targetWorld.ConsumeEvents();
+		};
+		auto FindAttack = [](const std::vector<GameEvent>& events)
+		{
+			return std::find_if(events.begin(), events.end(), [](const GameEvent& event)
+			{
+				return event.type == GameEventType::PlayerAttack;
+			});
+		};
+
+		Check(world.SelectOrb("basic-orb"), "single projectile test selects traveler orb");
+		world.ResetGame();
+		const std::vector<GameEvent> travelerEvents = ResolveOneNormalPeg(world);
+		Check(Near(world.GetEnemies()[0].actor.GetHp(), 9.0f), "single attack damages the active enemy");
+		Check(Near(world.GetEnemies()[1].actor.GetHp(), 10.0f)
+			&& Near(world.GetEnemies()[2].actor.GetHp(), 10.0f),
+			"single attack leaves non-target enemies unchanged");
+		const auto travelerAttack = FindAttack(travelerEvents);
+		Check(travelerAttack != travelerEvents.end()
+			&& travelerAttack->attackDelivery == AttackDelivery::Projectile
+			&& travelerAttack->attackTarget == AttackTarget::Single
+			&& travelerAttack->affectedPegs == 1,
+			"single projectile event identifies one target");
+
+		Check(world.SelectOrb("echo-orb"), "all-target test selects echo orb");
+		world.ResetGame();
+		const std::vector<GameEvent> echoEvents = ResolveOneNormalPeg(world);
+		Check(Near(world.GetEnemies()[0].actor.GetHp(), 9.2f)
+			&& Near(world.GetEnemies()[1].actor.GetHp(), 9.2f)
+			&& Near(world.GetEnemies()[2].actor.GetHp(), 9.2f),
+			"all-target attack damages every living enemy");
+		const auto echoAttack = FindAttack(echoEvents);
+		Check(echoAttack != echoEvents.end()
+			&& echoAttack->attackDelivery == AttackDelivery::Projectile
+			&& echoAttack->attackTarget == AttackTarget::All
+			&& echoAttack->affectedPegs == 3,
+			"all-target projectile event identifies the full roster");
+
+		Check(world.SelectOrb("iron-orb"), "melee test selects iron orb");
+		world.ResetGame();
+		const std::vector<GameEvent> ironEvents = ResolveOneNormalPeg(world);
+		Check(Near(world.GetEnemies()[0].actor.GetHp(), 8.5f), "melee attack applies iron orb damage to one target");
+		const auto ironAttack = FindAttack(ironEvents);
+		Check(ironAttack != ironEvents.end()
+			&& ironAttack->attackDelivery == AttackDelivery::Melee
+			&& ironAttack->attackTarget == AttackTarget::Single,
+			"melee event remains distinct from projectile attacks");
+	}
 }
 
 int main()
@@ -1767,6 +1862,7 @@ int main()
 	TestStageValidationMatrix();
 	TestStageVictoryAndDefeatRegression();
 	TestOrbAndRelicProgression();
+	TestAttackTypesAndTargets();
 	TestBossEnemyActionPattern();
 	TestExternalContentCatalog();
 	TestMultipleEnemyEncounter();

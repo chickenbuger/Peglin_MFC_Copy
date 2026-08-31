@@ -617,18 +617,45 @@ void GameWorld::ResolveTurn()
 	const float enemyY = _enemies.size() > 1
 		? GameLayout::EnemyGroupY
 		: GameLayout::EnemyInitialPosition.y;
-	const Vector2 defeatedPosition{ enemy.GetX(), enemyY };
-	const float shieldAbsorbed = (std::min)(activeEnemy.shield, _pendingDamage);
-	activeEnemy.shield -= shieldAbsorbed;
-	const float enemyDamage = _pendingDamage - shieldAbsorbed;
-	_feedback.lastEnemyDamage = enemyDamage;
+	const OrbDefinition& attackOrb = _loadout.GetSelectedOrb();
+	std::vector<std::size_t> attackTargets;
+	if (attackOrb.attackTarget == AttackTarget::All)
+	{
+		for (std::size_t index = 0; index < _enemies.size(); ++index)
+		{
+			if (_enemies[index].IsAlive())
+			{
+				attackTargets.push_back(index);
+			}
+		}
+	}
+	else
+	{
+		attackTargets.push_back(_activeEnemyIndex);
+	}
+
+	float totalEnemyDamage = 0.0f;
+	std::vector<std::size_t> defeatedEnemies;
+	for (const std::size_t targetIndex : attackTargets)
+	{
+		EnemyCombatant& target = _enemies[targetIndex];
+		const float shieldAbsorbed = (std::min)(target.shield, _pendingDamage);
+		target.shield -= shieldAbsorbed;
+		const float appliedDamage = _pendingDamage - shieldAbsorbed;
+		target.actor.SetHp(target.actor.GetHp() - appliedDamage);
+		totalEnemyDamage += appliedDamage;
+		if (!target.IsAlive())
+		{
+			defeatedEnemies.push_back(targetIndex);
+		}
+	}
+	_feedback.lastEnemyDamage = totalEnemyDamage;
 	_feedback.lastPlayerDamage = 0.0f;
 	_score.lastTurn = _score.currentShot;
 	_score.total += _score.lastTurn;
 	_score.currentShot = 0;
 	_score.currentCombo = 0;
 
-	enemy.SetHp(enemy.GetHp() - enemyDamage);
 	const bool enemyDefeated = enemy.GetHp() <= 0.0f;
 	if (!enemyDefeated)
 	{
@@ -638,6 +665,18 @@ void GameWorld::ResolveTurn()
 	++_completedTurns;
 	_feedback.turnNumber = _completedTurns;
 	_events.push_back({
+		GameEventType::PlayerAttack,
+		{ enemy.GetX(), enemyY },
+		PegType::Normal,
+		0,
+		0,
+		static_cast<int>(attackTargets.size()),
+		totalEnemyDamage,
+		attackOrb.attackDelivery,
+		attackOrb.attackTarget,
+		_activeEnemyIndex
+	});
+	_events.push_back({
 		GameEventType::TurnResolved,
 		{},
 		PegType::Normal,
@@ -646,16 +685,17 @@ void GameWorld::ResolveTurn()
 		_feedback.currentShotPegHits,
 		_feedback.lastEnemyDamage
 	});
-	if (enemyDefeated)
+	for (const std::size_t defeatedIndex : defeatedEnemies)
 	{
+		const EnemyCombatant& defeated = _enemies[defeatedIndex];
 		_events.push_back({
 			GameEventType::EnemyDefeated,
-			defeatedPosition,
+			{ defeated.actor.GetX(), enemyY },
 			PegType::Normal,
 			0,
 			0,
 			static_cast<int>(GetLivingEnemyCount()),
-			enemyDamage
+			totalEnemyDamage
 		});
 	}
 	if (_feedback.lastPlayerDamage > 0.0f)
@@ -688,7 +728,7 @@ void GameWorld::ResolveTurn()
 			0.0f
 		});
 	}
-	else if (enemyDefeated && !SelectNextLivingEnemy())
+	else if (GetLivingEnemyCount() == 0)
 	{
 		TransitionTo(GameState::Victory);
 		_feedback.type = GameFeedbackType::Victory;
@@ -704,6 +744,10 @@ void GameWorld::ResolveTurn()
 	}
 	else
 	{
+		if (enemyDefeated)
+		{
+			SelectNextLivingEnemy();
+		}
 		TransitionTo(GameState::Aiming);
 		_feedback.type = _feedback.lastPlayerDamage > 0.0f
 			? GameFeedbackType::PlayerDamaged

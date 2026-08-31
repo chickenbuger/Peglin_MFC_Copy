@@ -60,6 +60,7 @@ enum class GameEventType
 	PegHit,
 	BombTriggered,
 	RefreshTriggered,
+	PlayerAttack,
 	TurnResolved,
 	EnemyAdvanced,
 	EnemyFortified,
@@ -78,6 +79,9 @@ struct GameEvent
 	int combo = 0;
 	int affectedPegs = 0;
 	float damage = 0.0f;
+	AttackDelivery attackDelivery = AttackDelivery::Projectile;
+	AttackTarget attackTarget = AttackTarget::Single;
+	std::size_t targetEnemyIndex = 0;
 };
 
 struct AimPreview

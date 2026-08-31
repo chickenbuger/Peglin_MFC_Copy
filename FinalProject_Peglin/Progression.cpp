@@ -7,9 +7,9 @@
 namespace
 {
 	const std::vector<OrbDefinition> ORB_DEFINITIONS = {
-		{ "basic-orb", "Traveler Orb", 1.0f, 1.0f },
-		{ "iron-orb", "Iron Orb", 1.5f, 0.75f },
-		{ "echo-orb", "Echo Orb", 0.8f, 1.5f }
+		{ "basic-orb", "Traveler Orb", 1.0f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
+		{ "iron-orb", "Iron Orb", 1.5f, 0.75f, AttackDelivery::Melee, AttackTarget::Single },
+		{ "echo-orb", "Echo Orb", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All }
 	};
 
 	const std::vector<RelicDefinition> RELIC_DEFINITIONS = {
