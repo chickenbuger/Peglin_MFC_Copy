@@ -137,6 +137,15 @@
       "resourceId": "IDB_RELIC_BARK_GUARD_V1"
     },
     {
+      "source": "FinalProject_Peglin/res/shop-merchant-v1-source.png",
+      "output": "FinalProject_Peglin/res/shop-merchant-v1.bmp",
+      "width": 260,
+      "height": 300,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_SHOP_MERCHANT_V1"
+    },
+    {
       "source": null,
       "output": "FinalProject_Peglin/res/ui-adventure-frame-v1.bmp",
       "width": 1000,

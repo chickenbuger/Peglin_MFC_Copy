@@ -25,6 +25,7 @@
 #define IDB_RELIC_COMBO_LANTERN_V1       328
 #define IDB_RELIC_THORN_CHARM_V1         329
 #define IDB_RELIC_BARK_GUARD_V1          330
+#define IDB_SHOP_MERCHANT_V1             331
 #define ID_32771                        32771
 #define ID_GAMEPLAY_INFO                32772
 
@@ -32,7 +33,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        331
+#define _APS_NEXT_RESOURCE_VALUE        332
 #define _APS_NEXT_COMMAND_VALUE         32773
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310

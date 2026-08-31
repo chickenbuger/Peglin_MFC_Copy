@@ -10,6 +10,7 @@ enum class UiScreenKind
 	Loadout,
 	Options,
 	Reward,
+	Shop,
 	Result
 };
 
@@ -29,6 +30,8 @@ enum class UiCommand
 	TogglePegColorMode,
 	ToggleLanguage,
 	SelectReward,
+	BuyShopOffer,
+	LeaveShop,
 	RetryStage
 };
 

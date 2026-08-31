@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <optional>
 #include <string_view>
@@ -69,6 +70,7 @@ private:
 		Options,
 		Playing,
 		Reward,
+		Shop,
 		Result
 	};
 
@@ -120,6 +122,7 @@ private:
 	void DrawLoadoutScreen(CDC* deviceContext);
 	void DrawOptions(CDC* deviceContext);
 	void DrawRewardScreen(CDC* deviceContext);
+	void DrawShopScreen(CDC* deviceContext);
 	void DrawResultScreen(CDC* deviceContext);
 	void DrawMenuBackdrop(CDC* deviceContext);
 	void DrawPlayingLoadout(CDC* deviceContext);
@@ -135,6 +138,8 @@ private:
 	bool StartSelectedStage();
 	void BeginNewRun();
 	bool SelectRunReward(std::size_t index);
+	bool PurchaseShopOffer(std::size_t index);
+	bool LeaveShop();
 	void SaveOptions();
 	void RecordResult(bool cleared);
 	void ReloadLocalization();
@@ -179,10 +184,12 @@ private:
 	CBitmap _relicComboLanternIcon;
 	CBitmap _relicThornCharmIcon;
 	CBitmap _relicBarkGuardIcon;
+	CBitmap _shopMerchantSprite;
 	CString _loadoutNotice;
 	CString _runNotice;
 	std::optional<RunReward> _acquiredReward;
 	float _rewardAcquisitionSeconds = 0.0f;
+	std::array<bool, 3> _shopPurchased{};
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
 	ScreenMode _screenMode = ScreenMode::StageSelection;

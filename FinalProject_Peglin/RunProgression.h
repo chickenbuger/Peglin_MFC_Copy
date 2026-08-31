@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -31,6 +32,16 @@ struct RunReward
 	float magnitude = 0.0f;
 };
 
+struct RunShopOffer
+{
+	RunReward reward;
+	int price = 0;
+};
+
+inline constexpr std::string_view RunShopStageId = "goblin-market";
+bool IsRunShopStage(std::string_view stageId) noexcept;
+const std::array<RunShopOffer, 3>& GetRunShopOffers() noexcept;
+
 struct RunStageEntry
 {
 	std::string id;
@@ -47,16 +58,19 @@ class AdventureRun
 public:
 	bool Start(std::vector<std::string> orderedStageIds);
 	bool StartBranching(RunStageLayers stageLayers);
-	bool CompleteCurrentStage();
+	bool CompleteCurrentStage(bool grantCombatReward = true);
 	void MarkDefeated() noexcept;
 	bool RetryCurrentStage() noexcept;
 	std::optional<RunReward> SelectReward(std::size_t index);
 	bool SelectNextStage(std::size_t index);
 	bool ConfirmSelectedStage();
+	bool SpendGold(int amount) noexcept;
 
 	RunStatus GetStatus() const noexcept { return _status; }
 	std::size_t GetStageCount() const noexcept { return _stageLayers.size(); }
 	std::size_t GetClearedStageCount() const noexcept { return _clearedStageIds.size(); }
+	std::size_t GetCompletedCombatStageCount() const noexcept { return _completedCombatStages; }
+	int GetGold() const noexcept { return _gold; }
 	std::size_t GetCurrentStageIndex() const noexcept;
 	const std::string& GetCurrentStageId() const noexcept;
 	const std::vector<RunReward>& GetRewardChoices() const noexcept { return _rewardChoices; }
@@ -76,6 +90,8 @@ private:
 	RunStatus _status = RunStatus::NotStarted;
 	RunStageLayers _stageLayers;
 	std::size_t _currentLayer = 0;
+	std::size_t _completedCombatStages = 0;
+	int _gold = 0;
 	std::string _currentStageId;
 	std::vector<std::string> _clearedStageIds;
 	std::vector<std::string> _stageChoices;

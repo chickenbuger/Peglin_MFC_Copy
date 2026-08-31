@@ -126,6 +126,23 @@ namespace
 		}
 		return {};
 	}
+
+	UiAction ResolveShopClick(Vector2 position) noexcept
+	{
+		for (std::size_t index = 0; index < 3; ++index)
+		{
+			const float left = 300.0f + static_cast<float>(index) * 215.0f;
+			if (UiRect{ left, 190.0f, left + 200.0f, 520.0f }.Contains(position))
+			{
+				return { UiCommand::BuyShopOffer, index };
+			}
+		}
+		if (UiRect{ 340.0f, 640.0f, 660.0f, 690.0f }.Contains(position))
+		{
+			return { UiCommand::LeaveShop };
+		}
+		return {};
+	}
 }
 
 UiAction ResolveUiClick(
@@ -143,6 +160,8 @@ UiAction ResolveUiClick(
 		return ResolveOptionsClick(position);
 	case UiScreenKind::Reward:
 		return ResolveRewardClick(position);
+	case UiScreenKind::Shop:
+		return ResolveShopClick(position);
 	case UiScreenKind::Result:
 		return ResolveResultClick(position);
 	}

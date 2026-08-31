@@ -504,6 +504,13 @@ void CChildView::OnPaint()
 		memDc.SelectObject(previousBitmap);
 		return;
 	}
+	if (_screenMode == ScreenMode::Shop)
+	{
+		DrawShopScreen(&memDc);
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+		memDc.SelectObject(previousBitmap);
+		return;
+	}
 	if (_screenMode == ScreenMode::Result)
 	{
 		DrawResultScreen(&memDc);
@@ -677,6 +684,7 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_relicComboLanternIcon.LoadBitmap(IDB_RELIC_COMBO_LANTERN_V1);
 	_relicThornCharmIcon.LoadBitmap(IDB_RELIC_THORN_CHARM_V1);
 	_relicBarkGuardIcon.LoadBitmap(IDB_RELIC_BARK_GUARD_V1);
+	_shopMerchantSprite.LoadBitmap(IDB_SHOP_MERCHANT_V1);
 
 	CWnd* mainWindow = AfxGetMainWnd();
 	CMenu* mainMenu = mainWindow != nullptr ? mainWindow->GetMenu() : nullptr;
@@ -752,7 +760,8 @@ void CChildView::OnDestroy()
 		&_orbEchoIcon,
 		&_relicComboLanternIcon,
 		&_relicThornCharmIcon,
-		&_relicBarkGuardIcon })
+		&_relicBarkGuardIcon,
+		&_shopMerchantSprite })
 	{
 		if (itemIcon->GetSafeHandle() != nullptr)
 		{
@@ -1287,10 +1296,11 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	UiRenderer::DrawText(deviceContext, CRect(42, 165, 208, 210), _T("RUN STATUS"), 155, UiTheme::Gold);
 	CString runProgress;
 	runProgress.Format(
-		_T("스테이지 %zu / %zu\n체력 %d"),
+		_T("노드 %zu / %zu\n체력 %d · 골드 %d"),
 		(std::min)(_run.GetClearedStageCount() + 1, _run.GetStageCount()),
 		_run.GetStageCount(),
-		static_cast<int>(std::lround(_runPlayerHealth > 0.0f ? _runPlayerHealth : _game.GetPlayer().GetHp())));
+		static_cast<int>(std::lround(_runPlayerHealth > 0.0f ? _runPlayerHealth : _game.GetPlayer().GetHp())),
+		_run.GetGold());
 	UiRenderer::DrawText(deviceContext, CRect(42, 215, 208, 275), runProgress, 105, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawText(deviceContext, CRect(42, 285, 208, 315), _T("현재 오브"), 105, UiTheme::MutedText);
 	UiRenderer::DrawText(
@@ -1328,7 +1338,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	routeText.Format(
 		_run.GetStatus() == RunStatus::StageChoice
 			? _T("다음 경로 선택 · %zu / %zu")
-			: _T("전투 준비 · %zu / %zu"),
+			: (IsRunShopStage(_run.GetCurrentStageId())
+				? _T("상점 준비 · %zu / %zu")
+				: _T("전투 준비 · %zu / %zu")),
 		routeStep,
 		_run.GetStageCount());
 	UiRenderer::DrawProgressBar(
@@ -1344,10 +1356,11 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 
 	for (std::size_t index = 0; index < visibleStageCount; ++index)
 	{
+		const bool shopStage = IsRunShopStage(visibleStageIds[index]);
 		const StageDefinition* source = FindContentStage(
 			_contentCatalog.stages,
 			visibleStageIds[index]);
-		if (source == nullptr)
+		if (source == nullptr && !shopStage)
 		{
 			continue;
 		}
@@ -1359,14 +1372,23 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			|| (_run.GetStatus() == RunStatus::StageChoice
 				&& selectedChoiceIndex.has_value()
 				&& *selectedChoiceIndex == index);
-		const COLORREF stageColor = source->isBoss ? UiTheme::Orange : UiTheme::Gold;
+		const COLORREF stageColor = shopStage
+			? UiTheme::Green
+			: (source->isBoss ? UiTheme::Orange : UiTheme::Gold);
 		UiRenderer::DrawPanel(deviceContext, card, selected, stageColor);
 		CString title;
-		title.Format(
-			_T("[%zu] %s%s"),
-			index + 1,
-			Utf8Text(source->displayName).GetString(),
-			source->isBoss ? _T(" · BOSS") : _T(""));
+		if (shopStage)
+		{
+			title.Format(_T("[%zu] Goblin Market · SHOP"), index + 1);
+		}
+		else
+		{
+			title.Format(
+				_T("[%zu] %s%s"),
+				index + 1,
+				Utf8Text(source->displayName).GetString(),
+				source->isBoss ? _T(" · BOSS") : _T(""));
+		}
 		UiRenderer::DrawText(
 			deviceContext,
 			CRect(card.left + 15, card.top + 18, card.right - 15, card.bottom - 18),
@@ -1494,6 +1516,103 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 	}
 	UiRenderer::DrawText(deviceContext, CRect(120, 525, 880, 595), _runNotice, 105, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 720, 690), _T("보상 카드 클릭 · 1/2/3 선택"));
+}
+
+void CChildView::DrawShopScreen(CDC* deviceContext)
+{
+	DrawMenuBackdrop(deviceContext);
+	UiRenderer::DrawText(deviceContext, CRect(190, 35, 810, 105), _T("GOBLIN MARKET"), 285, UiTheme::Gold);
+	CString wallet;
+	wallet.Format(_T("보유 골드  %d G"), _run.GetGold());
+	UiRenderer::DrawText(deviceContext, CRect(300, 110, 930, 150), wallet, 145, UiTheme::Gold);
+
+	const CRect merchantPanel(25, 145, 280, 610);
+	UiRenderer::DrawPanel(deviceContext, merchantPanel, true, UiTheme::Green);
+	UiRenderer::DrawTransparentBitmap(
+		deviceContext,
+		_shopMerchantSprite.GetSafeHandle() != nullptr ? &_shopMerchantSprite : nullptr,
+		CRect(35, 165, 270, 485));
+	UiRenderer::DrawText(deviceContext, CRect(45, 490, 260, 530), _T("Mosswick 상점"), 135, UiTheme::Gold);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(45, 530, 260, 590),
+		_T("원하는 상품을 구매한 뒤\n다음 경로로 이동하세요"),
+		90,
+		UiTheme::MutedText,
+		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+
+	const auto& offers = GetRunShopOffers();
+	for (std::size_t index = 0; index < offers.size(); ++index)
+	{
+		const RunShopOffer& offer = offers[index];
+		const int left = 300 + static_cast<int>(index) * 215;
+		const CRect card(left, 190, left + 200, 520);
+		const bool purchased = _shopPurchased[index];
+		const bool affordable = _run.GetGold() >= offer.price;
+		const COLORREF categoryColor = offer.reward.kind == RunRewardKind::Orb
+			? UiTheme::Blue
+			: (offer.reward.kind == RunRewardKind::Relic ? UiTheme::Gold : UiTheme::Green);
+		UiRenderer::DrawPanel(
+			deviceContext,
+			card,
+			purchased,
+			purchased ? UiTheme::Green : (affordable ? categoryColor : UiTheme::MutedText));
+
+		CString category;
+		switch (offer.reward.kind)
+		{
+		case RunRewardKind::Orb: category = _T("ORB"); break;
+		case RunRewardKind::Relic: category = _T("RELIC"); break;
+		case RunRewardKind::Heal: category = _T("RECOVER"); break;
+		}
+		CString header;
+		header.Format(_T("[%zu] %s · %d G"), index + 1, category.GetString(), offer.price);
+		UiRenderer::DrawText(deviceContext, CRect(left + 8, 200, left + 192, 232), header, 95, categoryColor);
+
+		if (offer.reward.kind == RunRewardKind::Orb)
+		{
+			const OrbDefinition* orb = FindOrbDefinition(offer.reward.id);
+			if (orb != nullptr)
+			{
+				DrawOrbIcon(deviceContext, CRect(left + 64, 238, left + 136, 310), *orb);
+			}
+		}
+		else if (offer.reward.kind == RunRewardKind::Relic)
+		{
+			const RelicDefinition* relic = FindRelicDefinition(offer.reward.id);
+			if (relic != nullptr)
+			{
+				DrawRelicIcon(deviceContext, CRect(left + 64, 238, left + 136, 310), *relic);
+			}
+		}
+		else
+		{
+			DrawHealIcon(deviceContext, CRect(left + 64, 238, left + 136, 310));
+		}
+
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(left + 8, 315, left + 192, 350),
+			Utf8Text(offer.reward.displayName),
+			105,
+			UiTheme::Text);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(left + 10, 355, left + 190, 445),
+			Utf8Text(DescribeRewardEffect(offer.reward)),
+			70,
+			UiTheme::MutedText,
+			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(left + 10, 465, left + 190, 505),
+			purchased ? _T("구매 완료") : (affordable ? _T("구매 가능") : _T("골드 부족")),
+			95,
+			purchased ? UiTheme::Green : (affordable ? UiTheme::Gold : UiTheme::Danger));
+	}
+
+	UiRenderer::DrawText(deviceContext, CRect(300, 545, 930, 610), _runNotice, 95, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(340, 640, 660, 690), _T("상점 나가기 · ENTER / ESC"));
 }
 
 void CChildView::DrawLoadoutScreen(CDC* deviceContext)
@@ -1822,6 +1941,14 @@ bool CChildView::StartSelectedStage()
 {
 	if (_run.GetStatus() == RunStatus::StageReady)
 	{
+		if (IsRunShopStage(_run.GetCurrentStageId()))
+		{
+			_shopPurchased.fill(false);
+			_runNotice = _T("상품은 각각 한 번만 구매할 수 있습니다");
+			_screenMode = ScreenMode::Shop;
+			SetFocus();
+			return true;
+		}
 		return !_run.GetCurrentStageId().empty()
 			&& StartStage(_run.GetCurrentStageId());
 	}
@@ -1832,6 +1959,18 @@ bool CChildView::StartSelectedStage()
 	}
 
 	const std::string selectedStageId = _run.GetSelectedStageChoiceId();
+	if (IsRunShopStage(selectedStageId))
+	{
+		if (!_run.ConfirmSelectedStage())
+		{
+			return false;
+		}
+		_shopPurchased.fill(false);
+		_runNotice = _T("상품은 각각 한 번만 구매할 수 있습니다");
+		_screenMode = ScreenMode::Shop;
+		SetFocus();
+		return true;
+	}
 	if (!StartStage(selectedStageId))
 	{
 		_runNotice = _T("스테이지를 시작할 수 없습니다");
@@ -1865,6 +2004,7 @@ void CChildView::BeginNewRun()
 	_runNotice.Empty();
 	_acquiredReward.reset();
 	_rewardAcquisitionSeconds = 0.0f;
+	_shopPurchased.fill(false);
 	_resultSummary.reset();
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
@@ -1922,6 +2062,81 @@ bool CChildView::SelectRunReward(std::size_t index)
 		Utf8Text(selected->displayName).GetString(),
 		Utf8Text(DescribeRewardEffect(*selected)).GetString());
 	_screenMode = ScreenMode::Reward;
+	return true;
+}
+
+bool CChildView::PurchaseShopOffer(std::size_t index)
+{
+	const auto& offers = GetRunShopOffers();
+	if (_screenMode != ScreenMode::Shop
+		|| index >= offers.size()
+		|| _shopPurchased[index])
+	{
+		_runNotice = index < _shopPurchased.size() && _shopPurchased[index]
+			? _T("이미 구매한 상품입니다")
+			: _T("구매할 수 없는 상품입니다");
+		return false;
+	}
+
+	const RunShopOffer& offer = offers[index];
+	if (_run.GetGold() < offer.price)
+	{
+		_runNotice.Format(_T("골드가 부족합니다 · 필요 %d G"), offer.price);
+		return false;
+	}
+
+	bool applied = false;
+	switch (offer.reward.kind)
+	{
+	case RunRewardKind::Orb:
+		applied = _game.AddOrb(offer.reward.id);
+		break;
+	case RunRewardKind::Relic:
+		applied = _game.AcquireRelic(offer.reward.id);
+		break;
+	case RunRewardKind::Heal:
+	{
+		const float maximumHealth = _game.GetStage().rules.playerHealth;
+		if (_runPlayerHealth < maximumHealth)
+		{
+			_runPlayerHealth = (std::min)(
+				_runPlayerHealth + offer.reward.magnitude,
+				maximumHealth);
+			applied = true;
+		}
+		break;
+	}
+	}
+
+	if (!applied)
+	{
+		_runNotice = offer.reward.kind == RunRewardKind::Heal
+			? _T("체력이 이미 최대입니다")
+			: _T("보유 한도에 도달해 구매할 수 없습니다");
+		return false;
+	}
+	if (!_run.SpendGold(offer.price))
+	{
+		_runNotice = _T("골드 결제에 실패했습니다");
+		return false;
+	}
+
+	_shopPurchased[index] = true;
+	_runNotice.Format(
+		_T("%s 구매 완료 · 남은 골드 %d G"),
+		Utf8Text(offer.reward.displayName).GetString(),
+		_run.GetGold());
+	return true;
+}
+
+bool CChildView::LeaveShop()
+{
+	if (_screenMode != ScreenMode::Shop || !_run.CompleteCurrentStage(false))
+	{
+		return false;
+	}
+	_runNotice = _T("상점을 나왔습니다 · 다음 경로를 선택하세요");
+	_screenMode = ScreenMode::StageSelection;
 	return true;
 }
 
@@ -2015,6 +2230,7 @@ bool CChildView::HandleMenuClick(CPoint point)
 	case ScreenMode::Loadout: screen = UiScreenKind::Loadout; break;
 	case ScreenMode::Options: screen = UiScreenKind::Options; break;
 	case ScreenMode::Reward: screen = UiScreenKind::Reward; break;
+	case ScreenMode::Shop: screen = UiScreenKind::Shop; break;
 	case ScreenMode::Result: screen = UiScreenKind::Result; break;
 	case ScreenMode::Playing: return false;
 	}
@@ -2051,6 +2267,10 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 				_runNotice.Format(
 					_T("다음 경로: %s"),
 					Utf8Text(selected->displayName).GetString());
+			}
+			else if (IsRunShopStage(_run.GetSelectedStageChoiceId()))
+			{
+				_runNotice = _T("다음 경로: Goblin Market · 시작 전 변경 가능");
 			}
 		}
 		break;
@@ -2115,6 +2335,12 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		break;
 	case UiCommand::SelectReward:
 		SelectRunReward(action.index);
+		break;
+	case UiCommand::BuyShopOffer:
+		PurchaseShopOffer(action.index);
+		break;
+	case UiCommand::LeaveShop:
+		LeaveShop();
 		break;
 	case UiCommand::RetryStage:
 		_run.RetryCurrentStage();
@@ -2277,6 +2503,21 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		if (nChar >= '1' && nChar <= '3')
 		{
 			SelectRunReward(static_cast<std::size_t>(nChar - '1'));
+		}
+		Invalidate();
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+
+	if (_screenMode == ScreenMode::Shop)
+	{
+		if (nChar >= '1' && nChar <= '3')
+		{
+			PurchaseShopOffer(static_cast<std::size_t>(nChar - '1'));
+		}
+		else if (nChar == VK_RETURN || nChar == VK_ESCAPE || nChar == 'B')
+		{
+			LeaveShop();
 		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);

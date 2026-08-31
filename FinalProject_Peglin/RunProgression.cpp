@@ -5,6 +5,28 @@
 #include <unordered_set>
 #include <utility>
 
+namespace
+{
+	constexpr int STARTING_GOLD = 50;
+	constexpr int COMBAT_CLEAR_GOLD = 25;
+
+	const std::array<RunShopOffer, 3> SHOP_OFFERS{
+		RunShopOffer{ { RunRewardKind::Orb, "iron-orb", "Iron Orb", 0.0f }, 45 },
+		RunShopOffer{ { RunRewardKind::Relic, "bark-guard", "Bark Guard", 0.0f }, 70 },
+		RunShopOffer{ { RunRewardKind::Heal, {}, "Heal 30 HP", 30.0f }, 30 }
+	};
+}
+
+bool IsRunShopStage(std::string_view stageId) noexcept
+{
+	return stageId == RunShopStageId;
+}
+
+const std::array<RunShopOffer, 3>& GetRunShopOffers() noexcept
+{
+	return SHOP_OFFERS;
+}
+
 RunStageLayers BuildBranchingStageLayers(
 	const std::vector<RunStageEntry>& catalogStages)
 {
@@ -18,7 +40,9 @@ RunStageLayers BuildBranchingStageLayers(
 	std::unordered_set<std::string> ids;
 	for (const RunStageEntry& entry : catalogStages)
 	{
-		if (entry.id.empty() || !ids.insert(entry.id).second)
+		if (entry.id.empty()
+			|| IsRunShopStage(entry.id)
+			|| !ids.insert(entry.id).second)
 		{
 			return {};
 		}
@@ -51,6 +75,9 @@ RunStageLayers BuildBranchingStageLayers(
 		}
 		layers.push_back(std::move(layer));
 	}
+	const std::size_t shopLayerIndex = (std::min)(std::size_t{ 3 }, layers.size());
+	layers.insert(layers.begin() + static_cast<std::ptrdiff_t>(shopLayerIndex),
+		{ std::string(RunShopStageId) });
 	layers.push_back({ std::move(bossStage) });
 	return layers;
 }
@@ -92,6 +119,8 @@ bool AdventureRun::StartBranching(RunStageLayers stageLayers)
 
 	_stageLayers = std::move(stageLayers);
 	_currentLayer = 0;
+	_completedCombatStages = 0;
+	_gold = STARTING_GOLD;
 	_currentStageId = _stageLayers.front().front();
 	_clearedStageIds.clear();
 	_stageChoices.clear();
@@ -101,14 +130,24 @@ bool AdventureRun::StartBranching(RunStageLayers stageLayers)
 	return true;
 }
 
-bool AdventureRun::CompleteCurrentStage()
+bool AdventureRun::CompleteCurrentStage(bool grantCombatReward)
 {
 	if (_status != RunStatus::StageReady || _stageLayers.empty())
 	{
 		return false;
 	}
+	const bool shopStage = IsRunShopStage(_currentStageId);
+	if (shopStage == grantCombatReward)
+	{
+		return false;
+	}
 
 	_clearedStageIds.push_back(_currentStageId);
+	if (grantCombatReward)
+	{
+		++_completedCombatStages;
+		_gold += COMBAT_CLEAR_GOLD;
+	}
 	if (_currentLayer + 1 >= _stageLayers.size())
 	{
 		_status = RunStatus::Complete;
@@ -118,8 +157,16 @@ bool AdventureRun::CompleteCurrentStage()
 		return true;
 	}
 
-	BuildRewardChoices();
-	_status = RunStatus::RewardSelection;
+	if (grantCombatReward)
+	{
+		BuildRewardChoices();
+		_status = RunStatus::RewardSelection;
+	}
+	else
+	{
+		BuildStageChoices();
+		_status = RunStatus::StageChoice;
+	}
 	return true;
 }
 
@@ -183,6 +230,16 @@ bool AdventureRun::ConfirmSelectedStage()
 	return true;
 }
 
+bool AdventureRun::SpendGold(int amount) noexcept
+{
+	if (amount <= 0 || amount > _gold)
+	{
+		return false;
+	}
+	_gold -= amount;
+	return true;
+}
+
 std::size_t AdventureRun::GetCurrentStageIndex() const noexcept
 {
 	if (_stageLayers.empty())
@@ -221,7 +278,7 @@ bool AdventureRun::HasClearedStage(std::string_view stageId) const noexcept
 void AdventureRun::BuildRewardChoices()
 {
 	_rewardChoices.clear();
-	if (_clearedStageIds.size() % 2 == 1)
+	if (_completedCombatStages % 2 == 1)
 	{
 		_rewardChoices = {
 			{ RunRewardKind::Orb, "iron-orb", "Iron Orb", 0.0f },

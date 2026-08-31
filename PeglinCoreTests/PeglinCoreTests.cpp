@@ -398,6 +398,16 @@ namespace
 		Check(
 			!ResolveUiClick(UiScreenKind::Reward, { 500.0f, 600.0f }, 0).IsHandled(),
 			"reward screen ignores non-interactive background");
+		action = ResolveUiClick(UiScreenKind::Shop, { 330.0f, 300.0f }, 0);
+		Check(action.command == UiCommand::BuyShopOffer && action.index == 0,
+			"mouse buys the clicked shop offer");
+		Check(
+			ResolveUiClick(UiScreenKind::Shop, { 500.0f, 665.0f }, 0).command
+				== UiCommand::LeaveShop,
+			"mouse leaves the shop from the continue button");
+		Check(
+			!ResolveUiClick(UiScreenKind::Shop, { 20.0f, 20.0f }, 0).IsHandled(),
+			"shop screen ignores non-interactive background");
 	}
 
 	void TestAdventureRunProgression()
@@ -413,18 +423,30 @@ namespace
 			{ "stage-3", true }
 		};
 		const RunStageLayers route = BuildBranchingStageLayers(stageCatalog);
-		Check(route.size() == 5, "branching route creates four encounters and a boss layer");
+		Check(route.size() == 6, "branching route creates four encounters, a shop, and a boss layer");
 		Check(route[0].size() == 1 && route[0][0] == "stage-1", "branching route keeps one fixed opening stage");
 		Check(route[1].size() == 2 && route[1][0] == "stage-2" && route[1][1] == "stage-4",
 			"first cleared stage opens two route choices");
-		Check(route[2].size() == 2 && route[3].size() == 2, "middle route layers each expose two choices");
-		Check(route[4].size() == 1 && route[4][0] == "stage-3", "branching route always ends at the boss");
+		Check(route[2].size() == 2 && route[4].size() == 2, "combat route layers each expose two choices");
+		Check(route[3].size() == 1 && IsRunShopStage(route[3][0]),
+			"branching route inserts one fixed shop node before the final branch");
+		Check(route[5].size() == 1 && route[5][0] == "stage-3", "branching route always ends at the boss");
 		Check(BuildBranchingStageLayers({ { "only", false }, { "boss", true } }).empty(),
 			"route builder rejects an undersized catalog");
 		Check(BuildBranchingStageLayers({ { "a", false }, { "b", false }, { "boss-a", true }, { "boss-b", true } }).empty(),
 			"route builder rejects multiple bosses");
 		Check(BuildBranchingStageLayers({ { "same", false }, { "same", false }, { "boss", true } }).empty(),
 			"route builder rejects duplicate stage ids");
+		Check(BuildBranchingStageLayers({ { std::string(RunShopStageId), false }, { "other", false }, { "boss", true } }).empty(),
+			"route builder reserves the shop node id");
+		const auto& shopOffers = GetRunShopOffers();
+		Check(shopOffers.size() == 3, "shop exposes three deterministic offers");
+		Check(shopOffers[0].reward.kind == RunRewardKind::Orb && shopOffers[0].price == 45,
+			"shop offers a priced orb");
+		Check(shopOffers[1].reward.kind == RunRewardKind::Relic && shopOffers[1].price == 70,
+			"shop offers a priced relic");
+		Check(shopOffers[2].reward.kind == RunRewardKind::Heal && shopOffers[2].price == 30,
+			"shop offers priced healing");
 
 		AdventureRun run;
 		Check(!run.Start({}), "run rejects an empty stage path");
@@ -432,8 +454,10 @@ namespace
 		Check(run.GetStatus() == RunStatus::StageReady, "new run begins at a ready stage");
 		Check(run.GetCurrentStageId() == "stage-1", "new run begins at the first stage");
 		Check(run.GetClearedStageCount() == 0, "new run begins with no cleared stages");
+		Check(run.GetGold() == 50, "new run begins with starter gold");
 
 		Check(run.CompleteCurrentStage(), "first stage victory advances the run");
+		Check(run.GetGold() == 75, "combat victory awards gold");
 		Check(run.GetStatus() == RunStatus::RewardSelection, "non-final victory requires a reward");
 		Check(run.GetRewardChoices().size() == 3, "stage victory offers three rewards");
 		Check(run.GetRewardChoices()[0].kind == RunRewardKind::Orb, "reward set includes an orb");
@@ -477,12 +501,28 @@ namespace
 		Check(run.GetCurrentStageId() == "stage-4", "selected branch becomes the current stage");
 
 		Check(run.CompleteCurrentStage(), "second encounter victory advances the run");
+		Check(run.GetGold() == 100, "second combat victory awards gold");
 		Check(run.SelectReward(2).has_value(), "second encounter reward can be selected");
 		Check(run.SelectNextStage(0), "run accepts a stage from the second branch layer");
 		Check(run.ConfirmSelectedStage(), "second branch selection is confirmed at start");
 		Check(run.GetCurrentStageId() == "stage-5", "second branch selection is retained");
 		Check(run.CompleteCurrentStage(), "third encounter victory advances the run");
+		Check(run.GetGold() == 125, "third combat victory funds the shop");
 		Check(run.SelectReward(1).has_value(), "third encounter reward can be selected");
+		Check(run.GetAvailableStageIds().size() == 1
+			&& IsRunShopStage(run.GetAvailableStageIds()[0]),
+			"third encounter opens the fixed shop node");
+		Check(run.SelectNextStage(0) && run.ConfirmSelectedStage(),
+			"shop node is selected and confirmed like a stage");
+		Check(IsRunShopStage(run.GetCurrentStageId()), "confirmed shop becomes the current run node");
+		Check(!run.CompleteCurrentStage(), "shop cannot grant a combat reward");
+		Check(!run.SpendGold(0) && !run.SpendGold(126),
+			"shop wallet rejects invalid and unaffordable charges");
+		Check(run.SpendGold(45) && run.GetGold() == 80, "shop wallet deducts an affordable purchase");
+		Check(run.CompleteCurrentStage(false), "leaving the shop advances without a reward screen");
+		Check(run.GetStatus() == RunStatus::StageChoice
+			&& run.GetAvailableStageIds().size() == 2,
+			"shop exit opens the final combat branch directly");
 		Check(run.SelectNextStage(1), "run accepts a stage from the final branch layer");
 		Check(run.ConfirmSelectedStage(), "final branch selection is confirmed at start");
 		Check(run.GetCurrentStageId() == "stage-8", "final branch selection is retained");
@@ -499,7 +539,10 @@ namespace
 		Check(run.GetStatus() == RunStatus::StageReady, "retry restores stage-ready state");
 		Check(run.CompleteCurrentStage(), "boss victory completes the final stage");
 		Check(run.GetStatus() == RunStatus::Complete, "final victory completes the run");
-		Check(run.GetClearedStageCount() == 5, "completed run records every visited encounter");
+		Check(run.GetClearedStageCount() == 6, "completed run records combat and shop visits");
+		Check(run.GetCompletedCombatStageCount() == 5, "shop visit is excluded from combat clear totals");
+		Check(run.GetGold() == 130, "only combat victories add gold after shop spending");
+		Check(run.HasClearedStage(RunShopStageId), "run history records the visited shop node");
 		Check(run.HasClearedStage("stage-4") && !run.HasClearedStage("stage-2"),
 			"run history records the chosen branch without marking skipped stages");
 		Check(run.GetRewardChoices().empty(), "final victory does not offer a next-stage reward");
@@ -1755,7 +1798,7 @@ namespace
 			shippedEntries.push_back({ stage.id, stage.isBoss });
 		}
 		const RunStageLayers shippedRoute = BuildBranchingStageLayers(shippedEntries);
-		Check(shippedRoute.size() == 5, "shipped content supports a five-layer boss route");
+		Check(shippedRoute.size() == 6, "shipped content supports a shop-inclusive six-layer boss route");
 
 		const std::filesystem::path testDirectory =
 			std::filesystem::temp_directory_path()
