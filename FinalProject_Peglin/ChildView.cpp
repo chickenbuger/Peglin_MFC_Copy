@@ -198,6 +198,37 @@ namespace
 		return summary;
 	}
 
+	COLORREF OrbAccent(std::string_view orbId)
+	{
+		if (orbId == "iron-orb")
+		{
+			return RGB(185, 194, 204);
+		}
+		if (orbId == "echo-orb")
+		{
+			return RGB(180, 110, 235);
+		}
+		return RGB(45, 210, 190);
+	}
+
+	void DrawOrbIcon(CDC* deviceContext, const CRect& bounds, std::string_view orbId)
+	{
+		const int savedDc = deviceContext->SaveDC();
+		const COLORREF accent = OrbAccent(orbId);
+		CPen outerPen(PS_SOLID, 2, UiTheme::Gold);
+		CBrush orbBrush(accent);
+		deviceContext->SelectObject(&outerPen);
+		deviceContext->SelectObject(&orbBrush);
+		deviceContext->Ellipse(bounds);
+		CRect highlight(bounds);
+		highlight.DeflateRect(bounds.Width() / 4, bounds.Height() / 4);
+		CBrush highlightBrush(RGB(245, 238, 190));
+		deviceContext->SelectObject(&highlightBrush);
+		deviceContext->SelectStockObject(NULL_PEN);
+		deviceContext->Ellipse(highlight);
+		deviceContext->RestoreDC(savedDc);
+	}
+
 	std::filesystem::path GetDefaultContentCatalogPath()
 	{
 		std::vector<wchar_t> modulePath(1024, L'\0');
@@ -1137,19 +1168,25 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
 	UiRenderer::DrawText(deviceContext, CRect(160, 35, 820, 110), _T("ORB & RELIC LOADOUT"), 285, UiTheme::Gold);
-	UiRenderer::DrawText(deviceContext, CRect(80, 125, 900, 165), _T("오브는 하나를 선택하고 유물은 획득 한도까지 누적됩니다"), 120, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(80, 125, 900, 165), _T("보유 오브 목록 · 선택한 오브는 다음 전투의 첫 순서로 우선됩니다"), 115, UiTheme::MutedText);
 
 	const auto& orbs = GetOrbDefinitions();
+	const auto& ownedOrbs = _game.GetLoadout().GetOwnedOrbs();
 	for (std::size_t index = 0; index < orbs.size(); ++index)
 	{
 		const OrbDefinition& orb = orbs[index];
 		const int left = 75 + static_cast<int>(index) * 305;
 		const CRect card(left, 185, left + 270, 335);
 		const bool selected = _game.GetLoadout().GetSelectedOrbId() == orb.id;
+		const std::size_t ownedCount = static_cast<std::size_t>(std::count_if(
+			ownedOrbs.begin(),
+			ownedOrbs.end(),
+			[&orb](const std::string& id) { return id == orb.id; }));
 		UiRenderer::DrawPanel(deviceContext, card, selected, UiTheme::Gold);
+		DrawOrbIcon(deviceContext, CRect(left + 20, 204, left + 52, 236), orb.id);
 		CString title;
-		title.Format(_T("[%zu] %s"), index + 1, Utf8Text(orb.displayName).GetString());
-		UiRenderer::DrawText(deviceContext, CRect(left + 10, 200, left + 260, 250), title, 145, selected ? UiTheme::Gold : UiTheme::Text);
+		title.Format(_T("[%zu] %s · x%zu"), index + 1, Utf8Text(orb.displayName).GetString(), ownedCount);
+		UiRenderer::DrawText(deviceContext, CRect(left + 58, 200, left + 260, 250), title, 125, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 		CString stats;
 		stats.Format(_T("피해 x%.2f\n점수 x%.2f"), orb.pegDamageMultiplier, orb.scoreMultiplier);
 		UiRenderer::DrawText(deviceContext, CRect(left + 15, 255, left + 255, 320), stats, 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
@@ -1277,13 +1314,24 @@ CBitmap* CChildView::GetEnemySprite(EnemyVisualKind visual) noexcept
 
 void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 {
-	CString loadout;
-	loadout.Format(
-		_T("%s · %s"),
-		Utf8Text(_game.GetLoadout().GetSelectedOrb().displayName).GetString(),
-		RelicSummary(_game.GetLoadout()).GetString());
-	UiRenderer::DrawPanel(deviceContext, CRect(300, 130, 680, 180));
-	UiRenderer::DrawText(deviceContext, CRect(310, 135, 670, 175), loadout, 95, UiTheme::Gold);
+	const PlayerLoadout& loadout = _game.GetLoadout();
+	UiRenderer::DrawPanel(deviceContext, CRect(245, 128, 735, 188));
+	DrawOrbIcon(deviceContext, CRect(262, 137, 290, 165), loadout.GetSelectedOrbId());
+	DrawOrbIcon(deviceContext, CRect(487, 137, 515, 165), loadout.GetNextOrbId());
+	CString currentText;
+	currentText.Format(_T("현재  %s"), Utf8Text(loadout.GetSelectedOrb().displayName).GetString());
+	UiRenderer::DrawText(deviceContext, CRect(298, 132, 478, 165), currentText, 90, UiTheme::Gold, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	CString nextText;
+	nextText.Format(_T("다음  %s"), Utf8Text(loadout.GetNextOrb().displayName).GetString());
+	UiRenderer::DrawText(deviceContext, CRect(523, 132, 720, 165), nextText, 90, UiTheme::Blue, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	CString pileText;
+	pileText.Format(
+		_T("덱 %zu · 버림 %zu · 리필 %zu · %s"),
+		loadout.GetDrawPileCount(),
+		loadout.GetDiscardPileCount(),
+		loadout.GetReloadCount(),
+		RelicSummary(loadout).GetString());
+	UiRenderer::DrawText(deviceContext, CRect(260, 162, 720, 185), pileText, 75, UiTheme::MutedText);
 }
 
 bool CChildView::StartStage(std::string_view stageId)
@@ -1352,7 +1400,7 @@ bool CChildView::SelectRunReward(std::size_t index)
 	switch (selected->kind)
 	{
 	case RunRewardKind::Orb:
-		_game.SelectOrb(selected->id);
+		_game.AddOrb(selected->id);
 		break;
 	case RunRewardKind::Relic:
 		_game.AcquireRelic(selected->id);

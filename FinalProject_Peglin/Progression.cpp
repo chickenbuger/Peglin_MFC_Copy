@@ -2,6 +2,7 @@
 #include "Progression.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace
 {
@@ -47,6 +48,11 @@ namespace
 	}
 }
 
+PlayerLoadout::PlayerLoadout()
+{
+	Reset();
+}
+
 const std::vector<OrbDefinition>& GetOrbDefinitions() noexcept
 {
 	return ORB_DEFINITIONS;
@@ -83,12 +89,34 @@ const RelicDefinition* FindRelicDefinition(std::string_view id) noexcept
 
 bool PlayerLoadout::SelectOrb(std::string_view id)
 {
-	if (FindOrbDefinition(id) == nullptr)
+	if (FindOrbDefinition(id) == nullptr
+		|| std::find(_ownedOrbIds.begin(), _ownedOrbIds.end(), id) == _ownedOrbIds.end())
 	{
 		return false;
 	}
 
-	_selectedOrbId.assign(id);
+	_preferredOrbId.assign(id);
+	const auto found = std::find(
+		_currentCycle.begin() + static_cast<std::ptrdiff_t>(_cycleIndex),
+		_currentCycle.end(),
+		id);
+	if (found != _currentCycle.end())
+	{
+		std::iter_swap(
+			_currentCycle.begin() + static_cast<std::ptrdiff_t>(_cycleIndex),
+			found);
+	}
+	return true;
+}
+
+bool PlayerLoadout::AddOrb(std::string_view id)
+{
+	if (FindOrbDefinition(id) == nullptr || _ownedOrbIds.size() >= MaxOwnedOrbs)
+	{
+		return false;
+	}
+
+	_ownedOrbIds.emplace_back(id);
 	return true;
 }
 
@@ -116,14 +144,94 @@ bool PlayerLoadout::AcquireRelic(std::string_view id)
 
 void PlayerLoadout::Reset()
 {
-	_selectedOrbId.assign(DefaultOrbId);
+	_ownedOrbIds = { "basic-orb", "iron-orb", "echo-orb" };
+	_preferredOrbId.assign(DefaultOrbId);
 	_acquiredRelics.clear();
+	BeginBattle(0u);
 }
 
 const OrbDefinition& PlayerLoadout::GetSelectedOrb() const noexcept
 {
-	const OrbDefinition* definition = FindOrbDefinition(_selectedOrbId);
+	const OrbDefinition* definition = FindOrbDefinition(GetSelectedOrbId());
 	return definition == nullptr ? ORB_DEFINITIONS.front() : *definition;
+}
+
+const OrbDefinition& PlayerLoadout::GetNextOrb() const noexcept
+{
+	const OrbDefinition* definition = FindOrbDefinition(GetNextOrbId());
+	return definition == nullptr ? ORB_DEFINITIONS.front() : *definition;
+}
+
+std::string_view PlayerLoadout::GetSelectedOrbId() const noexcept
+{
+	return _currentCycle.empty() || _cycleIndex >= _currentCycle.size()
+		? DefaultOrbId
+		: std::string_view(_currentCycle[_cycleIndex]);
+}
+
+std::string_view PlayerLoadout::GetNextOrbId() const noexcept
+{
+	if (_cycleIndex + 1 < _currentCycle.size())
+	{
+		return _currentCycle[_cycleIndex + 1];
+	}
+	return _nextCycle.empty()
+		? GetSelectedOrbId()
+		: std::string_view(_nextCycle.front());
+}
+
+std::size_t PlayerLoadout::GetDrawPileCount() const noexcept
+{
+	return _currentCycle.empty() || _cycleIndex >= _currentCycle.size()
+		? 0
+		: _currentCycle.size() - _cycleIndex - 1;
+}
+
+void PlayerLoadout::BeginBattle(std::uint32_t shuffleSeed)
+{
+	_shuffleGenerator.seed(shuffleSeed);
+	_currentCycle = BuildShuffledCycle();
+	MovePreferredOrbToFront();
+	_nextCycle = BuildShuffledCycle();
+	_cycleIndex = 0;
+	_reloadCount = 0;
+}
+
+bool PlayerLoadout::AdvanceOrb()
+{
+	if (_currentCycle.empty())
+	{
+		return false;
+	}
+
+	++_cycleIndex;
+	if (_cycleIndex >= _currentCycle.size())
+	{
+		_currentCycle = std::move(_nextCycle);
+		_nextCycle = BuildShuffledCycle();
+		_cycleIndex = 0;
+		++_reloadCount;
+	}
+	return true;
+}
+
+std::vector<std::string> PlayerLoadout::BuildShuffledCycle()
+{
+	std::vector<std::string> cycle = _ownedOrbIds;
+	std::shuffle(cycle.begin(), cycle.end(), _shuffleGenerator);
+	return cycle;
+}
+
+void PlayerLoadout::MovePreferredOrbToFront()
+{
+	const auto preferred = std::find(
+		_currentCycle.begin(),
+		_currentCycle.end(),
+		_preferredOrbId);
+	if (preferred != _currentCycle.end())
+	{
+		std::iter_swap(_currentCycle.begin(), preferred);
+	}
 }
 
 std::size_t PlayerLoadout::GetRelicStackCount(std::string_view id) const noexcept

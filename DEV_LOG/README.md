@@ -73,6 +73,7 @@
 - [Version 6.4 — 새 페그 필드 UI와 개별 체력 막대](./Version_6.4.md)
 - [Version 6.5 — 마우스 클릭 UI 내비게이션](./Version_6.5.md)
 - [Version 6.6 — 순차 스테이지 런과 클리어 보상](./Version_6.6.md)
+- [Version 6.7 — 보유 오브 덱·리필과 다음 오브 미리보기](./Version_6.7.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

@@ -143,6 +143,7 @@ public:
 		const StageDefinition& stage,
 		GameDifficulty difficulty = GameDifficulty::Normal);
 	bool SelectOrb(std::string_view orbId) { return _loadout.SelectOrb(orbId); }
+	bool AddOrb(std::string_view orbId) { return _loadout.AddOrb(orbId); }
 	bool AcquireRelic(std::string_view relicId) { return _loadout.AcquireRelic(relicId); }
 	void ResetProgression();
 
@@ -196,6 +197,7 @@ private:
 	void ResolveTurn();
 	GameUpdateResult ReportTerminalResult(GameUpdateResult result) noexcept;
 	bool TransitionTo(GameState nextState);
+	std::uint32_t GetBattleShuffleSeed() const noexcept;
 
 	Player _player;
 	std::vector<EnemyCombatant> _enemies;

@@ -1282,6 +1282,7 @@ namespace
 		Check(world.GetNextEnemyAction().type == EnemyActionType::Strike, "strike is previewed after fortify");
 		Check(HasEvent(world.ConsumeEvents(), GameEventType::EnemyFortified), "fortify action emits feedback event");
 
+		const float currentOrbDamage = world.GetProgressionModifiers().pegDamageMultiplier;
 		Launch(world);
 		auto scan = world.GetTargets()._targetBallList.GetHeadPosition();
 		Vector2 normalPeg;
@@ -1300,7 +1301,7 @@ namespace
 		world.GetBall().SetPosition({ 500.0f, 801.0f });
 		world.Update(0.0f);
 		world.Update(0.0f);
-		Check(Near(world.GetEnemyShield(), 3.0f), "boss shield absorbs pending peg damage first");
+		Check(Near(world.GetEnemyShield(), 4.0f - currentOrbDamage), "boss shield absorbs current orb damage first");
 		Check(Near(world.GetEnemy().GetHp(), 60.0f), "absorbed peg damage does not reduce boss health");
 		Check(Near(world.GetPlayer().GetHp(), 92.0f), "boss strike applies its telegraphed damage");
 		Check(Near(world.GetFeedback().lastEnemyDamage, 0.0f), "absorbed damage is excluded from resolved enemy damage");
@@ -1642,11 +1643,37 @@ namespace
 
 		PlayerLoadout loadout;
 		Check(loadout.GetSelectedOrbId() == "basic-orb", "loadout starts with the basic orb");
+		Check(loadout.GetOwnedOrbs().size() == 3, "loadout exposes the three starter orbs");
+		Check(!loadout.GetNextOrbId().empty(), "loadout previews a next usable orb");
 		Check(loadout.GetAcquiredRelics().empty(), "loadout starts without relics");
 		Check(!loadout.SelectOrb("unknown-orb"), "loadout rejects an unknown orb");
 		Check(loadout.GetSelectedOrbId() == "basic-orb", "failed orb selection preserves the current orb");
 		Check(loadout.SelectOrb("iron-orb"), "loadout selects a registered orb");
 		Check(loadout.GetSelectedOrbId() == "iron-orb", "selected orb id is retained");
+
+		PlayerLoadout firstDeck;
+		PlayerLoadout secondDeck;
+		firstDeck.BeginBattle(20260831u);
+		secondDeck.BeginBattle(20260831u);
+		Check(firstDeck.GetSelectedOrbId() == secondDeck.GetSelectedOrbId(), "same seed reproduces the current orb");
+		Check(firstDeck.GetNextOrbId() == secondDeck.GetNextOrbId(), "same seed reproduces the next orb preview");
+		std::vector<std::string> firstCycle;
+		for (std::size_t index = 0; index < firstDeck.GetOwnedOrbs().size(); ++index)
+		{
+			firstCycle.emplace_back(firstDeck.GetSelectedOrbId());
+			Check(firstDeck.GetReloadCount() == 0, "deck does not refill before every owned orb is used");
+			Check(firstDeck.AdvanceOrb(), "using an orb advances the deck");
+		}
+		std::vector<std::string> ownedCycle = firstDeck.GetOwnedOrbs();
+		std::sort(firstCycle.begin(), firstCycle.end());
+		std::sort(ownedCycle.begin(), ownedCycle.end());
+		Check(firstCycle == ownedCycle, "one deck cycle uses every owned orb exactly once");
+		Check(firstDeck.GetReloadCount() == 1, "deck refills after every owned orb is used");
+		Check(!firstDeck.GetNextOrbId().empty(), "next orb preview remains available after refill");
+		Check(!firstDeck.AddOrb("unknown-orb"), "deck rejects an unknown reward orb");
+		const std::size_t ownedBeforeReward = firstDeck.GetOwnedOrbs().size();
+		Check(firstDeck.AddOrb("iron-orb"), "deck accepts a registered reward orb");
+		Check(firstDeck.GetOwnedOrbs().size() == ownedBeforeReward + 1, "reward orb is added to the owned list");
 
 		Check(loadout.AcquireRelic("combo-lantern"), "unique relic can be acquired once");
 		Check(!loadout.AcquireRelic("combo-lantern"), "unique relic rejects a duplicate");

@@ -102,6 +102,7 @@ GameUpdateResult GameWorld::Update(float deltaSeconds)
 
 void GameWorld::ResetGame()
 {
+	_loadout.BeginBattle(GetBattleShuffleSeed());
 	_gameState = GameState::Aiming;
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
@@ -671,6 +672,7 @@ void GameWorld::ResolveTurn()
 	}
 	_pendingDamage = 0.0f;
 	_ball.Init();
+	_loadout.AdvanceOrb();
 
 	if (_player.GetHp() <= 0.0f)
 	{
@@ -707,6 +709,17 @@ void GameWorld::ResolveTurn()
 			? GameFeedbackType::PlayerDamaged
 			: GameFeedbackType::TurnResolved;
 	}
+}
+
+std::uint32_t GameWorld::GetBattleShuffleSeed() const noexcept
+{
+	std::uint32_t hash = 2166136261u;
+	for (const unsigned char character : _stage.id)
+	{
+		hash ^= character;
+		hash *= 16777619u;
+	}
+	return hash;
 }
 
 std::vector<GameEvent> GameWorld::ConsumeEvents()
