@@ -63,6 +63,8 @@ namespace
 		case EnemyVisualKind::CrystalToad:
 		case EnemyVisualKind::EmberBat:
 		case EnemyVisualKind::MossShaman:
+		case EnemyVisualKind::ThornbackWolf:
+		case EnemyVisualKind::AzureWisp:
 			return true;
 		default:
 			return false;
@@ -227,7 +229,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		11, 4, { 60.0f, 390.0f }, 82.0f, 10.0f, 20260901u,
 		24.0f, 22.0f, 7, 60.0f, 0.86f,
 		{
-			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 8.0f },
+			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 8.0f },
 			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f },
 			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 7.0f }
 		},
@@ -238,7 +240,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		28.0f, 23.0f, 7, 58.0f, 0.88f,
 		{
 			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 11.0f },
-			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 8.0f },
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 8.0f },
 			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f }
 		},
 		{ { 3, PegType::Critical }, { 12, PegType::Refresh }, { 23, PegType::Bomb }, { 34, PegType::Critical }, { 41, PegType::Bomb } }));
@@ -248,7 +250,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		32.0f, 24.0f, 6, 56.0f, 0.91f,
 		{
 			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 13.0f },
-			{ "ember-bat-scout", "Ember Bat Scout", EnemyVisualKind::EmberBat, 9.0f },
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 9.0f },
 			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 10.0f }
 		},
 		{ { 5, PegType::Critical }, { 14, PegType::Bomb }, { 20, PegType::Refresh }, { 30, PegType::Bomb }, { 37, PegType::Critical } }));
@@ -258,7 +260,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		36.0f, 26.0f, 5, 54.0f, 0.93f,
 		{
 			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 10.0f },
-			{ "ember-bat-scout", "Ember Bat Scout", EnemyVisualKind::EmberBat, 11.0f },
+			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 11.0f },
 			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 15.0f }
 		},
 		{ { 4, PegType::Critical }, { 10, PegType::Bomb }, { 19, PegType::Refresh }, { 27, PegType::Bomb }, { 35, PegType::Critical }, { 42, PegType::Bomb } }));
@@ -268,8 +270,8 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 		40.0f, 27.0f, 5, 52.0f, 0.94f,
 		{
 			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 11.0f },
-			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 14.0f },
-			{ "crystal-toad-guard", "Crystal Toad Guard", EnemyVisualKind::CrystalToad, 15.0f }
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 14.0f },
+			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 15.0f }
 		},
 		{ { 2, PegType::Critical }, { 11, PegType::Refresh }, { 18, PegType::Bomb }, { 26, PegType::Critical }, { 33, PegType::Refresh }, { 40, PegType::Bomb } }));
 	stages.push_back(CreateBossStageDefinition());

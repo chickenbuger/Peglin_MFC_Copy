@@ -56,6 +56,24 @@
       "resourceId": "IDB_ENEMY_MOSS_SHAMAN_V1"
     },
     {
+      "source": "FinalProject_Peglin/res/enemy-thornback-wolf-v1-source.png",
+      "output": "FinalProject_Peglin/res/enemy-thornback-wolf-v1.bmp",
+      "width": 100,
+      "height": 84,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_THORNBACK_WOLF_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/enemy-azure-wisp-v1-source.png",
+      "output": "FinalProject_Peglin/res/enemy-azure-wisp-v1.bmp",
+      "width": 96,
+      "height": 84,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_AZURE_WISP_V1"
+    },
+    {
       "source": "FinalProject_Peglin/res/orb-amber-teal-v2-source.png",
       "output": "FinalProject_Peglin/res/orb-amber-teal-v2.bmp",
       "width": 36,

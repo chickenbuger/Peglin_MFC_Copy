@@ -659,6 +659,16 @@ namespace
 			Check(added.stage.has_value() && added.stage->enemies.size() == 3,
 				"added route stage provides a three-monster encounter");
 		}
+		const StageLoadResult thornwood = LoadStageDefinition("stage-4");
+		Check(
+			thornwood.stage.has_value()
+			&& thornwood.stage->enemies[0].visual == EnemyVisualKind::ThornbackWolf,
+			"built-in route includes the thornback wolf visual");
+		const StageLoadResult fungal = LoadStageDefinition("stage-5");
+		Check(
+			fungal.stage.has_value()
+			&& fungal.stage->enemies[1].visual == EnemyVisualKind::AzureWisp,
+			"built-in route includes the azure wisp visual");
 
 		const StageLoadResult bossResult = LoadStageDefinition("stage-3");
 		Check(bossResult.IsSuccess(), "stage catalog loads stage-3");
@@ -1493,8 +1503,18 @@ namespace
 		Check(shipped.stages.size() == 8, "shipped external catalog exposes eight route stages");
 		const StageDefinition* shippedForest = FindContentStage(shipped.stages, "stage-1");
 		const StageDefinition* shippedCavern = FindContentStage(shipped.stages, "stage-2");
+		const StageDefinition* shippedThornwood = FindContentStage(shipped.stages, "stage-4");
+		const StageDefinition* shippedFungal = FindContentStage(shipped.stages, "stage-5");
 		Check(shippedForest != nullptr && shippedForest->enemies.size() == 3, "shipped forest exposes a three-monster roster");
 		Check(shippedCavern != nullptr && shippedCavern->enemies.size() == 3, "shipped cavern exposes a three-monster roster");
+		Check(
+			shippedThornwood != nullptr
+			&& shippedThornwood->enemies[0].visual == EnemyVisualKind::ThornbackWolf,
+			"shipped catalog parses the thornback wolf visual");
+		Check(
+			shippedFungal != nullptr
+			&& shippedFungal->enemies[1].visual == EnemyVisualKind::AzureWisp,
+			"shipped catalog parses the azure wisp visual");
 		const StageDefinition* shippedBoss = FindContentStage(shipped.stages, "stage-3");
 		Check(shippedBoss != nullptr && shippedBoss->enemies.size() == 1, "shipped boss exposes one named boss");
 		Check(shippedBoss != nullptr && shippedBoss->enemyPattern.size() == 4, "shipped external catalog includes the boss pattern");
@@ -1636,7 +1656,7 @@ namespace
 		Check(shipped.UsedExternalContent(), "shipped gameplay definition catalog validates");
 		Check(shipped.catalog.progression.orbs.size() == 3, "external gameplay catalog provides three orbs");
 		Check(shipped.catalog.progression.relics.size() == 3, "external gameplay catalog provides three relics");
-		Check(shipped.catalog.enemies.size() == 7, "external gameplay catalog covers every shipped enemy id");
+		Check(shipped.catalog.enemies.size() == 9, "external gameplay catalog covers every shipped enemy id");
 
 		std::vector<StageDefinition> activatedStages = stageCatalog.stages;
 		Check(ActivateGameplayCatalog(shipped, activatedStages), "validated gameplay catalog activates atomically");

@@ -163,6 +163,8 @@ private:
 	CBitmap _enemySprite;
 	CBitmap _enemyBatSprite;
 	CBitmap _enemyShamanSprite;
+	CBitmap _enemyWolfSprite;
+	CBitmap _enemyWispSprite;
 	CBitmap _orbSprite;
 	CString _loadoutNotice;
 	CString _runNotice;

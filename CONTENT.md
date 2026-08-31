@@ -93,6 +93,14 @@ effect=enemy-rootbound-hide
 
 적에는 `EnemyDamageTakenMultiplier` 계열만 연결할 수 있다. 스테이지 로스터의 안정 ID와 연결된 뒤 실제 턴 피해 정산에 적용된다.
 
+스테이지의 `enemy` 세 번째 값은 시각 타입이며 Version 7.2에서 다음 다섯 값을 지원한다.
+
+- `CrystalToad`
+- `EmberBat`
+- `MossShaman`
+- `ThornbackWolf`
+- `AzureWisp`
+
 ## 검증과 복구
 
 로더는 적용 전에 다음을 모두 확인한다.

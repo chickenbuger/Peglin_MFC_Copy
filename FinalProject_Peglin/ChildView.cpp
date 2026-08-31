@@ -613,6 +613,8 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_enemySprite.LoadBitmap(IDB_ENEMY_CRYSTAL_TOAD_V2);
 	_enemyBatSprite.LoadBitmap(IDB_ENEMY_EMBER_BAT_V1);
 	_enemyShamanSprite.LoadBitmap(IDB_ENEMY_MOSS_SHAMAN_V1);
+	_enemyWolfSprite.LoadBitmap(IDB_ENEMY_THORNBACK_WOLF_V1);
+	_enemyWispSprite.LoadBitmap(IDB_ENEMY_AZURE_WISP_V1);
 	_orbSprite.LoadBitmap(IDB_ORB_AMBER_TEAL_V2);
 
 	CWnd* mainWindow = AfxGetMainWnd();
@@ -670,6 +672,14 @@ void CChildView::OnDestroy()
 	if (_enemyShamanSprite.GetSafeHandle() != nullptr)
 	{
 		_enemyShamanSprite.DeleteObject();
+	}
+	if (_enemyWolfSprite.GetSafeHandle() != nullptr)
+	{
+		_enemyWolfSprite.DeleteObject();
+	}
+	if (_enemyWispSprite.GetSafeHandle() != nullptr)
+	{
+		_enemyWispSprite.DeleteObject();
 	}
 	if (_orbSprite.GetSafeHandle() != nullptr)
 	{
@@ -1534,6 +1544,10 @@ CBitmap* CChildView::GetEnemySprite(EnemyVisualKind visual) noexcept
 		return _enemyBatSprite.GetSafeHandle() != nullptr ? &_enemyBatSprite : nullptr;
 	case EnemyVisualKind::MossShaman:
 		return _enemyShamanSprite.GetSafeHandle() != nullptr ? &_enemyShamanSprite : nullptr;
+	case EnemyVisualKind::ThornbackWolf:
+		return _enemyWolfSprite.GetSafeHandle() != nullptr ? &_enemyWolfSprite : nullptr;
+	case EnemyVisualKind::AzureWisp:
+		return _enemyWispSprite.GetSafeHandle() != nullptr ? &_enemyWispSprite : nullptr;
 	}
 	return nullptr;
 }

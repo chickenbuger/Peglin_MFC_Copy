@@ -26,7 +26,9 @@ enum class EnemyVisualKind
 {
 	CrystalToad,
 	EmberBat,
-	MossShaman
+	MossShaman,
+	ThornbackWolf,
+	AzureWisp
 };
 
 struct EnemyDefinition

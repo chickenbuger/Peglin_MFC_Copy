@@ -200,6 +200,8 @@ namespace
 		if (text == "CrystalToad") visual = EnemyVisualKind::CrystalToad;
 		else if (text == "EmberBat") visual = EnemyVisualKind::EmberBat;
 		else if (text == "MossShaman") visual = EnemyVisualKind::MossShaman;
+		else if (text == "ThornbackWolf") visual = EnemyVisualKind::ThornbackWolf;
+		else if (text == "AzureWisp") visual = EnemyVisualKind::AzureWisp;
 		else return false;
 		return true;
 	}

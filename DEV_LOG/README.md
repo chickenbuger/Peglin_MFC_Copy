@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.1 |
+| 현재 버전 | Version 7.2 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 1/7 완료 — 분기형 스테이지 선택과 보스 경로 검증 완료 |
+| 상태 | Sprint 7 P0 2/10 완료 — 신규 몬스터 시각 타입과 로스터 확장 완료 |
 
 ## 문서
 
@@ -82,6 +82,7 @@
 - [Version 6.13 — UTF-8 지역화와 이미지 자산 파이프라인](./Version_6.13.md)
 - [Version 6.14 — Sprint 6 런·GDI·배포 최종 검증](./Version_6.14.md)
 - [Version 7.1 — 분기형 스테이지 맵과 보스 경로](./Version_7.1.md)
+- [Version 7.2 — 신규 몬스터 시각 타입 확장](./Version_7.2.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
