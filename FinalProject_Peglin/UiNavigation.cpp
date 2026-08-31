@@ -107,6 +107,19 @@ namespace
 		}
 		return {};
 	}
+
+	UiAction ResolveRewardClick(Vector2 position) noexcept
+	{
+		for (std::size_t index = 0; index < 3; ++index)
+		{
+			const float left = 75.0f + static_cast<float>(index) * 305.0f;
+			if (UiRect{ left, 245.0f, left + 270.0f, 485.0f }.Contains(position))
+			{
+				return { UiCommand::SelectReward, index };
+			}
+		}
+		return {};
+	}
 }
 
 UiAction ResolveUiClick(
@@ -122,6 +135,8 @@ UiAction ResolveUiClick(
 		return ResolveLoadoutClick(position);
 	case UiScreenKind::Options:
 		return ResolveOptionsClick(position);
+	case UiScreenKind::Reward:
+		return ResolveRewardClick(position);
 	case UiScreenKind::Result:
 		return ResolveResultClick(position);
 	}

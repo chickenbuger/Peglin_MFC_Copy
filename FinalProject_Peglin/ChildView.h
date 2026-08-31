@@ -15,6 +15,7 @@
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GameWorld.h"
+#include "RunProgression.h"
 #include "UiNavigation.h"
 #include "UiRenderer.h"
 
@@ -62,6 +63,7 @@ private:
 		Loadout,
 		Options,
 		Playing,
+		Reward,
 		Result
 	};
 
@@ -99,6 +101,7 @@ private:
 	void DrawStageSelection(CDC* deviceContext);
 	void DrawLoadoutScreen(CDC* deviceContext);
 	void DrawOptions(CDC* deviceContext);
+	void DrawRewardScreen(CDC* deviceContext);
 	void DrawResultScreen(CDC* deviceContext);
 	void DrawMenuBackdrop(CDC* deviceContext);
 	void DrawPlayingLoadout(CDC* deviceContext);
@@ -108,6 +111,8 @@ private:
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
 	bool StartSelectedStage();
+	void BeginNewRun();
+	bool SelectRunReward(std::size_t index);
 	void SaveOptions();
 	void RecordResult(bool cleared);
 
@@ -125,6 +130,9 @@ private:
 	GameRecordStore _recordStore;
 	GameRecordBook _records;
 	ContentLoadResult _contentCatalog;
+	AdventureRun _run;
+	GameDifficulty _runDifficulty = GameDifficulty::Normal;
+	float _runPlayerHealth = 0.0f;
 	CBitmap _uiBackground;
 	bool _uiBackgroundLoaded = false;
 	CBitmap _gameplayBackground;
@@ -135,6 +143,7 @@ private:
 	CBitmap _orbSprite;
 	std::size_t _selectedStageIndex = 0;
 	CString _loadoutNotice;
+	CString _runNotice;
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
 	ScreenMode _screenMode = ScreenMode::StageSelection;

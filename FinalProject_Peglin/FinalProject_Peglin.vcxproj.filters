@@ -84,6 +84,9 @@
 	<ClInclude Include="Progression.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="RunProgression.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
     <ClInclude Include="StageDefinition.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -138,6 +141,9 @@
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
 	<ClCompile Include="Progression.cpp">
+	  <Filter>소스 파일</Filter>
+	</ClCompile>
+	<ClCompile Include="RunProgression.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
     <ClCompile Include="StageDefinition.cpp">

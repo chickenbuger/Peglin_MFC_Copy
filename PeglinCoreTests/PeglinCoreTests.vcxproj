@@ -57,6 +57,7 @@
     <ClCompile Include="..\FinalProject_Peglin\Parent_ball.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\PegLayout.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\Progression.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\RunProgression.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Player.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\StageDefinition.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\TargetBall.cpp" />

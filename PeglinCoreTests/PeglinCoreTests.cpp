@@ -16,6 +16,7 @@
 #include "PegLayout.h"
 #include "Physics.h"
 #include "Progression.h"
+#include "RunProgression.h"
 #include "UiNavigation.h"
 
 namespace
@@ -287,6 +288,46 @@ namespace
 		Check(
 			!ResolveUiClick(UiScreenKind::StageSelection, { 10.0f, 10.0f }, 3).IsHandled(),
 			"mouse ignores non-interactive background");
+		action = ResolveUiClick(UiScreenKind::Reward, { 685.0f, 360.0f }, 0);
+		Check(action.command == UiCommand::SelectReward && action.index == 2,
+			"mouse selects the clicked run reward card");
+		Check(
+			!ResolveUiClick(UiScreenKind::Reward, { 500.0f, 600.0f }, 0).IsHandled(),
+			"reward screen ignores non-interactive background");
+	}
+
+	void TestAdventureRunProgression()
+	{
+		AdventureRun run;
+		Check(!run.Start({}), "run rejects an empty stage path");
+		Check(run.Start({ "stage-1", "stage-2", "stage-3" }), "run accepts an ordered stage path");
+		Check(run.GetStatus() == RunStatus::StageReady, "new run begins at a ready stage");
+		Check(run.GetCurrentStageId() == "stage-1", "new run begins at the first stage");
+		Check(run.GetClearedStageCount() == 0, "new run begins with no cleared stages");
+
+		Check(run.CompleteCurrentStage(), "first stage victory advances the run");
+		Check(run.GetStatus() == RunStatus::RewardSelection, "non-final victory requires a reward");
+		Check(run.GetRewardChoices().size() == 3, "stage victory offers three rewards");
+		Check(run.GetRewardChoices()[0].kind == RunRewardKind::Orb, "reward set includes an orb");
+		Check(run.GetRewardChoices()[1].kind == RunRewardKind::Relic, "reward set includes a relic");
+		Check(run.GetRewardChoices()[2].kind == RunRewardKind::Heal, "reward set includes healing");
+		Check(!run.CompleteCurrentStage(), "run cannot skip the required reward");
+		Check(!run.SelectReward(3).has_value(), "run rejects an invalid reward index");
+		const auto firstReward = run.SelectReward(0);
+		Check(firstReward.has_value() && firstReward->id == "iron-orb", "run returns the selected reward");
+		Check(run.GetCurrentStageId() == "stage-2", "reward unlocks the next stage");
+
+		Check(run.CompleteCurrentStage(), "second stage victory advances the run");
+		Check(run.SelectReward(2).has_value(), "second stage reward can be selected");
+		Check(run.GetCurrentStageId() == "stage-3", "second reward unlocks the boss");
+		run.MarkDefeated();
+		Check(run.GetStatus() == RunStatus::Defeated, "defeat marks the run failed");
+		Check(run.RetryCurrentStage(), "failed run can retry the current stage");
+		Check(run.GetStatus() == RunStatus::StageReady, "retry restores stage-ready state");
+		Check(run.CompleteCurrentStage(), "boss victory completes the final stage");
+		Check(run.GetStatus() == RunStatus::Complete, "final victory completes the run");
+		Check(run.GetClearedStageCount() == 3, "completed run records every cleared stage");
+		Check(run.GetRewardChoices().empty(), "final victory does not offer a next-stage reward");
 	}
 
 	void TestLayoutConfiguration()
@@ -1677,6 +1718,7 @@ int main()
 	TestDefeatTransition();
 	TestStateAndRestitutionRules();
 	TestMouseUiNavigation();
+	TestAdventureRunProgression();
 	TestLayoutConfiguration();
 	TestSeededPegLayout();
 	TestDataDrivenPegLayout();

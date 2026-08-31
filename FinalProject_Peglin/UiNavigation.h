@@ -9,6 +9,7 @@ enum class UiScreenKind
 	StageSelection,
 	Loadout,
 	Options,
+	Reward,
 	Result
 };
 
@@ -26,6 +27,7 @@ enum class UiCommand
 	ToggleDifficulty,
 	ToggleSound,
 	TogglePegColorMode,
+	SelectReward,
 	RetryStage
 };
 

@@ -233,6 +233,7 @@ CChildView::CChildView()
 		_recordSaveFailed = !_recordStore.Save(_records);
 	}
 	_contentCatalog = LoadContentCatalog(GetDefaultContentCatalogPath());
+	BeginNewRun();
 }
 
 CChildView::~CChildView()
@@ -264,7 +265,11 @@ void CChildView::gameclear()
 {
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(true);
-	_screenMode = ScreenMode::Result;
+	_runPlayerHealth = _game.GetPlayer().GetHp();
+	_run.CompleteCurrentStage();
+	_screenMode = _run.GetStatus() == RunStatus::RewardSelection
+		? ScreenMode::Reward
+		: ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
 	_orbTrail.clear();
@@ -274,6 +279,7 @@ void CChildView::gameover()
 {
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(false);
+	_run.MarkDefeated();
 	_screenMode = ScreenMode::Result;
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
@@ -339,6 +345,13 @@ void CChildView::OnPaint()
 	if (_screenMode == ScreenMode::Options)
 	{
 		DrawOptions(&memDc);
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+		memDc.SelectObject(previousBitmap);
+		return;
+	}
+	if (_screenMode == ScreenMode::Reward)
+	{
+		DrawRewardScreen(&memDc);
 		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 		memDc.SelectObject(previousBitmap);
 		return;
@@ -971,21 +984,28 @@ void CChildView::DrawEnemyHealthBar(
 void CChildView::DrawStageSelection(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("ADVENTURE MAP"), 300, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("ADVENTURE RUN"), 300, UiTheme::Gold);
 
 	UiRenderer::DrawPanel(deviceContext, CRect(28, 150, 222, 625));
-	UiRenderer::DrawText(deviceContext, CRect(42, 165, 208, 210), _T("LOADOUT"), 165, UiTheme::Gold);
-	UiRenderer::DrawText(deviceContext, CRect(42, 225, 208, 260), _T("선택 오브"), 110, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(42, 165, 208, 210), _T("RUN STATUS"), 155, UiTheme::Gold);
+	CString runProgress;
+	runProgress.Format(
+		_T("스테이지 %zu / %zu\n체력 %d"),
+		_run.GetCurrentStageIndex() + 1,
+		_run.GetStageCount(),
+		static_cast<int>(std::lround(_runPlayerHealth > 0.0f ? _runPlayerHealth : _game.GetPlayer().GetHp())));
+	UiRenderer::DrawText(deviceContext, CRect(42, 215, 208, 275), runProgress, 105, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawText(deviceContext, CRect(42, 285, 208, 315), _T("현재 오브"), 105, UiTheme::MutedText);
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(42, 260, 208, 315),
+		CRect(42, 315, 208, 355),
 		Utf8Text(_game.GetLoadout().GetSelectedOrb().displayName),
 		145,
 		UiTheme::Text);
-	UiRenderer::DrawText(deviceContext, CRect(42, 335, 208, 370), _T("보유 유물"), 110, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(42, 365, 208, 395), _T("보유 유물"), 105, UiTheme::MutedText);
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(45, 375, 205, 515),
+		CRect(45, 400, 205, 525),
 		RelicSummary(_game.GetLoadout()),
 		110,
 		UiTheme::Green,
@@ -1002,8 +1022,13 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		const StageDefinition configured = ApplyDifficulty(_contentCatalog.stages[index], _options.difficulty);
 		const int top = 150 + static_cast<int>(index) * 160;
 		const CRect card(248, top, 752, top + 135);
-		const bool selected = index == _selectedStageIndex;
-		UiRenderer::DrawPanel(deviceContext, card, selected, configured.isBoss ? UiTheme::Orange : UiTheme::Gold);
+		const bool completed = index < _run.GetClearedStageCount();
+		const bool selected = index == _run.GetCurrentStageIndex()
+			&& _run.GetStatus() == RunStatus::StageReady;
+		const COLORREF stageColor = completed
+			? UiTheme::Green
+			: (configured.isBoss ? UiTheme::Orange : UiTheme::Gold);
+		UiRenderer::DrawPanel(deviceContext, card, selected || completed, stageColor);
 		CString title;
 		title.Format(
 			_T("[%zu] %s%s"),
@@ -1015,7 +1040,7 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			CRect(card.left + 15, card.top + 10, card.right - 15, card.top + 58),
 			title,
 			160,
-			selected ? UiTheme::Gold : UiTheme::Text);
+			completed ? UiTheme::Green : (selected ? UiTheme::Gold : UiTheme::MutedText));
 		const std::size_t enemyCount = configured.enemies.empty()
 			? std::size_t{ 1 }
 			: configured.enemies.size();
@@ -1041,8 +1066,12 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			UiTheme::MutedText);
 		const StageRecord record = _records.Get(configured.id, _options.difficulty);
 		CString recordText;
+		const CString nodeState = completed
+			? _T("CLEAR")
+			: (selected ? _T("NEXT") : _T("LOCKED"));
 		recordText.Format(
-			_T("기록 %d · 콤보 %d · 클리어 %d"),
+			_T("%s · 기록 %d · 콤보 %d · 클리어 %d"),
+			nodeState.GetString(),
 			record.highScore,
 			record.bestCombo,
 			record.clearCount);
@@ -1065,11 +1094,43 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	UiRenderer::DrawText(deviceContext, CRect(792, 380, 954, 445), PegColorModeText(_options.pegColorMode), 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), _T("[O] 옵션"));
 
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), _T("선택 스테이지 시작 · ENTER"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), _T("현재 노드 시작 · ENTER"));
 	if (!_contentCatalog.UsedExternalContent())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
 	}
+}
+
+void CChildView::DrawRewardScreen(CDC* deviceContext)
+{
+	DrawMenuBackdrop(deviceContext);
+	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("STAGE REWARD"), 300, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(160, 125, 820, 175), _T("보상 하나를 선택하면 다음 스테이지가 열립니다"), 125, UiTheme::MutedText);
+
+	const auto& rewards = _run.GetRewardChoices();
+	for (std::size_t index = 0; index < rewards.size(); ++index)
+	{
+		const RunReward& reward = rewards[index];
+		const int left = 75 + static_cast<int>(index) * 305;
+		const CRect card(left, 245, left + 270, 485);
+		const COLORREF color = reward.kind == RunRewardKind::Orb
+			? UiTheme::Blue
+			: (reward.kind == RunRewardKind::Relic ? UiTheme::Gold : UiTheme::Green);
+		UiRenderer::DrawPanel(deviceContext, card, true, color);
+		CString category;
+		switch (reward.kind)
+		{
+		case RunRewardKind::Orb: category = _T("ORB"); break;
+		case RunRewardKind::Relic: category = _T("RELIC"); break;
+		case RunRewardKind::Heal: category = _T("RECOVER"); break;
+		}
+		CString title;
+		title.Format(_T("[%zu] %s"), index + 1, category.GetString());
+		UiRenderer::DrawText(deviceContext, CRect(left + 15, 265, left + 255, 320), title, 160, color);
+		UiRenderer::DrawText(deviceContext, CRect(left + 15, 335, left + 255, 420), Utf8Text(reward.displayName), 145, UiTheme::Text, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	}
+	UiRenderer::DrawText(deviceContext, CRect(150, 535, 830, 585), _runNotice, 110, UiTheme::Orange);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 720, 690), _T("보상 카드 클릭 · 1/2/3 선택"));
 }
 
 void CChildView::DrawLoadoutScreen(CDC* deviceContext)
@@ -1160,7 +1221,7 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 	const bool victory = _resultSummary.has_value()
 		&& _resultSummary->result == GameUpdateResult::Victory;
 	UiRenderer::DrawPanel(deviceContext, CRect(250, 135, 730, 650), true, victory ? UiTheme::Green : UiTheme::Danger);
-	UiRenderer::DrawText(deviceContext, CRect(250, 55, 730, 125), victory ? _T("STAGE CLEAR") : _T("GAME OVER"), 300, victory ? UiTheme::Green : UiTheme::Danger);
+	UiRenderer::DrawText(deviceContext, CRect(250, 55, 730, 125), victory ? _T("RUN COMPLETE") : _T("RUN FAILED"), 300, victory ? UiTheme::Green : UiTheme::Danger);
 	if (_resultSummary.has_value())
 	{
 		UiRenderer::DrawText(deviceContext, CRect(280, 175, 700, 225), Utf8Text(_resultSummary->stageName), 165, UiTheme::Gold);
@@ -1187,7 +1248,7 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 		UiRenderer::DrawText(deviceContext, CRect(275, 565, 705, 610), _T("기록 저장 실패 · 현재 실행에서만 유지"), 105, UiTheme::Danger);
 	}
 	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 480, 690), _T("다시 도전 · R"));
-	UiRenderer::DrawKeyHint(deviceContext, CRect(500, 640, 720, 690), _T("스테이지 선택 · S"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(500, 640, 720, 690), _T("새 런 · S"));
 }
 
 void CChildView::DrawMenuBackdrop(CDC* deviceContext)
@@ -1228,7 +1289,7 @@ void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 bool CChildView::StartStage(std::string_view stageId)
 {
 	const StageDefinition* stage = FindContentStage(_contentCatalog.stages, stageId);
-	if (stage == nullptr || !_game.LoadStage(*stage, _options.difficulty))
+	if (stage == nullptr || !_game.LoadStage(*stage, _runDifficulty))
 	{
 		return false;
 	}
@@ -1238,6 +1299,11 @@ bool CChildView::StartStage(std::string_view stageId)
 	_orbTrailSampleSeconds = 0.0f;
 	_gameplayVisualTimeSeconds = 0.0f;
 	_resultSummary.reset();
+	if (_run.GetClearedStageCount() > 0 && _runPlayerHealth > 0.0f)
+	{
+		_game.GetPlayer().SetHp((std::min)(_runPlayerHealth, _game.GetStage().rules.playerHealth));
+	}
+	_runPlayerHealth = _game.GetPlayer().GetHp();
 	_screenMode = ScreenMode::Playing;
 	SetFocus();
 	return true;
@@ -1247,8 +1313,61 @@ bool CChildView::StartSelectedStage()
 {
 	const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
 	return stageCount > 0
+		&& _run.GetStatus() == RunStatus::StageReady
+		&& _selectedStageIndex == _run.GetCurrentStageIndex()
 		&& _selectedStageIndex < stageCount
 		&& StartStage(_contentCatalog.stages[_selectedStageIndex].id);
+}
+
+void CChildView::BeginNewRun()
+{
+	std::vector<std::string> stageIds;
+	const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
+	stageIds.reserve(stageCount);
+	for (std::size_t index = 0; index < stageCount; ++index)
+	{
+		stageIds.push_back(_contentCatalog.stages[index].id);
+	}
+
+	_game.ResetProgression();
+	_run.Start(std::move(stageIds));
+	_runDifficulty = _options.difficulty;
+	_runPlayerHealth = 0.0f;
+	_selectedStageIndex = 0;
+	_runNotice.Empty();
+	_resultSummary.reset();
+	_feedbackAnimations.clear();
+	_orbTrail.clear();
+	_screenMode = ScreenMode::StageSelection;
+}
+
+bool CChildView::SelectRunReward(std::size_t index)
+{
+	const std::optional<RunReward> selected = _run.SelectReward(index);
+	if (!selected.has_value())
+	{
+		return false;
+	}
+
+	switch (selected->kind)
+	{
+	case RunRewardKind::Orb:
+		_game.SelectOrb(selected->id);
+		break;
+	case RunRewardKind::Relic:
+		_game.AcquireRelic(selected->id);
+		break;
+	case RunRewardKind::Heal:
+		_runPlayerHealth = (std::min)(
+			_runPlayerHealth + selected->magnitude,
+			_game.GetStage().rules.playerHealth);
+		break;
+	}
+
+	_runNotice.Format(_T("%s 선택 완료"), Utf8Text(selected->displayName).GetString());
+	_selectedStageIndex = _run.GetCurrentStageIndex();
+	_screenMode = ScreenMode::StageSelection;
+	return true;
 }
 
 void CChildView::SaveOptions()
@@ -1330,6 +1449,7 @@ bool CChildView::HandleMenuClick(CPoint point)
 	case ScreenMode::StageSelection: screen = UiScreenKind::StageSelection; break;
 	case ScreenMode::Loadout: screen = UiScreenKind::Loadout; break;
 	case ScreenMode::Options: screen = UiScreenKind::Options; break;
+	case ScreenMode::Reward: screen = UiScreenKind::Reward; break;
 	case ScreenMode::Result: screen = UiScreenKind::Result; break;
 	case ScreenMode::Playing: return false;
 	}
@@ -1353,7 +1473,11 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 	switch (action.command)
 	{
 	case UiCommand::SelectStage:
-		_selectedStageIndex = action.index;
+		if (action.index == _run.GetCurrentStageIndex()
+			&& _run.GetStatus() == RunStatus::StageReady)
+		{
+			_selectedStageIndex = action.index;
+		}
 		break;
 	case UiCommand::StartSelectedStage:
 		StartSelectedStage();
@@ -1392,9 +1516,8 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 	case UiCommand::BackToStageSelection:
 		if (_screenMode == ScreenMode::Result)
 		{
-			_game.ResetGame();
-			_feedbackAnimations.clear();
-			_resultSummary.reset();
+			BeginNewRun();
+			break;
 		}
 		_screenMode = ScreenMode::StageSelection;
 		break;
@@ -1410,7 +1533,11 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		_options.TogglePegColorMode();
 		SaveOptions();
 		break;
+	case UiCommand::SelectReward:
+		SelectRunReward(action.index);
+		break;
 	case UiCommand::RetryStage:
+		_run.RetryCurrentStage();
 		restart();
 		break;
 	case UiCommand::None:
@@ -1465,22 +1592,14 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if (_screenMode == ScreenMode::StageSelection)
 	{
 		const std::size_t stageCount = (std::min)(std::size_t{ 3 }, _contentCatalog.stages.size());
-		if (nChar == VK_UP && stageCount > 0)
-		{
-			_selectedStageIndex = (_selectedStageIndex + stageCount - 1) % stageCount;
-		}
-		else if (nChar == VK_DOWN && stageCount > 0)
-		{
-			_selectedStageIndex = (_selectedStageIndex + 1) % stageCount;
-		}
-		else if (nChar == VK_RETURN)
+		if (nChar == VK_RETURN)
 		{
 			StartSelectedStage();
 		}
 		else if (nChar >= '1' && nChar <= '3')
 		{
 			const std::size_t requested = static_cast<std::size_t>(nChar - '1');
-			if (requested < stageCount)
+			if (requested < stageCount && requested == _run.GetCurrentStageIndex())
 			{
 				_selectedStageIndex = requested;
 				StartSelectedStage();
@@ -1562,18 +1681,27 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		return;
 	}
 
+	if (_screenMode == ScreenMode::Reward)
+	{
+		if (nChar >= '1' && nChar <= '3')
+		{
+			SelectRunReward(static_cast<std::size_t>(nChar - '1'));
+		}
+		Invalidate();
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+
 	if (_screenMode == ScreenMode::Result)
 	{
 		if (nChar == 'R')
 		{
+			_run.RetryCurrentStage();
 			restart();
 		}
 		else if (nChar == 'S')
 		{
-			_game.ResetGame();
-			_feedbackAnimations.clear();
-			_resultSummary.reset();
-			_screenMode = ScreenMode::StageSelection;
+			BeginNewRun();
 		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
@@ -1635,8 +1763,7 @@ void CChildView::OnCaptureChanged(CWnd* pWnd)
 
 void CChildView::On32771()
 {
-	// TODO: 여기에 명령 처리기 코드를 추가합니다.
-	restart();
+	BeginNewRun();
 }
 
 void CChildView::ReleaseMouseInput(bool cancelDrag)
