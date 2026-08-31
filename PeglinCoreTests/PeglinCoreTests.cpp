@@ -613,11 +613,12 @@ namespace
 		world.GetBall().SetPosition({ 485.0f, 500.0f });
 		world.GetBall().SetVelocity({ 2.0f, 0.0f });
 		world.Update(0.0f);
-		Check(world.GetTargets()._targetBallList.GetCount() == 2, "refresh restores removed pegs but excludes itself");
+		Check(world.GetTargets()._targetBallList.GetCount() == 3, "refresh restores removed pegs and replaces itself");
 		Check(world.GetFeedback().currentShotPegHits == 2, "refresh collision counts as one additional hit");
 		Check(world.GetScore().currentShot == 300, "refresh hit preserves normal combo scoring");
 
 		bool restoredNormalFound = false;
+		int activeRefreshPegs = 0;
 		auto position = world.GetTargets()._targetBallList.GetHeadPosition();
 		while (position != nullptr)
 		{
@@ -626,8 +627,10 @@ namespace
 			{
 				restoredNormalFound = true;
 			}
+			activeRefreshPegs += target.type == PegType::Refresh ? 1 : 0;
 		}
 		Check(restoredNormalFound, "refresh restores the removed peg with its original type");
+		Check(activeRefreshPegs == 1, "refresh activation always adds one replacement refresh peg");
 	}
 
 	void TestStageCatalogAndValidation()
@@ -1221,12 +1224,12 @@ namespace
 		world.GetBall().SetPosition({ 485.0f, 500.0f });
 		world.GetBall().SetVelocity({ 2.0f, 0.0f });
 		world.Update(0.0f);
-		Check(world.GetTargets()._targetBallList.GetCount() == 2, "first refresh leaves two unique active pegs");
+		Check(world.GetTargets()._targetBallList.GetCount() == 3, "first refresh restores itself without duplicating positions");
 
 		world.GetBall().SetPosition({ 585.0f, 500.0f });
 		world.GetBall().SetVelocity({ 2.0f, 0.0f });
 		world.Update(0.0f);
-		Check(world.GetTargets()._targetBallList.GetCount() == 2, "second refresh restores only missing pegs");
+		Check(world.GetTargets()._targetBallList.GetCount() == 3, "second refresh also restores itself without duplicates");
 
 		int normalCount = 0;
 		int refreshCount = 0;
@@ -1237,7 +1240,7 @@ namespace
 			normalCount += active.type == PegType::Normal ? 1 : 0;
 			refreshCount += active.type == PegType::Refresh ? 1 : 0;
 		}
-		Check(normalCount == 1 && refreshCount == 1, "refresh cycle preserves one peg per original definition");
+		Check(normalCount == 1 && refreshCount == 2, "refresh cycle preserves every original peg and refresh type");
 	}
 
 	void TestGameEventFeedbackStream()
@@ -1282,7 +1285,7 @@ namespace
 			refreshEvents.end(),
 			[](const GameEvent& event) { return event.type == GameEventType::RefreshTriggered; });
 		Check(refreshEffect != refreshEvents.end(), "refresh collision emits RefreshTriggered event");
-		Check(refreshEffect != refreshEvents.end() && refreshEffect->affectedPegs == 2, "refresh event reports restored peg count");
+		Check(refreshEffect != refreshEvents.end() && refreshEffect->affectedPegs == 3, "refresh event reports removed pegs plus its replacement");
 
 		world.GetBall().SetPosition({ 500.0f, 801.0f });
 		world.Update(0.0f);

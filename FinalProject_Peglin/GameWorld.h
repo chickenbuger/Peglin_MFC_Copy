@@ -193,7 +193,7 @@ private:
 	void HandlePegCollisions();
 	void AwardPeg(const TargetBall& target);
 	void ApplyBombEffect(const TargetBall& bomb);
-	void RestoreRemovedPegs(Vector2 excludedPosition);
+	void RestoreRemovedPegs(Vector2 triggerPosition);
 	void ExecuteEnemyAction(const EnemyActionDefinition& action);
 	EnemyCombatant& GetActiveEnemy() noexcept { return _enemies[_activeEnemyIndex]; }
 	const EnemyCombatant& GetActiveEnemy() const noexcept { return _enemies[_activeEnemyIndex]; }

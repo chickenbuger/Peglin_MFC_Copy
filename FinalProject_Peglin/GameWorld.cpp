@@ -481,17 +481,12 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 	});
 }
 
-void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
+void GameWorld::RestoreRemovedPegs(Vector2 triggerPosition)
 {
 	constexpr float POSITION_EPSILON_SQUARED = 0.0001f;
 	int restoredPegs = 0;
 	for (const PegDefinition& definition : _stage.pegLayout.pegs)
 	{
-		if ((definition.position - excludedPosition).LengthSquared() <= POSITION_EPSILON_SQUARED)
-		{
-			continue;
-		}
-
 		bool isActive = false;
 		auto activePosition = _targetBallList._targetBallList.GetHeadPosition();
 		while (activePosition != nullptr)
@@ -515,7 +510,7 @@ void GameWorld::RestoreRemovedPegs(Vector2 excludedPosition)
 
 	_events.push_back({
 		GameEventType::RefreshTriggered,
-		excludedPosition,
+		triggerPosition,
 		PegType::Refresh,
 		0,
 		_score.currentCombo,
