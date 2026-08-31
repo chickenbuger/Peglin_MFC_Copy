@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 6 |
-| 현재 버전 | Version 6.10 |
+| 현재 버전 | Version 6.11 |
 | 스프린트 목표 | 게임플레이 시각 완성도, 런 진행·보상, 외부 콘텐츠와 UI 확장 비용 개선 |
-| 상태 | Sprint 6 진행 중 — P0 10/13 완료 · 다음 작업은 부드러운 페그 충돌음 |
+| 상태 | Sprint 6 진행 중 — P0 11/14 완료 · 다음 작업은 외부 효과 콘텐츠 확장 |
 
 ## 문서
 
@@ -77,6 +77,7 @@
 - [Version 6.8 — 인게임 PEG FIELD 오버레이 제거](./Version_6.8.md)
 - [Version 6.9 — 공격 타입·대상 범위와 전투 애니메이션](./Version_6.9.md)
 - [Version 6.10 — 상단 게임 옵션 인게임 정보 토글](./Version_6.10.md)
+- [Version 6.11 — 부드러운 페그 충돌 효과음](./Version_6.11.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

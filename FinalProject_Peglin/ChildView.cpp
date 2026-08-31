@@ -7,11 +7,14 @@
 #include "FinalProject_Peglin.h"
 #include "ChildView.h"
 #include "GameLayout.h"
+#include "SoftPegSound.h"
 #include <algorithm>
 #include <cmath>
+#include <mmsystem.h>
 #include <utility>
 
 #pragma comment(lib, "Msimg32.lib")
+#pragma comment(lib, "Winmm.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -587,6 +590,7 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 void CChildView::OnDestroy()
 {
 	ReleaseMouseInput(true);
+	::PlaySoundW(nullptr, nullptr, 0);
 	SaveOptions();
 	if (_uiBackgroundLoaded)
 	{
@@ -1543,6 +1547,16 @@ void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 {
 	if (!_options.soundEnabled)
 	{
+		return;
+	}
+
+	if (eventType == GameEventType::PegHit)
+	{
+		static const std::vector<std::uint8_t> pegHitWave = CreateSoftPegHitWave();
+		::PlaySoundW(
+			reinterpret_cast<LPCWSTR>(pegHitWave.data()),
+			nullptr,
+			SND_MEMORY | SND_ASYNC | SND_NODEFAULT | SND_NOSTOP);
 		return;
 	}
 

@@ -17,6 +17,7 @@
 #include "Physics.h"
 #include "Progression.h"
 #include "RunProgression.h"
+#include "SoftPegSound.h"
 #include "UiNavigation.h"
 
 namespace
@@ -39,6 +40,54 @@ namespace
 	bool Near(float actual, float expected, float tolerance = 0.0001f)
 	{
 		return std::fabs(actual - expected) <= tolerance;
+	}
+
+	std::uint16_t ReadWaveUInt16(
+		const std::vector<std::uint8_t>& wave,
+		std::size_t offset)
+	{
+		return static_cast<std::uint16_t>(wave[offset])
+			| static_cast<std::uint16_t>(wave[offset + 1]) << 8U;
+	}
+
+	std::uint32_t ReadWaveUInt32(
+		const std::vector<std::uint8_t>& wave,
+		std::size_t offset)
+	{
+		std::uint32_t value = 0;
+		for (std::size_t index = 0; index < 4; ++index)
+		{
+			value |= static_cast<std::uint32_t>(wave[offset + index])
+				<< static_cast<unsigned int>(index * 8U);
+		}
+		return value;
+	}
+
+	void TestSoftPegHitSound()
+	{
+		const std::vector<std::uint8_t> wave = CreateSoftPegHitWave();
+		Check(wave.size() > 44U, "soft peg sound contains PCM samples");
+		Check(wave[0] == 'R' && wave[1] == 'I' && wave[2] == 'F' && wave[3] == 'F',
+			"soft peg sound has a RIFF header");
+		Check(wave[8] == 'W' && wave[9] == 'A' && wave[10] == 'V' && wave[11] == 'E',
+			"soft peg sound has a WAVE signature");
+		Check(ReadWaveUInt16(wave, 20) == 1U, "soft peg sound uses PCM encoding");
+		Check(ReadWaveUInt16(wave, 22) == 1U, "soft peg sound is mono");
+		Check(ReadWaveUInt32(wave, 24) == 22050U, "soft peg sound uses a compact sample rate");
+		Check(ReadWaveUInt16(wave, 34) == 16U, "soft peg sound uses sixteen-bit samples");
+		Check(ReadWaveUInt32(wave, 40) + 44U == wave.size(),
+			"soft peg sound data length matches its header");
+
+		int peak = 0;
+		for (std::size_t offset = 44; offset + 1 < wave.size(); offset += 2)
+		{
+			const auto sample = static_cast<std::int16_t>(ReadWaveUInt16(wave, offset));
+			peak = (std::max)(peak, std::abs(static_cast<int>(sample)));
+		}
+		Check(peak >= 1000 && peak <= 5000, "soft peg sound keeps a gentle audible peak");
+		Check(ReadWaveUInt16(wave, 44) == 0U, "soft peg sound begins without a click");
+		Check(ReadWaveUInt16(wave, wave.size() - 2U) == 0U,
+			"soft peg sound fades to silence");
 	}
 
 	void Launch(GameWorld& world)
@@ -1884,6 +1933,7 @@ int main()
 	TestStageCatalogAndValidation();
 	TestStageSelectionAndResultSummary();
 	TestGameOptionsAndDifficulty();
+	TestSoftPegHitSound();
 	TestGameSettingsPersistence();
 	TestStageRecordPersistence();
 	TestStageRulesConfigureWorld();
