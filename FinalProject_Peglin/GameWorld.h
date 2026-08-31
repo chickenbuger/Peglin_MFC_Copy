@@ -192,6 +192,7 @@ public:
 
 private:
 	void InitializeTargets();
+	void AdvanceMovingPegs(float deltaSeconds);
 	void HandlePegCollisions();
 	void AwardPeg(const TargetBall& target);
 	void ApplyBombEffect(const TargetBall& bomb);
@@ -223,6 +224,7 @@ private:
 	Vector2 _aimStart;
 	Vector2 _aimCurrent;
 	bool _aimInProgress = false;
+	float _pegMotionElapsedSeconds = 0.0f;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 	bool _terminalResultReported = false;

@@ -113,6 +113,14 @@ namespace
 		return count;
 	}
 
+	int CountMovingPegs(const StageDefinition& stage)
+	{
+		return static_cast<int>(std::count_if(
+			stage.pegLayout.pegs.begin(),
+			stage.pegLayout.pegs.end(),
+			[](const PegDefinition& peg) { return peg.motion.IsMoving(); }));
+	}
+
 	void TestZeroLengthShot()
 	{
 		GameWorld world;
@@ -564,6 +572,71 @@ namespace
 		Check(world.GetTargets()._targetBallList.GetCount() == 3, "reset rebuilds the configured custom layout");
 	}
 
+	void TestMovingPegStages()
+	{
+		constexpr float PI = 3.1415927f;
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{
+				{ 500.0f, 500.0f },
+				PegType::Normal,
+				{ PegMotionKind::Horizontal, 20.0f, PI, 0.0f }
+			},
+			{ { 600.0f, 500.0f }, PegType::Refresh }
+		};
+		GameWorld world(layout);
+		auto movingPosition = world.GetTargets()._targetBallList.GetHeadPosition();
+		const TargetBall& initial = world.GetTargets()._targetBallList.GetAt(movingPosition);
+		Check(initial.IsMoving() && Near(initial.position.x, 500.0f),
+			"moving peg starts from its deterministic phase position");
+
+		world.Update(0.5f);
+		movingPosition = world.GetTargets()._targetBallList.GetHeadPosition();
+		const TargetBall& shifted = world.GetTargets()._targetBallList.GetAt(movingPosition);
+		Check(Near(shifted.position.x, 520.0f) && Near(shifted.position.y, 500.0f),
+			"horizontal peg follows its configured sinusoidal path while aiming");
+
+		Check(world.TogglePause(), "moving peg test enters pause");
+		world.Update(0.5f);
+		movingPosition = world.GetTargets()._targetBallList.GetHeadPosition();
+		Check(Near(world.GetTargets()._targetBallList.GetAt(movingPosition).position.x, 520.0f),
+			"paused stage freezes moving pegs");
+		Check(world.TogglePause(), "moving peg test resumes from pause");
+		world.Update(0.5f);
+		movingPosition = world.GetTargets()._targetBallList.GetHeadPosition();
+		Check(Near(world.GetTargets()._targetBallList.GetAt(movingPosition).position.x, 500.0f),
+			"resumed moving peg continues from the preserved phase");
+
+		world.ResetGame();
+		movingPosition = world.GetTargets()._targetBallList.GetHeadPosition();
+		Check(Near(world.GetTargets()._targetBallList.GetAt(movingPosition).position.x, 500.0f),
+			"stage retry resets moving pegs to their initial phase");
+		world.Update(0.5f);
+		Launch(world);
+		world.GetBall().SetPosition({ 505.0f, 500.0f });
+		world.GetBall().SetVelocity({ 2.0f, 0.0f });
+		world.Update(0.0f);
+		Check(world.GetTargets()._targetBallList.GetCount() == 1,
+			"ball collision uses the moving peg's current position");
+
+		GameWorld refreshWorld(layout);
+		refreshWorld.Update(0.5f);
+		Launch(refreshWorld);
+		refreshWorld.GetBall().SetPosition({ 585.0f, 500.0f });
+		refreshWorld.GetBall().SetVelocity({ 2.0f, 0.0f });
+		refreshWorld.Update(0.0f);
+		Check(refreshWorld.GetTargets()._targetBallList.GetCount() == 2,
+			"refresh identifies an active moving peg by source index without duplicating it");
+		int movingCount = 0;
+		auto scan = refreshWorld.GetTargets()._targetBallList.GetHeadPosition();
+		while (scan != nullptr)
+		{
+			const TargetBall& target = refreshWorld.GetTargets()._targetBallList.GetNext(scan);
+			movingCount += target.IsMoving() ? 1 : 0;
+		}
+		Check(movingCount == 1, "refresh preserves exactly one restored moving peg definition");
+	}
+
 	void TestPegTypeDefinitions()
 	{
 		const PegTypeDefinition& normal = GetPegTypeDefinition(PegType::Normal);
@@ -760,6 +833,10 @@ namespace
 		Check(challengeResult.stage->pegLayout.pegs.size() == 40, "challenge stage provides a distinct board");
 		Check(Near(challengeResult.stage->rules.enemyHealth, 30.0f), "challenge stage provides stronger enemy");
 		Check(challengeResult.stage->rules.enemyStepsBeforeAttack == 6, "challenge stage provides faster attack timing");
+		Check(CountMovingPegs(*defaultResult.stage) == 0,
+			"opening stage keeps a static introductory peg board");
+		Check(CountMovingPegs(*challengeResult.stage) == 3,
+			"dense cavern introduces three moving pegs");
 		for (std::string_view stageId : { "stage-4", "stage-5", "stage-6", "stage-7", "stage-8" })
 		{
 			const StageLoadResult added = LoadStageDefinition(stageId);
@@ -784,6 +861,10 @@ namespace
 		Check(bossResult.stage->pegLayout.pegs.size() == 36, "boss stage provides its own board");
 		Check(bossResult.stage->enemyPattern.size() == 4, "boss stage exposes a four-action pattern");
 		Check(Near(bossResult.stage->rules.enemyHealth, 60.0f), "boss stage provides boss health");
+		Check(CountMovingPegs(*fungal.stage) == 3,
+			"fungal route contains a vertical moving-peg pattern");
+		Check(CountMovingPegs(*bossResult.stage) == 4,
+			"boss board contains a mixed moving-peg pattern");
 
 		const StageLoadResult missingResult = LoadStageDefinition("missing-stage");
 		Check(!missingResult.IsSuccess(), "unknown stage id fails safely");
@@ -817,6 +898,18 @@ namespace
 		invalid = CreateDefaultStageDefinition();
 		invalid.rules.pegRestitution = 2.0f;
 		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPegRestitution, "out-of-range stage restitution is rejected");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs[0].motion = {
+			PegMotionKind::Horizontal, 0.0f, 1.0f, 0.0f };
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::InvalidPegMotion,
+			"moving peg rejects a non-positive amplitude");
+
+		invalid = CreateDefaultStageDefinition();
+		invalid.pegLayout.pegs[0].motion = {
+			PegMotionKind::Horizontal, 20.0f, 1.0f, 0.0f };
+		Check(ValidateStageDefinition(invalid).error == StageLoadError::PegMotionOutOfBounds,
+			"moving peg path must remain inside the peg field");
 	}
 
 	void TestStageSelectionAndResultSummary()
@@ -1650,6 +1743,7 @@ namespace
 			"name=External Trial\n"
 			"layout=2,2,300,400,80,0,7\n"
 			"peg_type=1,Critical\n"
+			"peg_motion=2,Vertical,20,1.5,0\n"
 			"player_health=90\n"
 			"enemy_health=45\n"
 			"player_damage=12\n"
@@ -1675,6 +1769,11 @@ namespace
 		Check(external != nullptr, "external stage can be found by stable id");
 		Check(external != nullptr && external->pegLayout.pegs.size() == 4, "external grid definition creates its peg board");
 		Check(external != nullptr && external->pegLayout.pegs[1].type == PegType::Critical, "external peg override is applied");
+		Check(
+			external != nullptr
+			&& external->pegLayout.pegs[2].motion.kind == PegMotionKind::Vertical
+			&& Near(external->pegLayout.pegs[2].motion.amplitude, 20.0f),
+			"external peg motion preserves its axis and amplitude");
 		Check(external != nullptr && external->enemyPattern.size() == 2, "external enemy actions preserve order");
 		GameWorld externalWorld;
 		Check(external != nullptr && externalWorld.LoadStage(*external, GameDifficulty::Hard), "game world accepts validated external stage data");
@@ -1728,6 +1827,13 @@ namespace
 		badPegIndex.replace(badPegIndex.find("peg_type=1"), 10, "peg_type=99");
 		WriteContent(badPegIndex);
 		Check(LoadContentCatalog(contentPath).error == ContentLoadError::InvalidValue, "out-of-range peg override is rejected");
+
+		std::string duplicateMotion = validContent;
+		duplicateMotion.insert(duplicateMotion.find("player_health="),
+			"peg_motion=2,Horizontal,10,1,0\n");
+		WriteContent(duplicateMotion);
+		Check(LoadContentCatalog(contentPath).error == ContentLoadError::DuplicateKey,
+			"duplicate external peg motion is rejected");
 
 		std::string partial = validContent;
 		partial.erase(partial.find("enemy_health="), std::string("enemy_health=45\n").size());
@@ -2360,6 +2466,7 @@ int main()
 	TestLayoutConfiguration();
 	TestSeededPegLayout();
 	TestDataDrivenPegLayout();
+	TestMovingPegStages();
 	TestPegTypeDefinitions();
 	TestCriticalPegEffect();
 	TestBombPegEffect();

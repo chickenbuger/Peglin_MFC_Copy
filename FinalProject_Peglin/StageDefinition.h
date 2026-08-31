@@ -71,6 +71,8 @@ enum class StageLoadError
 	PegOutOfBounds,
 	DuplicatePegPosition,
 	InvalidPegType,
+	InvalidPegMotion,
+	PegMotionOutOfBounds,
 	InvalidPlayerHealth,
 	InvalidEnemyHealth,
 	InvalidPlayerDamage,

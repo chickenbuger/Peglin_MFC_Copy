@@ -29,6 +29,26 @@
 - `stages.v1.ini`의 `enemy` 첫 번째 값은 `gameplay.v1.ini`의 `[enemy]` ID와 일치해야 한다.
 - 같은 종류 안의 중복 ID, 알 수 없는 효과 ID와 적 ID는 전체 외부 카탈로그 복구를 발생시킨다.
 
+## 이동 페그 정의
+
+`stages.v1.ini`에서 레이아웃과 `peg_type`을 선언한 뒤 특정 페그에 왕복 이동을 추가할 수 있다.
+
+```ini
+peg_motion=12,Horizontal,22,1.20,0
+peg_motion=20,Vertical,18,1.00,3.1415927
+```
+
+값은 순서대로 `페그 인덱스, 이동축, 진폭(px), 각속도(rad/s), 시작 위상(rad)`이다.
+
+- 이동축은 `Horizontal` 또는 `Vertical`만 지원한다.
+- 진폭은 `0 초과~64px`, 각속도는 `0 초과~2π rad/s` 범위여야 한다.
+- 기준 위치와 전체 이동 경로가 PEG FIELD 안에 있어야 한다.
+- 같은 페그 인덱스에 `peg_motion`을 두 번 선언하면 전체 외부 스테이지 카탈로그를 거부한다.
+- 이동은 조준 중과 공 비행 중에 계속되고 일시정지 중에는 멈춘다. 스테이지 재시작 시 시작 위상으로 돌아간다.
+- Refresh 복원은 현재 좌표가 아닌 원본 페그 인덱스를 사용하므로 이동 중인 페그가 중복 생성되지 않는다.
+
+기본 카탈로그에서는 Dense Cavern, Fungal Hollow, Ember Roost와 Rootbound Citadel 보스전이 서로 다른 수평·수직 이동 패턴을 사용한다.
+
 ## 효과 정의
 
 ```ini

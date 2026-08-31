@@ -23,6 +23,7 @@ namespace
 		StageDefinition stage;
 		std::unordered_set<std::string> scalarKeys;
 		std::unordered_set<std::size_t> pegOverrideIndexes;
+		std::unordered_set<std::size_t> pegMotionIndexes;
 		bool hasId = false;
 		bool hasName = false;
 		bool hasLayout = false;
@@ -186,6 +187,14 @@ namespace
 		return true;
 	}
 
+	bool ParsePegMotionKind(std::string_view text, PegMotionKind& kind) noexcept
+	{
+		if (text == "Horizontal") kind = PegMotionKind::Horizontal;
+		else if (text == "Vertical") kind = PegMotionKind::Vertical;
+		else return false;
+		return true;
+	}
+
 	bool ParseActionType(std::string_view text, EnemyActionType& type) noexcept
 	{
 		if (text == "Advance") type = EnemyActionType::Advance;
@@ -300,7 +309,7 @@ namespace
 				continue;
 			}
 
-			if (key != "peg_type" && key != "action" && key != "enemy"
+			if (key != "peg_type" && key != "peg_motion" && key != "action" && key != "enemy"
 				&& !builder.scalarKeys.insert(std::string(key)).second)
 			{
 				return Fallback(ContentLoadError::DuplicateKey, lineNumber);
@@ -363,6 +372,27 @@ namespace
 					return Fallback(ContentLoadError::DuplicateKey, lineNumber);
 				}
 				builder.stage.pegLayout.pegs[index].type = type;
+			}
+			else if (key == "peg_motion")
+			{
+				const auto values = Split(value, ',');
+				std::size_t index = 0;
+				PegMotionDefinition motion;
+				if (!builder.hasLayout || values.size() != 5
+					|| !ParseNumber(values[0], index)
+					|| index >= builder.stage.pegLayout.pegs.size()
+					|| !ParsePegMotionKind(values[1], motion.kind)
+					|| !ParseFiniteFloat(values[2], motion.amplitude)
+					|| !ParseFiniteFloat(values[3], motion.angularSpeed)
+					|| !ParseFiniteFloat(values[4], motion.phase))
+				{
+					return Fallback(ContentLoadError::InvalidValue, lineNumber);
+				}
+				if (!builder.pegMotionIndexes.insert(index).second)
+				{
+					return Fallback(ContentLoadError::DuplicateKey, lineNumber);
+				}
+				builder.stage.pegLayout.pegs[index].motion = motion;
 			}
 			else if (key == "player_health")
 			{

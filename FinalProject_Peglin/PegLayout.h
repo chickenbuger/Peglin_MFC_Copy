@@ -13,6 +13,26 @@ enum class PegType
 	Refresh
 };
 
+enum class PegMotionKind
+{
+	None,
+	Horizontal,
+	Vertical
+};
+
+struct PegMotionDefinition
+{
+	PegMotionKind kind = PegMotionKind::None;
+	float amplitude = 0.0f;
+	float angularSpeed = 0.0f;
+	float phase = 0.0f;
+
+	bool IsMoving() const noexcept
+	{
+		return kind != PegMotionKind::None;
+	}
+};
+
 struct PegVisualStyle
 {
 	std::uint8_t red = 255;
@@ -34,6 +54,7 @@ struct PegDefinition
 {
 	Vector2 position;
 	PegType type = PegType::Normal;
+	PegMotionDefinition motion;
 };
 
 struct PegLayoutDefinition

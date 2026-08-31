@@ -16,6 +16,7 @@ namespace
 	constexpr float AIM_MAX_FORCE = 10.0f;
 	constexpr float AIM_MAX_DRAG_DISTANCE = 400.0f;
 	constexpr float AIM_PREVIEW_GRAVITY = 0.01f;
+	constexpr float BASE_TIMESTEP_SECONDS = 0.01f;
 	constexpr float AIM_PREVIEW_STEP_LENGTH =
 		AimPreview::GuideLengthPixels / static_cast<float>(AimPreview::PointCount);
 
@@ -67,6 +68,13 @@ GameWorld::GameWorld(StageDefinition stage)
 
 GameUpdateResult GameWorld::Update(float deltaSeconds)
 {
+	if (_gameState != GameState::Paused
+		&& _gameState != GameState::Victory
+		&& _gameState != GameState::Defeat)
+	{
+		AdvanceMovingPegs(deltaSeconds);
+	}
+
 	switch (_gameState)
 	{
 	case GameState::Aiming:
@@ -113,6 +121,7 @@ void GameWorld::ResetGame()
 	_aimStart = _ball.GetPosition();
 	_aimCurrent = _aimStart;
 	_aimInProgress = false;
+	_pegMotionElapsedSeconds = 0.0f;
 	_terminalResultReported = false;
 	_pegRestitution = _stage.rules.pegRestitution;
 	_ball.Init();
@@ -239,10 +248,12 @@ AimPreview GameWorld::GetAimPreview() const noexcept
 
 	Vector2 position = _ball.GetPosition();
 	Vector2 velocity = preview.launchDirection;
+	float previewElapsedSeconds = 0.0f;
 	for (std::size_t index = 0; index < preview.points.size(); ++index)
 	{
 		const float speed = (std::max)(velocity.Length(), COLLISION_EPSILON);
 		const float timeScale = AIM_PREVIEW_STEP_LENGTH / (force * speed);
+		previewElapsedSeconds += timeScale * BASE_TIMESTEP_SECONDS;
 		velocity.y += AIM_PREVIEW_GRAVITY * timeScale;
 		position += velocity.Normalized() * AIM_PREVIEW_STEP_LENGTH;
 
@@ -267,7 +278,9 @@ AimPreview GameWorld::GetAimPreview() const noexcept
 		{
 			const TargetBall& target =
 				_targetBallList._targetBallList.GetNext(targetPosition);
-			const Vector2 offset = position - target.position;
+			const Vector2 predictedTargetPosition = target.PositionAt(
+				_pegMotionElapsedSeconds + previewElapsedSeconds);
+			const Vector2 offset = position - predictedTargetPosition;
 			const float collisionRadius = _ball.GetSize() + target.size;
 			const float distanceSquared = offset.LengthSquared();
 			if (distanceSquared > collisionRadius * collisionRadius)
@@ -365,11 +378,28 @@ void GameWorld::SetPegRestitution(float restitution) noexcept
 void GameWorld::InitializeTargets()
 {
 	_targetBallList._targetBallList.RemoveAll();
-	for (const PegDefinition& definition : _stage.pegLayout.pegs)
+	for (std::size_t index = 0; index < _stage.pegLayout.pegs.size(); ++index)
 	{
 		TargetBall ball;
-		ball.setting(definition);
+		ball.setting(_stage.pegLayout.pegs[index], index);
+		ball.UpdateMotion(_pegMotionElapsedSeconds);
 		_targetBallList.add(ball);
+	}
+}
+
+void GameWorld::AdvanceMovingPegs(float deltaSeconds)
+{
+	if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	_pegMotionElapsedSeconds += deltaSeconds;
+	auto position = _targetBallList._targetBallList.GetHeadPosition();
+	while (position != nullptr)
+	{
+		TargetBall& target = _targetBallList._targetBallList.GetNext(position);
+		target.UpdateMotion(_pegMotionElapsedSeconds);
 	}
 }
 
@@ -483,16 +513,15 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 
 void GameWorld::RestoreRemovedPegs(Vector2 triggerPosition)
 {
-	constexpr float POSITION_EPSILON_SQUARED = 0.0001f;
 	int restoredPegs = 0;
-	for (const PegDefinition& definition : _stage.pegLayout.pegs)
+	for (std::size_t index = 0; index < _stage.pegLayout.pegs.size(); ++index)
 	{
 		bool isActive = false;
 		auto activePosition = _targetBallList._targetBallList.GetHeadPosition();
 		while (activePosition != nullptr)
 		{
 			const TargetBall& active = _targetBallList._targetBallList.GetNext(activePosition);
-			if ((active.position - definition.position).LengthSquared() <= POSITION_EPSILON_SQUARED)
+			if (active.GetSourceIndex() == index)
 			{
 				isActive = true;
 				break;
@@ -502,7 +531,8 @@ void GameWorld::RestoreRemovedPegs(Vector2 triggerPosition)
 		if (!isActive)
 		{
 			TargetBall restored;
-			restored.setting(definition);
+			restored.setting(_stage.pegLayout.pegs[index], index);
+			restored.UpdateMotion(_pegMotionElapsedSeconds);
 			_targetBallList.add(restored);
 			++restoredPegs;
 		}
@@ -546,7 +576,8 @@ bool GameWorld::EnsureRefreshPegAfterTurn()
 	else if (!_stage.pegLayout.pegs.empty())
 	{
 		TargetBall restored;
-		restored.setting(_stage.pegLayout.pegs.front());
+		restored.setting(_stage.pegLayout.pegs.front(), 0);
+		restored.UpdateMotion(_pegMotionElapsedSeconds);
 		restored.type = PegType::Refresh;
 		refreshPosition = restored.position;
 		_targetBallList.add(restored);

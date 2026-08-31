@@ -5,6 +5,28 @@
 void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 {
 	const int savedDc = pDC->SaveDC();
+	const int centerX = static_cast<int>(std::lround(position.x));
+	const int centerY = static_cast<int>(std::lround(position.y));
+
+	if (IsMoving())
+	{
+		CPen motionPen(PS_SOLID, 2, RGB(118, 205, 255));
+		pDC->SelectObject(&motionPen);
+		if (_motion.kind == PegMotionKind::Horizontal)
+		{
+			pDC->MoveTo(centerX - 19, centerY);
+			pDC->LineTo(centerX - 14, centerY);
+			pDC->MoveTo(centerX + 14, centerY);
+			pDC->LineTo(centerX + 19, centerY);
+		}
+		else
+		{
+			pDC->MoveTo(centerX, centerY - 19);
+			pDC->LineTo(centerX, centerY - 14);
+			pDC->MoveTo(centerX, centerY + 14);
+			pDC->LineTo(centerX, centerY + 19);
+		}
+	}
 
 	PegVisualStyle visual = GetPegTypeDefinition(type).visual;
 	if (colorMode == PegColorMode::HighContrast)
@@ -28,8 +50,6 @@ void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 
 	if (colorMode == PegColorMode::HighContrast)
 	{
-		const int centerX = static_cast<int>(std::lround(position.x));
-		const int centerY = static_cast<int>(std::lround(position.y));
 		const int markerRadius = static_cast<int>(std::lround(size * 0.55f));
 		const COLORREF markerColor = type == PegType::Bomb
 			? RGB(0, 0, 0)
@@ -68,8 +88,32 @@ void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 	pDC->RestoreDC(savedDc);
 }
 
-void TargetBall::setting(const PegDefinition& definition)
+void TargetBall::setting(const PegDefinition& definition, std::size_t sourceIndex)
 {
-	position = definition.position;
+	_origin = definition.position;
 	type = definition.type;
+	_motion = definition.motion;
+	_sourceIndex = sourceIndex;
+	UpdateMotion(0.0f);
+}
+
+void TargetBall::UpdateMotion(float elapsedSeconds) noexcept
+{
+	position = PositionAt(elapsedSeconds);
+}
+
+Vector2 TargetBall::PositionAt(float elapsedSeconds) const noexcept
+{
+	if (!_motion.IsMoving())
+	{
+		return _origin;
+	}
+
+	const float offset = std::sin(
+		_motion.phase + _motion.angularSpeed * elapsedSeconds) * _motion.amplitude;
+	if (_motion.kind == PegMotionKind::Horizontal)
+	{
+		return { _origin.x + offset, _origin.y };
+	}
+	return { _origin.x, _origin.y + offset };
 }

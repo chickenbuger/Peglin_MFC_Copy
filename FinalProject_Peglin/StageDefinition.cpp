@@ -13,6 +13,9 @@ namespace
 	constexpr std::size_t MAX_STAGE_PEGS = 256;
 	constexpr std::size_t MAX_STAGE_ENEMIES = 3;
 	constexpr float DUPLICATE_POSITION_EPSILON_SQUARED = 0.0001f;
+	constexpr float MAX_PEG_MOTION_AMPLITUDE = 64.0f;
+	constexpr float MAX_PEG_MOTION_ANGULAR_SPEED = 6.2831855f;
+	constexpr float PI = 3.1415927f;
 	constexpr std::array<StageCatalogEntry, 8> STAGE_CATALOG = {
 		StageCatalogEntry{ "stage-1", "Forgotten Forest" },
 		StageCatalogEntry{ "stage-2", "Dense Cavern" },
@@ -40,6 +43,46 @@ namespace
 			return true;
 		default:
 			return false;
+		}
+	}
+
+	bool IsKnownPegMotion(PegMotionKind kind) noexcept
+	{
+		switch (kind)
+		{
+		case PegMotionKind::None:
+		case PegMotionKind::Horizontal:
+		case PegMotionKind::Vertical:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	struct PegMotionAssignment
+	{
+		std::size_t index = 0;
+		PegMotionKind kind = PegMotionKind::None;
+		float amplitude = 0.0f;
+		float angularSpeed = 0.0f;
+		float phase = 0.0f;
+	};
+
+	void ApplyPegMotions(
+		StageDefinition& stage,
+		std::initializer_list<PegMotionAssignment> motions)
+	{
+		for (const PegMotionAssignment& assignment : motions)
+		{
+			if (assignment.index < stage.pegLayout.pegs.size())
+			{
+				stage.pegLayout.pegs[assignment.index].motion = {
+					assignment.kind,
+					assignment.amplitude,
+					assignment.angularSpeed,
+					assignment.phase
+				};
+			}
 		}
 	}
 
@@ -170,6 +213,11 @@ StageDefinition CreateChallengeStageDefinition()
 		stage.pegLayout.pegs[24].type = PegType::Refresh;
 		stage.pegLayout.pegs[33].type = PegType::Critical;
 	}
+	ApplyPegMotions(stage, {
+		{ 12, PegMotionKind::Horizontal, 22.0f, 1.20f, 0.0f },
+		{ 20, PegMotionKind::Horizontal, 22.0f, 1.20f, 2.0f * PI / 3.0f },
+		{ 28, PegMotionKind::Horizontal, 22.0f, 1.20f, 4.0f * PI / 3.0f }
+	});
 
 	stage.rules.playerHealth = 100.0f;
 	stage.rules.enemyHealth = 30.0f;
@@ -201,6 +249,12 @@ StageDefinition CreateBossStageDefinition()
 		stage.pegLayout.pegs[22].type = PegType::Bomb;
 		stage.pegLayout.pegs[31].type = PegType::Critical;
 	}
+	ApplyPegMotions(stage, {
+		{ 11, PegMotionKind::Horizontal, 26.0f, 1.35f, 0.0f },
+		{ 15, PegMotionKind::Horizontal, 26.0f, 1.35f, PI },
+		{ 20, PegMotionKind::Vertical, 18.0f, 1.10f, PI / 2.0f },
+		{ 24, PegMotionKind::Vertical, 18.0f, 1.10f, 3.0f * PI / 2.0f }
+	});
 
 	stage.rules.playerHealth = 110.0f;
 	stage.rules.enemyHealth = 60.0f;
@@ -234,7 +288,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 			{ "ember-bat", "Ember Bat", EnemyVisualKind::EmberBat, 7.0f }
 		},
 		{ { 6, PegType::Critical }, { 17, PegType::Bomb }, { 28, PegType::Refresh }, { 38, PegType::Critical } }));
-	stages.push_back(CreateRouteStage(
+	StageDefinition fungal = CreateRouteStage(
 		"stage-5", "Fungal Hollow",
 		9, 5, { 210.0f, 360.0f }, 60.0f, 14.0f, 20260902u,
 		28.0f, 23.0f, 7, 58.0f, 0.88f,
@@ -243,7 +297,13 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 8.0f },
 			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 9.0f }
 		},
-		{ { 3, PegType::Critical }, { 12, PegType::Refresh }, { 23, PegType::Bomb }, { 34, PegType::Critical }, { 41, PegType::Bomb } }));
+		{ { 3, PegType::Critical }, { 12, PegType::Refresh }, { 23, PegType::Bomb }, { 34, PegType::Critical }, { 41, PegType::Bomb } });
+	ApplyPegMotions(fungal, {
+		{ 16, PegMotionKind::Vertical, 18.0f, 1.00f, 0.0f },
+		{ 22, PegMotionKind::Vertical, 18.0f, 1.00f, PI },
+		{ 28, PegMotionKind::Vertical, 18.0f, 1.00f, 0.0f }
+	});
+	stages.push_back(std::move(fungal));
 	stages.push_back(CreateRouteStage(
 		"stage-6", "Crystal Grotto",
 		10, 4, { 195.0f, 385.0f }, 58.0f, 16.0f, 20260903u,
@@ -254,7 +314,7 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 			{ "moss-shaman", "Moss Shaman", EnemyVisualKind::MossShaman, 10.0f }
 		},
 		{ { 5, PegType::Critical }, { 14, PegType::Bomb }, { 20, PegType::Refresh }, { 30, PegType::Bomb }, { 37, PegType::Critical } }));
-	stages.push_back(CreateRouteStage(
+	StageDefinition ember = CreateRouteStage(
 		"stage-7", "Ember Roost",
 		11, 4, { 190.0f, 380.0f }, 54.0f, 18.0f, 20260904u,
 		36.0f, 26.0f, 5, 54.0f, 0.93f,
@@ -263,7 +323,14 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 11.0f },
 			{ "crystal-toad", "Crystal Toad", EnemyVisualKind::CrystalToad, 15.0f }
 		},
-		{ { 4, PegType::Critical }, { 10, PegType::Bomb }, { 19, PegType::Refresh }, { 27, PegType::Bomb }, { 35, PegType::Critical }, { 42, PegType::Bomb } }));
+		{ { 4, PegType::Critical }, { 10, PegType::Bomb }, { 19, PegType::Refresh }, { 27, PegType::Bomb }, { 35, PegType::Critical }, { 42, PegType::Bomb } });
+	ApplyPegMotions(ember, {
+		{ 13, PegMotionKind::Horizontal, 20.0f, 1.60f, 0.0f },
+		{ 21, PegMotionKind::Vertical, 16.0f, 1.30f, PI / 2.0f },
+		{ 29, PegMotionKind::Horizontal, 20.0f, 1.60f, PI },
+		{ 37, PegMotionKind::Vertical, 16.0f, 1.30f, 3.0f * PI / 2.0f }
+	});
+	stages.push_back(std::move(ember));
 	stages.push_back(CreateRouteStage(
 		"stage-8", "Shaman Mire",
 		9, 5, { 210.0f, 355.0f }, 60.0f, 18.0f, 20260905u,
@@ -379,6 +446,21 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 		{
 			return { StageLoadError::InvalidPegType, index };
 		}
+		const PegMotionDefinition& motion = peg.motion;
+		if (!IsKnownPegMotion(motion.kind)
+			|| !std::isfinite(motion.amplitude)
+			|| !std::isfinite(motion.angularSpeed)
+			|| !std::isfinite(motion.phase)
+			|| (motion.kind == PegMotionKind::None
+				&& (motion.amplitude != 0.0f || motion.angularSpeed != 0.0f))
+			|| (motion.kind != PegMotionKind::None
+				&& (motion.amplitude <= 0.0f
+					|| motion.amplitude > MAX_PEG_MOTION_AMPLITUDE
+					|| motion.angularSpeed <= 0.0f
+					|| motion.angularSpeed > MAX_PEG_MOTION_ANGULAR_SPEED)))
+		{
+			return { StageLoadError::InvalidPegMotion, index };
+		}
 		if (!std::isfinite(peg.position.x)
 			|| !std::isfinite(peg.position.y)
 			|| peg.position.x < GameLayout::PegFieldLeft + GameLayout::PegRadius
@@ -387,6 +469,15 @@ StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noex
 			|| peg.position.y > GameLayout::PegFieldBottom - GameLayout::PegRadius)
 		{
 			return { StageLoadError::PegOutOfBounds, index };
+		}
+		if ((motion.kind == PegMotionKind::Horizontal
+				&& (peg.position.x - motion.amplitude < GameLayout::PegFieldLeft + GameLayout::PegRadius
+					|| peg.position.x + motion.amplitude > GameLayout::PegFieldRight - GameLayout::PegRadius))
+			|| (motion.kind == PegMotionKind::Vertical
+				&& (peg.position.y - motion.amplitude < GameLayout::PegFieldTop + GameLayout::PegRadius
+					|| peg.position.y + motion.amplitude > GameLayout::PegFieldBottom - GameLayout::PegRadius)))
+		{
+			return { StageLoadError::PegMotionOutOfBounds, index };
 		}
 
 		for (std::size_t earlier = 0; earlier < index; ++earlier)

@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.7 |
+| 현재 버전 | Version 7.8 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 7/13 완료 — 오브·유물 이미지와 정확한 보상 획득 안내 완료 |
+| 상태 | Sprint 7 P0 8/14 완료 — 일부 스테이지의 지속 이동 페그 패턴 완료 |
 
 ## 문서
 
@@ -88,6 +88,7 @@
 - [Version 7.5 — 공격 종료 시 Refresh Peg 최소 보장](./Version_7.5.md)
 - [Version 7.6 — 간결한 스테이지 선택과 연출 완료 후 전환](./Version_7.6.md)
 - [Version 7.7 — 오브·유물 이미지와 정확한 보상 효과 안내](./Version_7.7.md)
+- [Version 7.8 — 지속 이동 페그 스테이지 패턴](./Version_7.8.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
