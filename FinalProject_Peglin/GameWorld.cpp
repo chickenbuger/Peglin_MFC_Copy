@@ -519,6 +519,55 @@ void GameWorld::RestoreRemovedPegs(Vector2 triggerPosition)
 	});
 }
 
+bool GameWorld::EnsureRefreshPegAfterTurn()
+{
+	TargetBall* replacement = nullptr;
+	auto position = _targetBallList._targetBallList.GetHeadPosition();
+	while (position != nullptr)
+	{
+		TargetBall& active = _targetBallList._targetBallList.GetNext(position);
+		if (active.type == PegType::Refresh)
+		{
+			return false;
+		}
+		if (replacement == nullptr
+			|| (replacement->type != PegType::Normal && active.type == PegType::Normal))
+		{
+			replacement = &active;
+		}
+	}
+
+	Vector2 refreshPosition = GameLayout::BallInitialPosition;
+	if (replacement != nullptr)
+	{
+		replacement->type = PegType::Refresh;
+		refreshPosition = replacement->position;
+	}
+	else if (!_stage.pegLayout.pegs.empty())
+	{
+		TargetBall restored;
+		restored.setting(_stage.pegLayout.pegs.front());
+		restored.type = PegType::Refresh;
+		refreshPosition = restored.position;
+		_targetBallList.add(restored);
+	}
+	else
+	{
+		return false;
+	}
+
+	_events.push_back({
+		GameEventType::RefreshGuaranteed,
+		refreshPosition,
+		PegType::Refresh,
+		0,
+		_score.currentCombo,
+		1,
+		0.0f
+	});
+	return true;
+}
+
 std::size_t GameWorld::GetLivingEnemyCount() const noexcept
 {
 	return static_cast<std::size_t>(std::count_if(
@@ -709,6 +758,7 @@ void GameWorld::ResolveTurn()
 	_pendingDamage = 0.0f;
 	_ball.Init();
 	_loadout.AdvanceOrb();
+	EnsureRefreshPegAfterTurn();
 
 	if (_player.GetHp() <= 0.0f)
 	{

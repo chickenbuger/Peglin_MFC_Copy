@@ -60,6 +60,7 @@ enum class GameEventType
 	PegHit,
 	BombTriggered,
 	RefreshTriggered,
+	RefreshGuaranteed,
 	PlayerAttack,
 	TurnResolved,
 	EnemyAdvanced,
@@ -172,6 +173,7 @@ public:
 	}
 	Parent_ball& GetBall() noexcept { return _ball; }
 	TargetBallList& GetTargets() noexcept { return _targetBallList; }
+	const TargetBallList& GetTargets() const noexcept { return _targetBallList; }
 	const PegLayoutDefinition& GetPegLayout() const noexcept { return _stage.pegLayout; }
 	const StageDefinition& GetStage() const noexcept { return _stage; }
 	GameDifficulty GetDifficulty() const noexcept { return _difficulty; }
@@ -194,6 +196,7 @@ private:
 	void AwardPeg(const TargetBall& target);
 	void ApplyBombEffect(const TargetBall& bomb);
 	void RestoreRemovedPegs(Vector2 triggerPosition);
+	bool EnsureRefreshPegAfterTurn();
 	void ExecuteEnemyAction(const EnemyActionDefinition& action);
 	EnemyCombatant& GetActiveEnemy() noexcept { return _enemies[_activeEnemyIndex]; }
 	const EnemyCombatant& GetActiveEnemy() const noexcept { return _enemies[_activeEnemyIndex]; }

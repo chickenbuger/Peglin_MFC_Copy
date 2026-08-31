@@ -99,6 +99,18 @@ namespace
 		Check(world.GetState() == GameState::BallInFlight, "shot enters BallInFlight");
 	}
 
+	int CountActivePegsOfType(const GameWorld& world, PegType type)
+	{
+		int count = 0;
+		auto position = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (position != nullptr)
+		{
+			const TargetBall& peg = world.GetTargets()._targetBallList.GetNext(position);
+			count += peg.type == type ? 1 : 0;
+		}
+		return count;
+	}
+
 	void TestZeroLengthShot()
 	{
 		GameWorld world;
@@ -640,6 +652,63 @@ namespace
 		}
 		Check(restoredNormalFound, "refresh restores the removed peg with its original type");
 		Check(activeRefreshPegs == 1, "refresh activation always adds one replacement refresh peg");
+	}
+
+	void TestRefreshPegMinimumAfterTurn()
+	{
+		PegLayoutDefinition layout;
+		layout.pegs = {
+			{ { 300.0f, 500.0f }, PegType::Normal },
+			{ { 500.0f, 500.0f }, PegType::Critical }
+		};
+		GameWorld world(layout);
+		Launch(world);
+		world.GetBall().SetPosition({ 500.0f, 801.0f });
+		world.Update(0.0f);
+		world.Update(0.0f);
+
+		Check(CountActivePegsOfType(world, PegType::Refresh) == 1,
+			"turn completion converts one active peg when refresh is missing");
+		const std::vector<GameEvent> events = world.ConsumeEvents();
+		Check(std::any_of(events.begin(), events.end(), [](const GameEvent& event)
+			{
+				return event.type == GameEventType::RefreshGuaranteed
+					&& event.affectedPegs == 1;
+			}), "refresh guarantee emits one deterministic replacement event");
+
+		PegLayoutDefinition emptyAfterShotLayout;
+		emptyAfterShotLayout.pegs = {
+			{ { 500.0f, 500.0f }, PegType::Normal }
+		};
+		GameWorld emptyAfterShot(emptyAfterShotLayout);
+		Launch(emptyAfterShot);
+		emptyAfterShot.GetBall().SetPosition({ 485.0f, 500.0f });
+		emptyAfterShot.GetBall().SetVelocity({ 2.0f, 0.0f });
+		emptyAfterShot.Update(0.0f);
+		emptyAfterShot.GetBall().SetPosition({ 500.0f, 801.0f });
+		emptyAfterShot.Update(0.0f);
+		emptyAfterShot.Update(0.0f);
+		Check(emptyAfterShot.GetTargets()._targetBallList.GetCount() == 1
+			&& CountActivePegsOfType(emptyAfterShot, PegType::Refresh) == 1,
+			"turn completion recreates a refresh peg when the board is empty");
+
+		PegLayoutDefinition existingRefreshLayout;
+		existingRefreshLayout.pegs = {
+			{ { 300.0f, 500.0f }, PegType::Refresh },
+			{ { 500.0f, 500.0f }, PegType::Normal }
+		};
+		GameWorld existingRefresh(existingRefreshLayout);
+		Launch(existingRefresh);
+		existingRefresh.GetBall().SetPosition({ 500.0f, 801.0f });
+		existingRefresh.Update(0.0f);
+		existingRefresh.Update(0.0f);
+		const std::vector<GameEvent> existingEvents = existingRefresh.ConsumeEvents();
+		Check(CountActivePegsOfType(existingRefresh, PegType::Refresh) == 1,
+			"turn completion preserves an already active refresh peg");
+		Check(std::none_of(existingEvents.begin(), existingEvents.end(), [](const GameEvent& event)
+			{
+				return event.type == GameEventType::RefreshGuaranteed;
+			}), "existing refresh peg avoids an unnecessary conversion event");
 	}
 
 	void TestStageCatalogAndValidation()
@@ -2243,6 +2312,7 @@ int main()
 	TestCriticalPegEffect();
 	TestBombPegEffect();
 	TestRefreshPegEffect();
+	TestRefreshPegMinimumAfterTurn();
 	TestStageCatalogAndValidation();
 	TestStageSelectionAndResultSummary();
 	TestGameOptionsAndDifficulty();

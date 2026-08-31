@@ -790,6 +790,11 @@ void CChildView::ConsumeGameEvents()
 			animation.color = RGB(0, 190, 90);
 			animation.lifetimeSeconds = 1.1f;
 			break;
+		case GameEventType::RefreshGuaranteed:
+			animation.text = _T("REFRESH READY");
+			animation.color = RGB(0, 210, 120);
+			animation.lifetimeSeconds = 1.1f;
+			break;
 		case GameEventType::PlayerAttack:
 		{
 			const CString deliveryText = event.attackDelivery == AttackDelivery::Melee
