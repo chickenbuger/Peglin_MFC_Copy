@@ -395,8 +395,6 @@ void CChildView::OnPaint()
 		return;
 	}
 
-	DrawPlayfieldBoundary(&memDc);
-
 	//targetball
 	auto& targets = _game.GetTargets()._targetBallList;
 	auto pos = targets.GetHeadPosition();
@@ -926,52 +924,6 @@ void CChildView::DrawAimPreview(CDC* deviceContext)
 	deviceContext->SetBkMode(TRANSPARENT);
 	deviceContext->SetTextColor(RGB(255, 255, 255));
 	deviceContext->TextOut(left, bottom + 3, strengthText);
-	deviceContext->RestoreDC(savedDc);
-}
-
-void CChildView::DrawPlayfieldBoundary(CDC* deviceContext)
-{
-	const int left = static_cast<int>(std::lround(GameLayout::PegFieldLeft));
-	const int top = static_cast<int>(std::lround(GameLayout::PegFieldTop));
-	const int right = static_cast<int>(std::lround(GameLayout::PegFieldRight));
-	const int bottom = static_cast<int>(std::lround(GameLayout::PegFieldBottom));
-	constexpr int CORNER_LENGTH = 30;
-
-	const int savedDc = deviceContext->SaveDC();
-	deviceContext->SelectStockObject(NULL_BRUSH);
-
-	CPen shadowPen(PS_SOLID, 5, RGB(5, 10, 18));
-	deviceContext->SelectObject(&shadowPen);
-	deviceContext->Rectangle(left, top, right, bottom);
-
-	CPen boundaryPen(PS_SOLID, 2, UiTheme::Blue);
-	deviceContext->SelectObject(&boundaryPen);
-	deviceContext->Rectangle(left + 2, top + 2, right - 2, bottom - 2);
-
-	CPen cornerPen(PS_SOLID, 4, UiTheme::Gold);
-	deviceContext->SelectObject(&cornerPen);
-	deviceContext->MoveTo(left, top + CORNER_LENGTH);
-	deviceContext->LineTo(left, top);
-	deviceContext->LineTo(left + CORNER_LENGTH, top);
-	deviceContext->MoveTo(right - CORNER_LENGTH, top);
-	deviceContext->LineTo(right, top);
-	deviceContext->LineTo(right, top + CORNER_LENGTH);
-	deviceContext->MoveTo(left, bottom - CORNER_LENGTH);
-	deviceContext->LineTo(left, bottom);
-	deviceContext->LineTo(left + CORNER_LENGTH, bottom);
-	deviceContext->MoveTo(right - CORNER_LENGTH, bottom);
-	deviceContext->LineTo(right, bottom);
-	deviceContext->LineTo(right, bottom - CORNER_LENGTH);
-
-	const CRect labelBounds(left + 36, top - 11, left + 154, top + 12);
-	deviceContext->FillSolidRect(labelBounds, RGB(8, 14, 24));
-	UiRenderer::DrawText(
-		deviceContext,
-		labelBounds,
-		_T("PEG FIELD"),
-		85,
-		UiTheme::Gold);
-
 	deviceContext->RestoreDC(savedDc);
 }
 

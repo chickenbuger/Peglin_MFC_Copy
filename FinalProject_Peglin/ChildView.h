@@ -90,7 +90,6 @@ private:
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
-	void DrawPlayfieldBoundary(CDC* deviceContext);
 	void DrawEnemyHealthBar(
 		CDC* deviceContext,
 		const EnemyCombatant& combatant,
