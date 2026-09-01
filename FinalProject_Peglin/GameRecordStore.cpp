@@ -13,8 +13,9 @@
 namespace
 {
 	constexpr std::string_view RECORDS_VERSION_KEY = "peglin_records_version";
-	constexpr std::string_view RECORDS_VERSION = "1";
+	constexpr std::string_view RECORDS_VERSION = "2";
 	constexpr std::size_t MAX_RECORDS = 128;
+	constexpr std::size_t MAX_PERFORMANCE_RECORDS = 512;
 
 	bool IsValidStageId(std::string_view stageId) noexcept
 	{
@@ -82,6 +83,18 @@ namespace
 			return false;
 		}
 
+		output = parsed;
+		return true;
+	}
+
+	bool ParseNonNegativeInt64(std::string_view value, long long& output) noexcept
+	{
+		if (value.empty()) return false;
+		long long parsed = 0;
+		const char* const begin = value.data();
+		const char* const end = begin + value.size();
+		const auto result = std::from_chars(begin, end, parsed);
+		if (result.ec != std::errc{} || result.ptr != end || parsed < 0) return false;
 		output = parsed;
 		return true;
 	}
@@ -176,6 +189,70 @@ bool GameRecordBook::ApplyResult(
 	return changed;
 }
 
+PerformanceRecord GameRecordBook::GetPerformance(
+	std::string_view stageId,
+	GameDifficulty difficulty,
+	std::string_view orbId) const
+{
+	const auto record = std::find_if(
+		_performanceRecords.begin(),
+		_performanceRecords.end(),
+		[stageId, difficulty, orbId](const PerformanceRecord& candidate)
+		{
+			return candidate.stageId == stageId
+				&& candidate.difficulty == difficulty
+				&& candidate.orbId == orbId;
+		});
+	return record == _performanceRecords.end()
+		? PerformanceRecord{ std::string(stageId), difficulty, std::string(orbId) }
+		: *record;
+}
+
+bool GameRecordBook::ApplyPerformanceResult(
+	std::string_view stageId,
+	GameDifficulty difficulty,
+	std::string_view orbId,
+	int score,
+	int combo,
+	bool cleared)
+{
+	if (!IsValidStageId(stageId) || !IsValidStageId(orbId) || score < 0 || combo < 0)
+	{
+		return false;
+	}
+	auto record = std::find_if(
+		_performanceRecords.begin(),
+		_performanceRecords.end(),
+		[stageId, difficulty, orbId](const PerformanceRecord& candidate)
+		{
+			return candidate.stageId == stageId
+				&& candidate.difficulty == difficulty
+				&& candidate.orbId == orbId;
+		});
+	if (record == _performanceRecords.end())
+	{
+		if (_performanceRecords.size() >= MAX_PERFORMANCE_RECORDS) return false;
+		_performanceRecords.push_back({
+			std::string(stageId), difficulty, std::string(orbId), 1, cleared ? 1 : 0,
+			score, score, combo });
+		return true;
+	}
+	if (record->attemptCount == (std::numeric_limits<int>::max)()
+		|| record->totalScore > (std::numeric_limits<long long>::max)() - score)
+	{
+		return false;
+	}
+	++record->attemptCount;
+	record->totalScore += score;
+	record->highScore = (std::max)(record->highScore, score);
+	record->bestCombo = (std::max)(record->bestCombo, combo);
+	if (cleared && record->clearCount < (std::numeric_limits<int>::max)())
+	{
+		++record->clearCount;
+	}
+	return true;
+}
+
 GameRecordStore::GameRecordStore(std::filesystem::path filePath)
 	: _filePath(std::move(filePath))
 {
@@ -214,7 +291,9 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 			line.pop_back();
 		}
 		const bool legacyVersion = line == std::string(RECORDS_VERSION_KEY) + "=0";
-		if (!legacyVersion && line != std::string(RECORDS_VERSION_KEY) + '=' + std::string(RECORDS_VERSION))
+		const bool versionOne = line == std::string(RECORDS_VERSION_KEY) + "=1";
+		const bool currentVersion = line == std::string(RECORDS_VERSION_KEY) + '=' + std::string(RECORDS_VERSION);
+		if (!legacyVersion && !versionOne && !currentVersion)
 		{
 			result.state = RecordLoadState::Invalid;
 			result.message = "records version is invalid";
@@ -222,6 +301,7 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 		}
 
 		std::set<std::pair<std::string, GameDifficulty>> keys;
+		std::set<std::tuple<std::string, GameDifficulty, std::string>> performanceKeys;
 		while (std::getline(stream, line))
 		{
 			if (!line.empty() && line.back() == '\r')
@@ -230,6 +310,46 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 			}
 			if (line.empty())
 			{
+				continue;
+			}
+			if (currentVersion && line.starts_with("performance="))
+			{
+				const std::vector<std::string_view> fields = SplitRecord(std::string_view(line).substr(12));
+				PerformanceRecord record;
+				if (fields.size() != 8U
+					|| !IsValidStageId(fields[0])
+					|| !ParseDifficulty(fields[1], record.difficulty)
+					|| !IsValidStageId(fields[2])
+					|| !ParseNonNegativeInt(fields[3], record.attemptCount)
+					|| !ParseNonNegativeInt(fields[4], record.clearCount)
+					|| !ParseNonNegativeInt64(fields[5], record.totalScore)
+					|| !ParseNonNegativeInt(fields[6], record.highScore)
+					|| !ParseNonNegativeInt(fields[7], record.bestCombo)
+					|| record.attemptCount <= 0
+					|| record.clearCount > record.attemptCount)
+				{
+					result = RecordLoadResult{};
+					result.state = RecordLoadState::Invalid;
+					result.message = "performance record value is invalid";
+					return result;
+				}
+				record.stageId = fields[0];
+				record.orbId = fields[2];
+				if (!performanceKeys.emplace(record.stageId, record.difficulty, record.orbId).second)
+				{
+					result = RecordLoadResult{};
+					result.state = RecordLoadState::Invalid;
+					result.message = "performance record key is duplicated";
+					return result;
+				}
+				result.records._performanceRecords.push_back(std::move(record));
+				if (result.records._performanceRecords.size() > MAX_PERFORMANCE_RECORDS)
+				{
+					result = RecordLoadResult{};
+					result.state = RecordLoadState::Invalid;
+					result.message = "too many performance records";
+					return result;
+				}
 				continue;
 			}
 			if (!line.starts_with("record="))
@@ -284,8 +404,10 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 			}
 		}
 
-		result.state = legacyVersion ? RecordLoadState::Migrated : RecordLoadState::Loaded;
-		result.message = legacyVersion ? "legacy records migrated from version 0" : "";
+		result.state = currentVersion ? RecordLoadState::Loaded : RecordLoadState::Migrated;
+		result.message = legacyVersion
+			? "legacy records migrated from version 0"
+			: (versionOne ? "records migrated from version 1" : "");
 		return result;
 	}
 	catch (const std::exception& exception)
@@ -301,7 +423,8 @@ bool GameRecordStore::Save(const GameRecordBook& records, std::string* errorMess
 {
 	try
 	{
-		if (records.GetAll().size() > MAX_RECORDS)
+		if (records.GetAll().size() > MAX_RECORDS
+			|| records.GetAllPerformance().size() > MAX_PERFORMANCE_RECORDS)
 		{
 			if (errorMessage != nullptr)
 			{
@@ -329,6 +452,12 @@ bool GameRecordStore::Save(const GameRecordBook& records, std::string* errorMess
 		std::sort(sorted.begin(), sorted.end(), [](const StageRecord& left, const StageRecord& right)
 		{
 			return std::tie(left.stageId, left.difficulty) < std::tie(right.stageId, right.difficulty);
+		});
+		std::vector<PerformanceRecord> sortedPerformance = records.GetAllPerformance();
+		std::sort(sortedPerformance.begin(), sortedPerformance.end(), [](const PerformanceRecord& left, const PerformanceRecord& right)
+		{
+			return std::tie(left.stageId, left.difficulty, left.orbId)
+				< std::tie(right.stageId, right.difficulty, right.orbId);
 		});
 
 		std::filesystem::path temporaryPath = _filePath;
@@ -365,6 +494,33 @@ bool GameRecordStore::Save(const GameRecordBook& records, std::string* errorMess
 				<< record.highScore << '|'
 				<< record.bestCombo << '|'
 				<< record.clearCount << '\n';
+		}
+		for (const PerformanceRecord& record : sortedPerformance)
+		{
+			if (!IsValidStageId(record.stageId)
+				|| !IsValidStageId(record.orbId)
+				|| record.attemptCount <= 0
+				|| record.clearCount < 0
+				|| record.clearCount > record.attemptCount
+				|| record.totalScore < 0
+				|| record.highScore < 0
+				|| record.bestCombo < 0)
+			{
+				stream.close();
+				std::error_code cleanupError;
+				std::filesystem::remove(temporaryPath, cleanupError);
+				if (errorMessage != nullptr) *errorMessage = "performance record value is invalid";
+				return false;
+			}
+			stream
+				<< "performance=" << record.stageId << '|'
+				<< DifficultyValue(record.difficulty) << '|'
+				<< record.orbId << '|'
+				<< record.attemptCount << '|'
+				<< record.clearCount << '|'
+				<< record.totalScore << '|'
+				<< record.highScore << '|'
+				<< record.bestCombo << '\n';
 		}
 		stream.flush();
 		if (!stream)

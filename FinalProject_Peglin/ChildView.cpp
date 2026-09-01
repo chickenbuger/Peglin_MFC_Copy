@@ -539,6 +539,12 @@ void CChildView::OnPaint()
 		PresentFrame();
 		return;
 	}
+	if (_screenMode == ScreenMode::Statistics)
+	{
+		DrawStatisticsScreen(&memDc);
+		PresentFrame();
+		return;
+	}
 	if (_screenMode == ScreenMode::Reward)
 	{
 		DrawRewardScreen(&memDc);
@@ -1581,8 +1587,9 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		82,
 		UiTheme::Green,
 		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 575, 206, 625), Text("hint.loadout"));
-	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 638, 206, 688), Text("hint.options"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 565, 206, 602), _T("[T] 통계"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 608, 206, 646), Text("hint.loadout"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 652, 206, 690), Text("hint.options"));
 
 	std::vector<std::string> visibleStageIds;
 	if (_run.GetStatus() == RunStatus::StageChoice)
@@ -2091,6 +2098,105 @@ void CChildView::DrawOptions(CDC* deviceContext)
 	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 565, 700, 620), Text("hint.back"));
 }
 
+void CChildView::DrawStatisticsScreen(CDC* deviceContext)
+{
+	DrawMenuBackdrop(deviceContext);
+	DrawMenuTitle(deviceContext, _T("전투 통계"), UiTheme::Green);
+
+	CString filterText = _T("[D] 난이도: 전체");
+	switch (_statisticsDifficulty)
+	{
+	case StatisticsDifficultyFilter::All: break;
+	case StatisticsDifficultyFilter::Easy: filterText = _T("[D] 난이도: 쉬움"); break;
+	case StatisticsDifficultyFilter::Normal: filterText = _T("[D] 난이도: 보통"); break;
+	case StatisticsDifficultyFilter::Hard: filterText = _T("[D] 난이도: 어려움"); break;
+	}
+	CString sortText;
+	switch (_statisticsSort)
+	{
+	case StatisticsSortMode::HighScore: sortText = _T("[S] 정렬: 최고 점수"); break;
+	case StatisticsSortMode::ClearCount: sortText = _T("[S] 정렬: 클리어"); break;
+	case StatisticsSortMode::AverageScore: sortText = _T("[S] 정렬: 평균 점수"); break;
+	}
+	UiRenderer::DrawKeyHint(deviceContext, CRect(80, 110, 300, 160), filterText);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(350, 110, 570, 160), sortText);
+	CString totalText;
+	totalText.Format(_T("조합 기록 %zu개"), _records.GetAllPerformance().size());
+	UiRenderer::DrawText(deviceContext, CRect(620, 110, 920, 160), totalText, 100, UiTheme::Gold);
+
+	const CRect tableBounds(45, 180, 955, 610);
+	UiRenderer::DrawPanel(deviceContext, tableBounds, false, UiTheme::Green);
+	const int columns[]{ 55, 300, 390, 535, 615, 695, 785, 875, 945 };
+	const CString headers[]{
+		_T("STAGE"), _T("난이도"), _T("ORB"), _T("PLAY"),
+		_T("CLEAR"), _T("AVG"), _T("HIGH"), _T("COMBO")
+	};
+	for (std::size_t index = 0; index < 8U; ++index)
+	{
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(columns[index], 190, columns[index + 1], 225),
+			headers[index],
+			78,
+			UiTheme::MutedText);
+	}
+
+	const std::vector<PerformanceRecord> rows = BuildStatisticsRows(
+		_records,
+		_statisticsDifficulty,
+		_statisticsSort);
+	if (rows.empty())
+	{
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(100, 280, 900, 480),
+			_T("아직 조건에 맞는 전투 기록이 없습니다\n스테이지를 완료하거나 패배하면 자동으로 기록됩니다"),
+			125,
+			UiTheme::MutedText,
+			DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
+	}
+	const std::size_t visibleRowCount = (std::min)(std::size_t{ 7 }, rows.size());
+	for (std::size_t index = 0; index < visibleRowCount; ++index)
+	{
+		const PerformanceRecord& record = rows[index];
+		const int top = 230 + static_cast<int>(index) * 52;
+		if (index % 2U == 0U)
+		{
+			deviceContext->FillSolidRect(CRect(52, top, 948, top + 48), UiTheme::PanelMuted);
+		}
+		const StageDefinition* stage = FindContentStage(_contentCatalog.stages, record.stageId);
+		const OrbDefinition* orb = FindOrbDefinition(record.orbId);
+		CString stageName = stage != nullptr ? Utf8Text(stage->displayName) : Utf8Text(record.stageId);
+		CString orbName = orb != nullptr ? Utf8Text(orb->displayName) : Utf8Text(record.orbId);
+		CString values[8];
+		values[0] = stageName;
+		values[1] = DifficultyTextForUi(record.difficulty);
+		values[2] = orbName;
+		values[3].Format(_T("%d"), record.attemptCount);
+		values[4].Format(_T("%d"), record.clearCount);
+		values[5].Format(_T("%.0f"), record.AverageScore());
+		values[6].Format(_T("%d"), record.highScore);
+		values[7].Format(_T("%d"), record.bestCombo);
+		for (std::size_t column = 0; column < 8U; ++column)
+		{
+			UiRenderer::DrawText(
+				deviceContext,
+				CRect(columns[column], top, columns[column + 1], top + 48),
+				values[column],
+				column == 0U || column == 2U ? 70 : 78,
+				column >= 5U ? UiTheme::Green : UiTheme::Text,
+				DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+		}
+	}
+	if (rows.size() > visibleRowCount)
+	{
+		CString more;
+		more.Format(_T("상위 %zu개 표시 · 전체 %zu개"), visibleRowCount, rows.size());
+		UiRenderer::DrawText(deviceContext, CRect(60, 570, 700, 605), more, 85, UiTheme::MutedText);
+	}
+	UiRenderer::DrawKeyHint(deviceContext, CRect(720, 630, 945, 688), _T("돌아가기 · B/ESC"));
+}
+
 void CChildView::DrawResultScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
@@ -2578,6 +2684,7 @@ UiScreenKind CChildView::CurrentUiScreen() const noexcept
 	case ScreenMode::StageSelection: return UiScreenKind::StageSelection;
 	case ScreenMode::Loadout: return UiScreenKind::Loadout;
 	case ScreenMode::Options: return UiScreenKind::Options;
+	case ScreenMode::Statistics: return UiScreenKind::Statistics;
 	case ScreenMode::Reward: return UiScreenKind::Reward;
 	case ScreenMode::Shop: return UiScreenKind::Shop;
 	case ScreenMode::Result: return UiScreenKind::Result;
@@ -2683,12 +2790,20 @@ void CChildView::RecordResult(bool cleared)
 		return;
 	}
 
-	if (_records.ApplyResult(
+	bool changed = _records.ApplyResult(
 		_resultSummary->stageId,
 		_options.difficulty,
 		_resultSummary->totalScore,
 		_resultSummary->bestCombo,
-		cleared))
+		cleared);
+	changed = _records.ApplyPerformanceResult(
+		_resultSummary->stageId,
+		_options.difficulty,
+		_resultSummary->orbId,
+		_resultSummary->totalScore,
+		_resultSummary->bestCombo,
+		cleared) || changed;
+	if (changed)
 	{
 		_recordSaveFailed = !_recordStore.Save(_records);
 	}
@@ -2739,6 +2854,7 @@ bool CChildView::HandleMenuClick(CPoint point)
 	case ScreenMode::StageSelection: screen = UiScreenKind::StageSelection; break;
 	case ScreenMode::Loadout: screen = UiScreenKind::Loadout; break;
 	case ScreenMode::Options: screen = UiScreenKind::Options; break;
+	case ScreenMode::Statistics: screen = UiScreenKind::Statistics; break;
 	case ScreenMode::Reward: screen = UiScreenKind::Reward; break;
 	case ScreenMode::Shop: screen = UiScreenKind::Shop; break;
 	case ScreenMode::Result: screen = UiScreenKind::Result; break;
@@ -2797,6 +2913,9 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		break;
 	case UiCommand::OpenOptions:
 		SetScreenMode(ScreenMode::Options);
+		break;
+	case UiCommand::OpenStatistics:
+		SetScreenMode(ScreenMode::Statistics);
 		break;
 	case UiCommand::SelectOrb:
 	{
@@ -2857,6 +2976,12 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		_options.ToggleLanguage();
 		ReloadLocalization();
 		SaveOptions();
+		break;
+	case UiCommand::CycleStatisticsDifficulty:
+		_statisticsDifficulty = NextStatisticsDifficultyFilter(_statisticsDifficulty);
+		break;
+	case UiCommand::CycleStatisticsSort:
+		_statisticsSort = NextStatisticsSortMode(_statisticsSort);
 		break;
 	case UiCommand::SelectReward:
 		SelectRunReward(action.index);
@@ -2950,6 +3075,10 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			_loadoutNotice.Empty();
 			SetScreenMode(ScreenMode::Loadout);
 		}
+		else if (nChar == 'T')
+		{
+			SetScreenMode(ScreenMode::Statistics);
+		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 		return;
@@ -2981,6 +3110,25 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		{
 			_game.ResetProgression();
 			_loadoutNotice = _T("오브와 유물을 기본 상태로 초기화했습니다");
+		}
+		else if (nChar == 'B' || nChar == VK_ESCAPE)
+		{
+			SetScreenMode(ScreenMode::StageSelection);
+		}
+		Invalidate();
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+
+	if (_screenMode == ScreenMode::Statistics)
+	{
+		if (nChar == 'D')
+		{
+			_statisticsDifficulty = NextStatisticsDifficultyFilter(_statisticsDifficulty);
+		}
+		else if (nChar == 'S')
+		{
+			_statisticsSort = NextStatisticsSortMode(_statisticsSort);
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)
 		{

@@ -15,9 +15,10 @@ std::size_t GetGamepadFocusCount(UiScreenKind screen, std::size_t visibleStageCo
 {
 	switch (screen)
 	{
-	case UiScreenKind::StageSelection: return SafeStageCount(visibleStageCount) + 3U;
+	case UiScreenKind::StageSelection: return SafeStageCount(visibleStageCount) + 4U;
 	case UiScreenKind::Loadout: return 8U;
 	case UiScreenKind::Options: return 7U;
+	case UiScreenKind::Statistics: return 3U;
 	case UiScreenKind::Reward: return 3U;
 	case UiScreenKind::Shop: return 4U;
 	case UiScreenKind::Result: return 2U;
@@ -54,8 +55,9 @@ UiAction ResolveGamepadFocusedAction(
 	case UiScreenKind::StageSelection:
 		if (focusIndex < stageCount) return { UiCommand::SelectStage, focusIndex };
 		if (focusIndex == stageCount) return { UiCommand::StartSelectedStage };
-		if (focusIndex == stageCount + 1U) return { UiCommand::OpenLoadout };
-		if (focusIndex == stageCount + 2U) return { UiCommand::OpenOptions };
+		if (focusIndex == stageCount + 1U) return { UiCommand::OpenStatistics };
+		if (focusIndex == stageCount + 2U) return { UiCommand::OpenLoadout };
+		if (focusIndex == stageCount + 3U) return { UiCommand::OpenOptions };
 		break;
 	case UiScreenKind::Loadout:
 		if (focusIndex < 3U) return { UiCommand::SelectOrb, focusIndex };
@@ -75,6 +77,11 @@ UiAction ResolveGamepadFocusedAction(
 		case 6U: return { UiCommand::BackToStageSelection };
 		default: break;
 		}
+		break;
+	case UiScreenKind::Statistics:
+		if (focusIndex == 0U) return { UiCommand::CycleStatisticsDifficulty };
+		if (focusIndex == 1U) return { UiCommand::CycleStatisticsSort };
+		if (focusIndex == 2U) return { UiCommand::BackToStageSelection };
 		break;
 	case UiScreenKind::Reward:
 		if (focusIndex < 3U) return { UiCommand::SelectReward, focusIndex };
@@ -97,6 +104,7 @@ UiAction ResolveGamepadBackAction(UiScreenKind screen) noexcept
 	{
 	case UiScreenKind::Loadout:
 	case UiScreenKind::Options:
+	case UiScreenKind::Statistics:
 	case UiScreenKind::Result:
 		return { UiCommand::BackToStageSelection };
 	case UiScreenKind::Shop:
@@ -123,8 +131,9 @@ UiFocusRect GetGamepadFocusRect(
 			return { left, 215.0f, left + 343.0f, 590.0f };
 		}
 		if (focusIndex == stageCount) return { 350.0f, 635.0f, 865.0f, 695.0f };
-		if (focusIndex == stageCount + 1U) return { 43.0f, 575.0f, 206.0f, 625.0f };
-		if (focusIndex == stageCount + 2U) return { 43.0f, 638.0f, 206.0f, 688.0f };
+		if (focusIndex == stageCount + 1U) return { 43.0f, 565.0f, 206.0f, 602.0f };
+		if (focusIndex == stageCount + 2U) return { 43.0f, 608.0f, 206.0f, 646.0f };
+		if (focusIndex == stageCount + 3U) return { 43.0f, 652.0f, 206.0f, 690.0f };
 		break;
 	case UiScreenKind::Loadout:
 		if (focusIndex < 3U)
@@ -149,6 +158,11 @@ UiFocusRect GetGamepadFocusRect(
 		if (focusIndex < 7U) return rects[focusIndex];
 		break;
 	}
+	case UiScreenKind::Statistics:
+		if (focusIndex == 0U) return { 80.0f, 110.0f, 300.0f, 160.0f };
+		if (focusIndex == 1U) return { 350.0f, 110.0f, 570.0f, 160.0f };
+		if (focusIndex == 2U) return { 720.0f, 630.0f, 945.0f, 688.0f };
+		break;
 	case UiScreenKind::Reward:
 		if (focusIndex < 3U)
 		{

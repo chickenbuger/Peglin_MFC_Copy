@@ -109,6 +109,7 @@ struct GameResultSummary
 	GameUpdateResult result = GameUpdateResult::None;
 	std::string stageId;
 	std::string stageName;
+	std::string orbId;
 	int totalScore = 0;
 	int bestCombo = 0;
 	int turns = 0;
@@ -235,6 +236,7 @@ private:
 	GameFeedback _feedback;
 	GameScore _score;
 	PlayerLoadout _loadout;
+	std::string _lastUsedOrbId = std::string(PlayerLoadout::DefaultOrbId);
 	std::vector<GameEvent> _events;
 	Vector2 _aimStart;
 	Vector2 _aimCurrent;

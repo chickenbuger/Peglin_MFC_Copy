@@ -19,6 +19,7 @@
 #include "GameSettingsStore.h"
 #include "GamepadNavigation.h"
 #include "GameplayCatalog.h"
+#include "GameStatistics.h"
 #include "GameWorld.h"
 #include "Localization.h"
 #include "RunProgression.h"
@@ -72,6 +73,7 @@ private:
 		StageSelection,
 		Loadout,
 		Options,
+		Statistics,
 		Playing,
 		Reward,
 		Shop,
@@ -128,6 +130,7 @@ private:
 	void DrawStageSelection(CDC* deviceContext);
 	void DrawLoadoutScreen(CDC* deviceContext);
 	void DrawOptions(CDC* deviceContext);
+	void DrawStatisticsScreen(CDC* deviceContext);
 	void DrawRewardScreen(CDC* deviceContext);
 	void DrawShopScreen(CDC* deviceContext);
 	void DrawResultScreen(CDC* deviceContext);
@@ -221,6 +224,8 @@ private:
 	std::array<bool, 3> _shopPurchased{};
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
+	StatisticsDifficultyFilter _statisticsDifficulty = StatisticsDifficultyFilter::All;
+	StatisticsSortMode _statisticsSort = StatisticsSortMode::HighScore;
 	ScreenMode _screenMode = ScreenMode::StageSelection;
 	std::optional<GameResultSummary> _resultSummary;
 };

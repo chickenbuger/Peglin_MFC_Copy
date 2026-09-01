@@ -11,6 +11,7 @@
 #include "GameWorld.h"
 #include "AudioCatalog.h"
 #include "GamepadNavigation.h"
+#include "GameStatistics.h"
 #include "ContentCatalog.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
@@ -434,13 +435,25 @@ namespace
 				== UiCommand::StartSelectedStage,
 			"mouse starts the selected stage");
 		Check(
-			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 600.0f }, 3).command
+			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 625.0f }, 3).command
 				== UiCommand::OpenLoadout,
 			"mouse opens loadout management");
 		Check(
-			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 665.0f }, 3).command
+			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 670.0f }, 3).command
 				== UiCommand::OpenOptions,
 			"mouse opens options");
+		Check(
+			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 580.0f }, 3).command
+				== UiCommand::OpenStatistics,
+			"mouse opens detailed statistics");
+		Check(
+			ResolveUiClick(UiScreenKind::Statistics, { 180.0f, 135.0f }, 0).command
+				== UiCommand::CycleStatisticsDifficulty,
+			"mouse cycles statistics difficulty filter");
+		Check(
+			ResolveUiClick(UiScreenKind::Statistics, { 450.0f, 135.0f }, 0).command
+				== UiCommand::CycleStatisticsSort,
+			"mouse cycles statistics sorting");
 
 		action = ResolveUiClick(UiScreenKind::Loadout, { 400.0f, 250.0f }, 0);
 		Check(action.command == UiCommand::SelectOrb && action.index == 1, "mouse selects an orb card");
@@ -537,12 +550,14 @@ namespace
 
 	void TestGamepadNavigation()
 	{
-		Check(GetGamepadFocusCount(UiScreenKind::StageSelection, 2) == 5U,
-			"gamepad stage screen exposes routes, start, loadout, and options");
+		Check(GetGamepadFocusCount(UiScreenKind::StageSelection, 2) == 6U,
+			"gamepad stage screen exposes routes, start, statistics, loadout, and options");
 		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 8U,
 			"gamepad can focus every loadout action");
 		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 7U,
 			"gamepad can focus every option and back");
+		Check(GetGamepadFocusCount(UiScreenKind::Statistics, 0) == 3U,
+			"gamepad can focus statistics filter, sort, and back");
 		Check(GetGamepadFocusCount(UiScreenKind::Reward, 0) == 3U,
 			"gamepad can focus every reward");
 		Check(GetGamepadFocusCount(UiScreenKind::Shop, 0) == 4U,
@@ -556,6 +571,8 @@ namespace
 			== UiCommand::SelectStage, "gamepad confirms the focused route");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::StageSelection, 2, 2).command
 			== UiCommand::StartSelectedStage, "gamepad starts a selected stage");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::StageSelection, 3, 2).command
+			== UiCommand::OpenStatistics, "gamepad opens detailed statistics");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Loadout, 4, 0).command
 			== UiCommand::AcquireRelic, "gamepad reaches relic acquisition");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 3, 0).command
@@ -1224,6 +1241,7 @@ namespace
 		Check(summary.has_value(), "terminal stage exposes result summary");
 		Check(summary.has_value() && summary->result == GameUpdateResult::Victory, "result summary preserves outcome");
 		Check(summary.has_value() && summary->stageId == "result-stage", "result summary preserves stage identity");
+		Check(summary.has_value() && summary->orbId == "basic-orb", "result summary preserves the last used orb");
 		Check(summary.has_value() && summary->totalScore == 200, "result summary preserves final score");
 		Check(summary.has_value() && summary->bestCombo == 1, "result summary preserves best combo");
 		Check(summary.has_value() && summary->turns == 1, "result summary preserves completed turns");
@@ -1511,6 +1529,36 @@ namespace
 		Check(records.Get("stage-1", GameDifficulty::Normal).highScore == 900, "normal record remains isolated from hard");
 		Check(records.ApplyResult("stage-2", GameDifficulty::Normal, 1200, 10, true), "stage id creates an isolated record");
 		Check(records.Get("stage-2", GameDifficulty::Normal).highScore == 1200, "second stage retains its own result");
+		Check(!records.ApplyPerformanceResult("stage-1", GameDifficulty::Normal, "bad|orb", 10, 1, false),
+			"performance record rejects an invalid orb id");
+		Check(records.ApplyPerformanceResult("stage-1", GameDifficulty::Normal, "basic-orb", 500, 4, false),
+			"first orb performance attempt creates a detailed record");
+		Check(records.ApplyPerformanceResult("stage-1", GameDifficulty::Normal, "basic-orb", 900, 8, true),
+			"second orb performance attempt updates aggregates");
+		Check(records.ApplyPerformanceResult("stage-1", GameDifficulty::Hard, "iron-orb", 700, 6, true),
+			"difficulty and orb create an isolated performance record");
+		const PerformanceRecord performance = records.GetPerformance(
+			"stage-1", GameDifficulty::Normal, "basic-orb");
+		Check(performance.attemptCount == 2 && performance.clearCount == 1,
+			"performance record counts attempts and clears");
+		Check(performance.totalScore == 1400 && Near(static_cast<float>(performance.AverageScore()), 700.0f),
+			"performance record calculates total and average score");
+		Check(performance.highScore == 900 && performance.bestCombo == 8,
+			"performance record preserves high score and combo");
+		Check(records.GetPerformance("stage-1", GameDifficulty::Normal, "iron-orb").attemptCount == 0,
+			"missing orb performance returns an empty aggregate");
+		const std::vector<PerformanceRecord> highScoreRows = BuildStatisticsRows(
+			records, StatisticsDifficultyFilter::All, StatisticsSortMode::HighScore);
+		Check(highScoreRows.size() == 2U && highScoreRows.front().highScore == 900,
+			"statistics sort detailed rows by high score");
+		const std::vector<PerformanceRecord> hardRows = BuildStatisticsRows(
+			records, StatisticsDifficultyFilter::Hard, StatisticsSortMode::AverageScore);
+		Check(hardRows.size() == 1U && hardRows.front().orbId == "iron-orb",
+			"statistics filter isolates a difficulty");
+		Check(NextStatisticsDifficultyFilter(StatisticsDifficultyFilter::Hard)
+			== StatisticsDifficultyFilter::All, "statistics difficulty filter wraps");
+		Check(NextStatisticsSortMode(StatisticsSortMode::AverageScore)
+			== StatisticsSortMode::HighScore, "statistics sort mode wraps");
 
 		const std::filesystem::path testDirectory =
 			std::filesystem::temp_directory_path()
@@ -1536,6 +1584,10 @@ namespace
 		Check(loadedNormal.clearCount == 2, "record file preserves clear count");
 		Check(loaded.records.Get("stage-1", GameDifficulty::Hard).highScore == 700, "record file preserves difficulty isolation");
 		Check(loaded.records.Get("stage-2", GameDifficulty::Normal).highScore == 1200, "record file preserves stage isolation");
+		const PerformanceRecord loadedPerformance = loaded.records.GetPerformance(
+			"stage-1", GameDifficulty::Normal, "basic-orb");
+		Check(loadedPerformance.attemptCount == 2 && loadedPerformance.totalScore == 1400,
+			"record file preserves detailed orb performance");
 
 		GameRecordBook updated = loaded.records;
 		Check(updated.ApplyResult("stage-2", GameDifficulty::Normal, 1500, 11, false), "record book accepts a later improvement");
@@ -1562,7 +1614,7 @@ namespace
 		Check(migratedStage.bestCombo == 10, "legacy record combo migrates");
 		Check(migratedStage.clearCount == 2, "legacy record clears migrate");
 		Check(migratedRecords.records.Get("stage-1", GameDifficulty::Hard).highScore == 0, "legacy record defaults to normal difficulty");
-		Check(store.Save(migratedRecords.records), "migrated records rewrite as version one");
+		Check(store.Save(migratedRecords.records), "migrated records rewrite as version two");
 		Check(store.Load().state == RecordLoadState::Loaded, "rewritten records load as current version");
 		{
 			std::ofstream invalidDifficulty(recordPath, std::ios::trunc);

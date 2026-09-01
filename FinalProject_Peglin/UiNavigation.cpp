@@ -39,13 +39,34 @@ namespace
 		{
 			return { UiCommand::StartSelectedStage };
 		}
-		if (UiRect{ 43.0f, 575.0f, 206.0f, 625.0f }.Contains(position))
+		if (UiRect{ 43.0f, 565.0f, 206.0f, 602.0f }.Contains(position))
+		{
+			return { UiCommand::OpenStatistics };
+		}
+		if (UiRect{ 43.0f, 608.0f, 206.0f, 646.0f }.Contains(position))
 		{
 			return { UiCommand::OpenLoadout };
 		}
-		if (UiRect{ 43.0f, 638.0f, 206.0f, 688.0f }.Contains(position))
+		if (UiRect{ 43.0f, 652.0f, 206.0f, 690.0f }.Contains(position))
 		{
 			return { UiCommand::OpenOptions };
+		}
+		return {};
+	}
+
+	UiAction ResolveStatisticsClick(Vector2 position) noexcept
+	{
+		if (UiRect{ 80.0f, 110.0f, 300.0f, 160.0f }.Contains(position))
+		{
+			return { UiCommand::CycleStatisticsDifficulty };
+		}
+		if (UiRect{ 350.0f, 110.0f, 570.0f, 160.0f }.Contains(position))
+		{
+			return { UiCommand::CycleStatisticsSort };
+		}
+		if (UiRect{ 720.0f, 630.0f, 945.0f, 688.0f }.Contains(position))
+		{
+			return { UiCommand::BackToStageSelection };
 		}
 		return {};
 	}
@@ -166,6 +187,8 @@ UiAction ResolveUiClick(
 		return ResolveLoadoutClick(position);
 	case UiScreenKind::Options:
 		return ResolveOptionsClick(position);
+	case UiScreenKind::Statistics:
+		return ResolveStatisticsClick(position);
 	case UiScreenKind::Reward:
 		return ResolveRewardClick(position);
 	case UiScreenKind::Shop:

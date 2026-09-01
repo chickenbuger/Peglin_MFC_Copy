@@ -111,6 +111,7 @@ GameUpdateResult GameWorld::Update(float deltaSeconds)
 void GameWorld::ResetGame()
 {
 	_loadout.BeginBattle(GetBattleShuffleSeed());
+	_lastUsedOrbId = std::string(_loadout.GetSelectedOrbId());
 	_gameState = GameState::Aiming;
 	_stateBeforePause = GameState::Aiming;
 	_pendingDamage = 0.0f;
@@ -338,6 +339,7 @@ bool GameWorld::ReleaseShot(Vector2 position)
 		launched = _ball.shooting();
 		if (launched)
 		{
+			_lastUsedOrbId = std::string(_loadout.GetSelectedOrbId());
 			_score.currentShot = 0;
 			_score.currentCombo = 0;
 			TransitionTo(GameState::BallInFlight);
@@ -1079,6 +1081,7 @@ std::optional<GameResultSummary> GameWorld::GetResultSummary() const
 		result,
 		_stage.id,
 		_stage.displayName,
+		_lastUsedOrbId,
 		_score.total,
 		_score.bestCombo,
 		_completedTurns

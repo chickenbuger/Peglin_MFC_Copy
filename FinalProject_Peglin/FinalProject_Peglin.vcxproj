@@ -207,6 +207,7 @@
 	<ClInclude Include="Localization.h" />
 	<ClInclude Include="GameRecordStore.h" />
 	<ClInclude Include="GameSettingsStore.h" />
+	<ClInclude Include="GameStatistics.h" />
     <ClInclude Include="GameWorld.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="Parent_ball.h" />
@@ -237,6 +238,7 @@
     <ClCompile Include="GameWorld.cpp" />
 	<ClCompile Include="GameRecordStore.cpp" />
 	<ClCompile Include="GameSettingsStore.cpp" />
+	<ClCompile Include="GameStatistics.cpp" />
 	<ClCompile Include="GamepadNavigation.cpp" />
 	<ClCompile Include="GameplayCatalog.cpp" />
 	<ClCompile Include="Localization.cpp" />
