@@ -106,7 +106,7 @@ foreach ($line in $hashLines) {
 }
 
 if ($Launch) {
-    $process = Start-Process -FilePath $executablePath -WorkingDirectory $resolvedRoot -PassThru
+    $process = Start-Process -FilePath $executablePath -WorkingDirectory $resolvedRoot -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 3
     $process.Refresh()
     if ($process.HasExited) {

@@ -62,7 +62,7 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
 
 ```powershell
-& '.\tools\Package-Release.ps1' -Version '7.14'
+& '.\tools\Package-Release.ps1' -Version '7.20'
 ```
 
 패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 이미지 변환·크기·색심도와 외부 스테이지·게임플레이·한국어·영어 카탈로그를 먼저 검증한다. 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함하며, `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 경로 탈출, 파일 변조, MFC 런타임·외부 카탈로그 누락을 자동 탐지한다.
@@ -80,7 +80,7 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 
 ## 현재 검증 상태
 
-2026-09-01 Version 7.14 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 955개·총 3,820개 자동 검증과 5종 몬스터, 9개 적 안정 ID, Refresh Peg 최소 보장·매 턴 재배치·파괴 후 즉시 재생성, 오브·유물 보상 안내, 이동 페그, 시작 전 경로 재선택, Goblin Market 상점, 몬스터별 칸 거리·공격 사거리, 이미지 기반 스테이지 카드와 최적화된 메뉴 클릭 영역을 검증했다. 자산 파이프라인은 22개 리소스와 21개 PNG→24-bit BMP 변환을 검증한다.
+2026-09-01 Version 7.20 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 1,051개·총 4,204개 자동 검증과 분기형 전체 런, 5종 몬스터, 9개 적 안정 ID, Refresh Peg 보장·재배치, 오브·유물, 이동 페그, 상점, 칸 거리·사거리, 파일 오디오, 게임패드, 상세 통계와 세이브 백업·손상 복구를 검증했다. 자산 파이프라인은 22개 리소스와 21개 PNG→24-bit BMP 변환을 검증한다.
 
 Version 7.4 Release x64 ZIP은 `dist/PeglinMFC-7.4-win-x64.zip`에 생성되며 크기는 7,054,453 bytes, SHA-256은 `62D7B57F5D7DD058785EE8717488EFA7FBE3636102C41F3F73247A878DB811FF`다.
 
@@ -101,3 +101,5 @@ Version 7.12 Release x64 ZIP은 `dist/PeglinMFC-7.12-win-x64.zip`에 생성되�
 Version 7.13 Release x64 ZIP은 `dist/PeglinMFC-7.13-win-x64.zip`에 생성되며 크기는 8,037,975 bytes, SHA-256은 `15FDF5C18A51C2C463A63C6E7E0A4374DECDAFE8ACC9470A01DC836005A31DED`다.
 
 Version 7.14 Release x64 ZIP은 `dist/PeglinMFC-7.14-win-x64.zip`에 생성되며 크기는 8,040,036 bytes, SHA-256은 `CD5B916D774158FA43BC81D09FDD68D31043B77135F511CB6BDD9CF8C839D98A`다.
+
+Version 7.20 Release x64 ZIP은 `dist/PeglinMFC-7.20-win-x64.zip`에 생성되며 크기는 8,714,542 bytes, SHA-256은 `072B3097C23A9352B3826869B068B4ECC29FB7379D79C76A01BAFBB3FE868F7A`다. 자산 22개, PNG 변환 21개, 오디오 WAV 11개, 앱 로컬 MFC/CRT와 외부 콘텐츠를 포함하며 실제 패키지 실행과 변조·누락 검사를 통과했다.

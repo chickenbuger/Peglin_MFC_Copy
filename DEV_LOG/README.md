@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.19 |
+| 현재 스프린트 | Sprint 7 완료 |
+| 현재 버전 | Version 7.20 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 19/20 완료 — 세이브 백업·손상 복구·선택형 초기화 완료 |
+| 상태 | Sprint 7 P0 20/20 및 최종 회귀·배포 검증 완료 · Sprint 8 계획 준비 |
 
 ## 문서
 
@@ -100,6 +100,7 @@
 - [Version 7.17 — 게임패드 전체 런 입력 동등성](./Version_7.17.md)
 - [Version 7.18 — 스테이지·난이도·오브 상세 통계](./Version_7.18.md)
 - [Version 7.19 — 세이브 백업·손상 복구·선택형 초기화](./Version_7.19.md)
+- [Version 7.20 — Sprint 7 최종 회귀·배포 검증](./Version_7.20.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)
@@ -107,7 +108,8 @@
 - [Next Version Plan 4 — Sprint 4 계획](./Next_Version_Plan_4.md)
 - [Next Version Plan 5 — Sprint 5 계획](./Next_Version_Plan_5.md)
 - [Next Version Plan 6 — Sprint 6 계획](./Next_Version_Plan_6.md)
-- [Next Version Plan 7 — Sprint 7 준비 계획](./Next_Version_Plan_7.md)
+- [Next Version Plan 7 — Sprint 7 완료 기록](./Next_Version_Plan_7.md)
+- [Next Version Plan 8 — Sprint 8 계획](./Next_Version_Plan_8.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차
