@@ -23,6 +23,7 @@
 #include "GameplayCatalog.h"
 #include "Localization.h"
 #include "PegLayout.h"
+#include "PerformanceMonitor.h"
 #include "Physics.h"
 #include "Progression.h"
 #include "RewardPresentation.h"
@@ -218,6 +219,39 @@ namespace
 			"demo mode advances through a stable varied shot sequence");
 		demo.SetEnabled(false);
 		Check(demo.GetNextShotIndex() == 0, "disabling demo mode resets its sequence");
+	}
+
+	void TestPerformanceMonitor()
+	{
+		PerformanceMonitor monitor;
+		PerformanceSnapshot snapshot = monitor.GetSnapshot();
+		Check(snapshot.sampleCount == 0 && snapshot.framesPerSecond == 0.0f,
+			"performance monitor starts empty");
+		monitor.RecordFrame(0.0f, 4);
+		Check(monitor.GetSnapshot().sampleCount == 0, "performance monitor ignores invalid frame durations");
+		monitor.RecordFrame(0.01f, 1);
+		snapshot = monitor.GetSnapshot();
+		Check(snapshot.sampleCount == 1 && Near(snapshot.framesPerSecond, 100.0f),
+			"performance monitor reports a one hundred FPS frame");
+		Check(Near(snapshot.averageFrameMilliseconds, 10.0f)
+			&& Near(snapshot.maximumFrameMilliseconds, 10.0f),
+			"performance monitor reports initial frame timing");
+		monitor.RecordFrame(0.02f, 2);
+		snapshot = monitor.GetSnapshot();
+		Check(Near(snapshot.averageFrameMilliseconds, 15.0f)
+			&& Near(snapshot.maximumFrameMilliseconds, 20.0f),
+			"performance monitor aggregates average and maximum timing");
+		Check(snapshot.lastFixedSteps == 2 && snapshot.peakFixedSteps == 2,
+			"performance monitor tracks fixed-step pressure");
+		for (std::size_t index = 0; index < PerformanceMonitor::SampleCapacity + 5U; ++index)
+		{
+			monitor.RecordFrame(0.005f, 1);
+		}
+		snapshot = monitor.GetSnapshot();
+		Check(snapshot.sampleCount == PerformanceMonitor::SampleCapacity,
+			"performance monitor keeps a bounded rolling window");
+		Check(Near(snapshot.maximumFrameMilliseconds, 5.0f),
+			"performance monitor discards expired slow frames");
 	}
 
 	void Launch(GameWorld& world)
@@ -3342,6 +3376,7 @@ int main(int argc, char* argv[])
 	TestAudioCatalog();
 	TestAudioMixing();
 	TestDemoRun();
+	TestPerformanceMonitor();
 	TestGameSettingsPersistence();
 	TestStageRecordPersistence();
 	TestStageRulesConfigureWorld();

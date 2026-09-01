@@ -273,6 +273,7 @@
 	<ClInclude Include="AudioPlayer.h" />
 	<ClInclude Include="CombatLog.h" />
 	<ClInclude Include="DemoRun.h" />
+	<ClInclude Include="PerformanceMonitor.h" />
     <ResourceCompile Include="FinalProjectPeglin.rc" />
 	<ResourceCompile Include="UiResources.rc" />
   </ItemGroup>

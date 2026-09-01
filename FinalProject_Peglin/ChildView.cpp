@@ -591,6 +591,7 @@ void CChildView::OnPaint()
 		DrawGamepadFocus(&memDc);
 		DrawUiAnimations(&memDc, logicalBounds);
 		DrawDemoBadge(&memDc);
+		DrawPerformanceHud(&memDc);
 		memDc.RestoreDC(logicalDrawingState);
 		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 		memDc.SelectObject(previousBitmap);
@@ -964,11 +965,14 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 	_lastFrameTime = now;
 	_accumulatedTimeSeconds += std::clamp(elapsedSeconds, 0.0, MAX_FRAME_TIME_SECONDS);
 
+	int fixedSteps = 0;
 	while (_accumulatedTimeSeconds >= FIXED_TIMESTEP_SECONDS)
 	{
 		UpdateGameStep(static_cast<float>(FIXED_TIMESTEP_SECONDS));
 		_accumulatedTimeSeconds -= FIXED_TIMESTEP_SECONDS;
+		++fixedSteps;
 	}
+	_performanceMonitor.RecordFrame(static_cast<float>(elapsedSeconds), fixedSteps);
 
 	Invalidate(FALSE);
 
@@ -1069,6 +1073,33 @@ void CChildView::DrawDemoBadge(CDC* deviceContext)
 	const CRect badge(852, 18, 968, 50);
 	UiRenderer::DrawPanel(deviceContext, badge, true, UiTheme::Orange);
 	UiRenderer::DrawText(deviceContext, badge, _T("DEMO · F9"), 88, UiTheme::Orange);
+}
+
+void CChildView::DrawPerformanceHud(CDC* deviceContext)
+{
+	if (!_performanceHudVisible) return;
+	const PerformanceSnapshot snapshot = _performanceMonitor.GetSnapshot();
+	const DWORD gdiObjects = ::GetGuiResources(::GetCurrentProcess(), GR_GDIOBJECTS);
+	const DWORD userObjects = ::GetGuiResources(::GetCurrentProcess(), GR_USEROBJECTS);
+	CString text;
+	text.Format(
+		_T("PERFORMANCE · F3\nFPS %.1f · AVG %.2f ms\nMAX %.2f ms · STEP %d/%d\nGDI %lu · USER %lu"),
+		snapshot.framesPerSecond,
+		snapshot.averageFrameMilliseconds,
+		snapshot.maximumFrameMilliseconds,
+		snapshot.lastFixedSteps,
+		snapshot.peakFixedSteps,
+		static_cast<unsigned long>(gdiObjects),
+		static_cast<unsigned long>(userObjects));
+	const CRect panel(18, 508, 250, 628);
+	UiRenderer::DrawPanel(deviceContext, panel, true, UiTheme::Green);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(panel.left + 10, panel.top + 8, panel.right - 10, panel.bottom - 8),
+		text,
+		76,
+		UiTheme::Text,
+		DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
 }
 
 void CChildView::FinishPendingTerminalTransition()
@@ -3456,6 +3487,13 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 
 void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
+	if (nChar == VK_F3)
+	{
+		_performanceHudVisible = !_performanceHudVisible;
+		Invalidate(FALSE);
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
 	if (nChar == VK_F9)
 	{
 		SetDemoMode(!_demoRun.IsEnabled());

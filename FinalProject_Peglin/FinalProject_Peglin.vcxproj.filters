@@ -6,6 +6,7 @@
 	<ClInclude Include="AudioPlayer.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="CombatLog.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="DemoRun.h"><Filter>헤더 파일</Filter></ClInclude>
+	<ClInclude Include="PerformanceMonitor.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="GamepadNavigation.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="GameStatistics.h"><Filter>헤더 파일</Filter></ClInclude>
     <Filter Include="소스 파일">

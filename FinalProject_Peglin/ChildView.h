@@ -24,6 +24,7 @@
 #include "GameStatistics.h"
 #include "GameWorld.h"
 #include "Localization.h"
+#include "PerformanceMonitor.h"
 #include "RunProgression.h"
 #include "TerminalTransitionGate.h"
 #include "PeglinUiAnimation.h"
@@ -133,6 +134,7 @@ private:
 	void DrawCombatLog(CDC* deviceContext);
 	void DrawGameplayTooltip(CDC* deviceContext);
 	void DrawDemoBadge(CDC* deviceContext);
+	void DrawPerformanceHud(CDC* deviceContext);
 	void DrawEnemyHealthBar(
 		CDC* deviceContext,
 		const EnemyCombatant& combatant,
@@ -208,6 +210,8 @@ private:
 	AudioPlayer _audioPlayer;
 	DemoRunController _demoRun;
 	bool _demoRequested = false;
+	PerformanceMonitor _performanceMonitor;
+	bool _performanceHudVisible = false;
 	GameSettingsStore _settingsStore;
 	GameRecordStore _recordStore;
 	GameRecordBook _records;
