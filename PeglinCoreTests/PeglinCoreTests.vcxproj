@@ -59,6 +59,7 @@
 	<ClCompile Include="..\FinalProject_Peglin\GameSettingsStore.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\GameStatistics.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\GamepadNavigation.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\GamepadFeedback.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\GameplayCatalog.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\Localization.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Parent_ball.cpp" />

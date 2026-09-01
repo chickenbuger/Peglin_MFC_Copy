@@ -19,6 +19,7 @@
 #include "DemoRun.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
+#include "GamepadFeedback.h"
 #include "GamepadNavigation.h"
 #include "GameplayCatalog.h"
 #include "GameStatistics.h"
@@ -179,7 +180,9 @@ private:
 	void ApplyAudioOptions();
 	void UpdateScreenMusic();
 	void SetScreenMode(ScreenMode mode);
-	void PollGamepad();
+	void PollGamepad(float deltaSeconds);
+	void ApplyGamepadRumble(float deltaSeconds);
+	void StopGamepadRumble() noexcept;
 	void SetDemoMode(bool enabled);
 	void UpdateDemoRun(float deltaSeconds);
 	UiScreenKind CurrentUiScreen() const noexcept;
@@ -207,6 +210,10 @@ private:
 	bool _gamepadTriggerDown = false;
 	bool _gamepadStickLatched = false;
 	bool _gamepadConnected = false;
+	GamepadConnectionTracker _gamepadConnection;
+	GamepadRumbleEnvelope _gamepadRumble;
+	unsigned short _appliedLeftMotor = 0;
+	unsigned short _appliedRightMotor = 0;
 	std::size_t _gamepadFocusIndex = 0;
 	Vector2 _gamepadAimDirection{ 0.0f, -1.0f };
 	TerminalTransitionGate _terminalTransition;

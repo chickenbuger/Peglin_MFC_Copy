@@ -12,6 +12,7 @@
 #include "AudioCatalog.h"
 #include "AudioMixing.h"
 #include "GamepadNavigation.h"
+#include "GamepadFeedback.h"
 #include "GameStatistics.h"
 #include "ContentCatalog.h"
 #include "CombatLog.h"
@@ -870,6 +871,52 @@ namespace
 		Check(ShouldFireGamepadShot(GamepadFireBinding::RightTrigger, false, true)
 			&& !ShouldFireGamepadShot(GamepadFireBinding::RightTrigger, true, false),
 			"trigger fire binding ignores the south button");
+
+		GamepadConnectionTracker connection;
+		Check(connection.Update(false) == GamepadConnectionChange::None,
+			"gamepad starts in a stable disconnected state");
+		Check(connection.Update(true) == GamepadConnectionChange::Connected,
+			"gamepad reports its first connection once");
+		Check(connection.IsConnected() && connection.Update(true) == GamepadConnectionChange::None,
+			"stable gamepad connection does not repeat notifications");
+		Check(connection.Update(false) == GamepadConnectionChange::Disconnected,
+			"gamepad reports a connection loss once");
+		Check(!connection.IsConnected() && connection.Update(false) == GamepadConnectionChange::None,
+			"stable gamepad disconnection does not repeat notifications");
+		Check(connection.Update(true) == GamepadConnectionChange::Reconnected,
+			"gamepad distinguishes reconnection from first connection");
+
+		GamepadRumbleEnvelope rumble;
+		Check(!rumble.IsActive(), "gamepad rumble starts idle");
+		rumble.Trigger(GamepadRumbleCue::PegHit);
+		const GamepadMotorLevels pegRumble = rumble.GetLevels();
+		Check(rumble.IsActive() && pegRumble.right > pegRumble.left,
+			"peg rumble favors the precise right motor");
+		rumble.Trigger(GamepadRumbleCue::PlayerDamaged);
+		const GamepadMotorLevels damageRumble = rumble.GetLevels();
+		Check(damageRumble.left > damageRumble.right,
+			"damage rumble overrides a peg hit with a heavier left motor");
+		rumble.Trigger(GamepadRumbleCue::PegHit);
+		const GamepadMotorLevels protectedRumble = rumble.GetLevels();
+		Check(Near(protectedRumble.left, damageRumble.left)
+			&& Near(protectedRumble.right, damageRumble.right),
+			"low-priority peg rumble cannot interrupt damage feedback");
+		rumble.Update(0.21f);
+		const GamepadMotorLevels fadingRumble = rumble.GetLevels();
+		Check(rumble.IsActive() && fadingRumble.left < damageRumble.left,
+			"gamepad rumble fades near the end of its envelope");
+		rumble.Update(0.02f);
+		Check(!rumble.IsActive() && rumble.GetLevels().left == 0.0f
+			&& rumble.GetLevels().right == 0.0f,
+			"gamepad rumble always returns both motors to zero");
+		rumble.Trigger(GamepadRumbleCue::Victory);
+		Check(rumble.GetLevels().right > rumble.GetLevels().left,
+			"victory feedback favors the high-frequency motor");
+		rumble.Trigger(GamepadRumbleCue::Defeat);
+		Check(rumble.GetLevels().left > rumble.GetLevels().right,
+			"equal-priority terminal feedback can replace the current pattern");
+		rumble.Reset();
+		Check(!rumble.IsActive(), "gamepad disconnect reset stops terminal vibration");
 		Check(!GetGamepadFocusRect(UiScreenKind::Result, 9, 0).IsValid(),
 			"invalid gamepad focus has no rectangle");
 	}

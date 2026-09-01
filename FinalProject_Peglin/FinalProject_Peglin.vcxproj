@@ -207,6 +207,7 @@
     <ClInclude Include="GameLayout.h" />
 	<ClInclude Include="GameOptions.h" />
 	<ClInclude Include="GamepadNavigation.h" />
+	<ClInclude Include="GamepadFeedback.h" />
 	<ClInclude Include="GameplayCatalog.h" />
 	<ClInclude Include="Localization.h" />
 	<ClInclude Include="GameRecordStore.h" />
@@ -247,6 +248,7 @@
 	<ClCompile Include="GameSettingsStore.cpp" />
 	<ClCompile Include="GameStatistics.cpp" />
 	<ClCompile Include="GamepadNavigation.cpp" />
+	<ClCompile Include="GamepadFeedback.cpp" />
 	<ClCompile Include="GameplayCatalog.cpp" />
 	<ClCompile Include="Localization.cpp" />
     <ClCompile Include="MainFrm.cpp" />

@@ -985,6 +985,7 @@ void CChildView::OnDestroy()
 		KillTimer(_gameTimerId);
 		_gameTimerId = 0;
 	}
+	StopGamepadRumble();
 
 	CWnd::OnDestroy();
 }
@@ -1022,7 +1023,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
 	_audioPlayer.Update(deltaSeconds);
-	PollGamepad();
+	PollGamepad(deltaSeconds);
 	UpdateDemoRun(deltaSeconds);
 	_screenTransition.Update(deltaSeconds);
 	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);
@@ -2249,7 +2250,7 @@ void CChildView::DrawOptions(CDC* deviceContext)
 	CString optionsGuide;
 	optionsGuide.Format(
 		_T("클릭하거나 단축키로 즉시 변경 · GAMEPAD %s"),
-		_gamepadConnected ? _T("연결됨") : _T("미연결"));
+		_gamepadConnected ? _T("연결됨 · 진동 준비") : _T("미연결 · 진동 대기"));
 	UiRenderer::DrawText(
 		deviceContext,
 		CRect(190, 96, 810, 122),
@@ -3195,25 +3196,45 @@ std::size_t CChildView::VisibleStageCount() const noexcept
 	return _run.GetStatus() == RunStatus::StageReady ? std::size_t{ 1 } : std::size_t{ 0 };
 }
 
-void CChildView::PollGamepad()
+void CChildView::PollGamepad(float deltaSeconds)
 {
 	XINPUT_STATE state{};
 	if (::XInputGetState(0, &state) != ERROR_SUCCESS)
 	{
+		const GamepadConnectionChange change = _gamepadConnection.Update(false);
+		if (change == GamepadConnectionChange::Disconnected)
+		{
+			_optionsNotice = _T("게임패드 연결 해제 · 입력과 진동을 안전하게 초기화했습니다");
+		}
 		_gamepadConnected = false;
 		_previousGamepadButtons = 0;
 		_gamepadTriggerDown = false;
 		_gamepadStickLatched = false;
+		_gamepadRumble.Reset();
+		_appliedLeftMotor = 0;
+		_appliedRightMotor = 0;
 		return;
 	}
 
 	_gamepadConnected = true;
 	const DWORD buttons = state.Gamepad.wButtons;
-	const DWORD pressed = buttons & ~_previousGamepadButtons;
-	_previousGamepadButtons = buttons;
 	const bool triggerDown = state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
-	const bool triggerPressed = triggerDown && !_gamepadTriggerDown;
+	const GamepadConnectionChange connectionChange = _gamepadConnection.Update(true);
+	const bool suppressReconnectEdges = connectionChange == GamepadConnectionChange::Connected
+		|| connectionChange == GamepadConnectionChange::Reconnected;
+	if (connectionChange == GamepadConnectionChange::Connected)
+	{
+		_optionsNotice = _T("게임패드 연결됨 · 조준과 진동 피드백 준비");
+	}
+	else if (connectionChange == GamepadConnectionChange::Reconnected)
+	{
+		_optionsNotice = _T("게임패드 재연결됨 · 눌린 버튼을 중립 상태로 동기화했습니다");
+	}
+	const DWORD pressed = suppressReconnectEdges ? 0U : buttons & ~_previousGamepadButtons;
+	_previousGamepadButtons = buttons;
+	const bool triggerPressed = !suppressReconnectEdges && triggerDown && !_gamepadTriggerDown;
 	_gamepadTriggerDown = triggerDown;
+	ApplyGamepadRumble(deltaSeconds);
 
 	const float stickX = static_cast<float>(state.Gamepad.sThumbLX) / 32767.0f;
 	const float stickY = -static_cast<float>(state.Gamepad.sThumbLY) / 32767.0f;
@@ -3284,6 +3305,43 @@ void CChildView::PollGamepad()
 	}
 }
 
+void CChildView::ApplyGamepadRumble(float deltaSeconds)
+{
+	_gamepadRumble.Update(deltaSeconds);
+	const GamepadMotorLevels levels = _gamepadRumble.GetLevels();
+	const auto toMotorSpeed = [](float value) noexcept
+	{
+		return static_cast<unsigned short>(std::lround(
+			std::clamp(value, 0.0f, 1.0f) * 65535.0f));
+	};
+	const unsigned short left = toMotorSpeed(levels.left);
+	const unsigned short right = toMotorSpeed(levels.right);
+	if (left == _appliedLeftMotor && right == _appliedRightMotor)
+	{
+		return;
+	}
+	XINPUT_VIBRATION vibration{};
+	vibration.wLeftMotorSpeed = left;
+	vibration.wRightMotorSpeed = right;
+	if (::XInputSetState(0, &vibration) == ERROR_SUCCESS)
+	{
+		_appliedLeftMotor = left;
+		_appliedRightMotor = right;
+	}
+}
+
+void CChildView::StopGamepadRumble() noexcept
+{
+	_gamepadRumble.Reset();
+	XINPUT_VIBRATION vibration{};
+	if (_gamepadConnected)
+	{
+		::XInputSetState(0, &vibration);
+	}
+	_appliedLeftMotor = 0;
+	_appliedRightMotor = 0;
+}
+
 void CChildView::RecordResult(bool cleared)
 {
 	if (!_resultSummary.has_value())
@@ -3323,6 +3381,43 @@ void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 	else if (eventType == GameEventType::Victory) cue = "victory";
 	else if (eventType == GameEventType::Defeat) cue = "defeat";
 	_audioPlayer.PlayEffect(cue);
+
+	std::optional<GamepadRumbleCue> rumble;
+	switch (eventType)
+	{
+	case GameEventType::PegHit:
+		rumble = pegType == PegType::Normal
+			? GamepadRumbleCue::PegHit
+			: GamepadRumbleCue::HeavyImpact;
+		break;
+	case GameEventType::RefreshTriggered:
+	case GameEventType::RefreshGuaranteed:
+	case GameEventType::RefreshRelocated:
+		rumble = GamepadRumbleCue::PegHit;
+		break;
+	case GameEventType::BombTriggered:
+	case GameEventType::PlayerAttack:
+	case GameEventType::EnemyDefeated:
+		rumble = GamepadRumbleCue::HeavyImpact;
+		break;
+	case GameEventType::PlayerDamaged:
+		rumble = GamepadRumbleCue::PlayerDamaged;
+		break;
+	case GameEventType::Victory:
+		rumble = GamepadRumbleCue::Victory;
+		break;
+	case GameEventType::Defeat:
+		rumble = GamepadRumbleCue::Defeat;
+		break;
+	case GameEventType::TurnResolved:
+	case GameEventType::EnemyAdvanced:
+	case GameEventType::EnemyFortified:
+		break;
+	}
+	if (rumble.has_value())
+	{
+		_gamepadRumble.Trigger(*rumble);
+	}
 }
 
 

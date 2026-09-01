@@ -8,6 +8,7 @@
 	<ClInclude Include="DemoRun.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="PerformanceMonitor.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="GamepadNavigation.h"><Filter>헤더 파일</Filter></ClInclude>
+	<ClInclude Include="GamepadFeedback.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="GameStatistics.h"><Filter>헤더 파일</Filter></ClInclude>
     <Filter Include="소스 파일">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
@@ -26,6 +27,7 @@
 	<ClCompile Include="AudioCatalog.cpp"><Filter>소스 파일</Filter></ClCompile>
 	<ClCompile Include="AudioPlayer.cpp"><Filter>소스 파일</Filter></ClCompile>
 	<ClCompile Include="GamepadNavigation.cpp"><Filter>소스 파일</Filter></ClCompile>
+	<ClCompile Include="GamepadFeedback.cpp"><Filter>소스 파일</Filter></ClCompile>
 	<ClCompile Include="GameStatistics.cpp"><Filter>소스 파일</Filter></ClCompile>
     <ClInclude Include="FinalProject_Peglin.h">
       <Filter>헤더 파일</Filter>
