@@ -2,6 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
 	<ClInclude Include="AudioCatalog.h"><Filter>헤더 파일</Filter></ClInclude>
+	<ClInclude Include="AudioMixing.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="AudioPlayer.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="CombatLog.h"><Filter>헤더 파일</Filter></ClInclude>
 	<ClInclude Include="GamepadNavigation.h"><Filter>헤더 파일</Filter></ClInclude>

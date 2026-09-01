@@ -971,6 +971,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
+	_audioPlayer.Update(deltaSeconds);
 	PollGamepad();
 	_screenTransition.Update(deltaSeconds);
 	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);

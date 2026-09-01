@@ -10,6 +10,7 @@
 
 #include "GameWorld.h"
 #include "AudioCatalog.h"
+#include "AudioMixing.h"
 #include "GamepadNavigation.h"
 #include "GameStatistics.h"
 #include "ContentCatalog.h"
@@ -162,6 +163,30 @@ namespace
 			"audio catalog rejects path traversal");
 
 		std::filesystem::remove_all(testDirectory, cleanupError);
+	}
+
+	void TestAudioMixing()
+	{
+		AudioEffectGate gate;
+		Check(gate.TryAccept("peg_hit"), "audio gate accepts the first peg hit");
+		Check(!gate.TryAccept("peg_hit"), "audio gate coalesces immediate repeated peg hits");
+		gate.Update(0.06f);
+		Check(gate.TryAccept("peg_hit"), "audio gate accepts a spaced peg hit");
+		Check(gate.TryAccept("attack"), "audio gate accepts a second ordinary cue in the window");
+		Check(!gate.TryAccept("ui_confirm"), "audio gate limits ordinary effect bursts");
+		Check(gate.TryAccept("victory"), "audio gate always admits a priority cue");
+		gate.Update(0.11f);
+		Check(gate.TryAccept("ui_confirm"), "audio burst budget resets after its window");
+
+		AudioFadeEnvelope fade;
+		fade.Reset(1.0f);
+		fade.SetTarget(0.0f);
+		Check(Near(fade.Update(0.14f, 0.28f), 0.5f), "audio fade reaches its midpoint deterministically");
+		Check(Near(fade.Update(0.14f, 0.28f), 0.0f) && fade.IsAtTarget(),
+			"audio fade lands exactly on silence");
+		fade.SetTarget(1.0f);
+		Check(Near(fade.Update(0.28f, 0.28f), 1.0f) && fade.IsAtTarget(),
+			"audio fade restores full scene level");
 	}
 
 	void Launch(GameWorld& world)
@@ -3284,6 +3309,7 @@ int main(int argc, char* argv[])
 	TestGameOptionsAndDifficulty();
 	TestSoftPegHitSound();
 	TestAudioCatalog();
+	TestAudioMixing();
 	TestGameSettingsPersistence();
 	TestStageRecordPersistence();
 	TestStageRulesConfigureWorld();
