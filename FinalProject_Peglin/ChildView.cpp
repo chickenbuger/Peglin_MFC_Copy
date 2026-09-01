@@ -8,14 +8,11 @@
 #include "ChildView.h"
 #include "GameLayout.h"
 #include "RewardPresentation.h"
-#include "SoftPegSound.h"
 #include <algorithm>
 #include <cmath>
-#include <mmsystem.h>
 #include <utility>
 
 #pragma comment(lib, "Msimg32.lib")
-#pragma comment(lib, "Winmm.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -359,6 +356,12 @@ CChildView::CChildView()
 		_recordSaveFailed = !_recordStore.Save(_records);
 	}
 	ReloadLocalization();
+	_audioCatalog = LoadAudioCatalog(GetDefaultAudioCatalogPath());
+	if (_audioCatalog.IsUsable())
+	{
+		_audioPlayer.SetCatalog(_audioCatalog.catalog);
+	}
+	ApplyAudioOptions();
 	_contentCatalog = LoadContentCatalog(GetDefaultContentCatalogPath());
 	_gameplayCatalog = LoadGameplayCatalog(
 		GetDefaultGameplayCatalogPath(),
@@ -439,9 +442,9 @@ void CChildView::gameclear()
 	RecordResult(true);
 	_runPlayerHealth = _game.GetPlayer().GetHp();
 	_run.CompleteCurrentStage();
-	_screenMode = _run.GetStatus() == RunStatus::RewardSelection
+	SetScreenMode(_run.GetStatus() == RunStatus::RewardSelection
 		? ScreenMode::Reward
-		: ScreenMode::Result;
+		: ScreenMode::Result);
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
@@ -456,7 +459,7 @@ void CChildView::gameover()
 	_resultSummary = _game.GetResultSummary();
 	RecordResult(false);
 	_run.MarkDefeated();
-	_screenMode = ScreenMode::Result;
+	SetScreenMode(ScreenMode::Result);
 	ReleaseMouseInput(true);
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
@@ -475,7 +478,7 @@ void CChildView::restart()
 	_orbTrailSampleSeconds = 0.0f;
 	_gameplayVisualTimeSeconds = 0.0f;
 	_resultSummary.reset();
-	_screenMode = ScreenMode::Playing;
+	SetScreenMode(ScreenMode::Playing);
 }
 
 BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
@@ -780,6 +783,7 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	_lastFrameTime = std::chrono::steady_clock::now();
 	_accumulatedTimeSeconds = 0.0;
+	UpdateScreenMusic();
 
 	return 0;
 }
@@ -787,7 +791,7 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 void CChildView::OnDestroy()
 {
 	ReleaseMouseInput(true);
-	::PlaySoundW(nullptr, nullptr, 0);
+	_audioPlayer.StopAll();
 	SaveOptions();
 	if (_uiBackgroundLoaded)
 	{
@@ -895,7 +899,7 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 			{
 				_acquiredReward.reset();
 				_rewardAcquisitionSeconds = 0.0f;
-				_screenMode = ScreenMode::StageSelection;
+				SetScreenMode(ScreenMode::StageSelection);
 			}
 		}
 		return;
@@ -1912,41 +1916,62 @@ void CChildView::DrawOptions(CDC* deviceContext)
 		UiTheme::MutedText);
 	DrawOptionTile(
 		deviceContext,
-		CRect(195, 172, 485, 292),
+		CRect(195, 145, 485, 235),
 		_T("[D]"),
 		Text("option.difficulty"),
 		DifficultyTextForUi(_options.difficulty),
 		UiTheme::Gold);
 	DrawOptionTile(
 		deviceContext,
-		CRect(515, 172, 805, 292),
+		CRect(515, 145, 805, 235),
 		_T("[M]"),
 		Text("option.sound"),
 		Text(_options.soundEnabled ? "value.on" : "value.off"),
 		_options.soundEnabled ? UiTheme::Green : UiTheme::Danger);
+	CString effectsVolume;
+	effectsVolume.Format(_T("%d%%"), _options.effectsVolume);
 	DrawOptionTile(
 		deviceContext,
-		CRect(195, 322, 485, 442),
+		CRect(195, 255, 485, 345),
+		_T("[E]"),
+		_T("효과음 볼륨"),
+		effectsVolume,
+		UiTheme::Orange);
+	CString musicVolume;
+	musicVolume.Format(_T("%d%%"), _options.musicVolume);
+	DrawOptionTile(
+		deviceContext,
+		CRect(515, 255, 805, 345),
+		_T("[V]"),
+		_T("배경음 볼륨"),
+		musicVolume,
+		UiTheme::Blue);
+	DrawOptionTile(
+		deviceContext,
+		CRect(195, 365, 485, 455),
 		_T("[C]"),
 		Text("option.peg_color"),
 		PegColorModeTextForUi(_options.pegColorMode),
 		UiTheme::Blue);
 	DrawOptionTile(
 		deviceContext,
-		CRect(515, 322, 805, 442),
+		CRect(515, 365, 805, 455),
 		_T("[L]"),
 		Text("option.language"),
 		Text(_options.language == UiLanguage::Korean
 			? "language.korean"
 			: "language.english"),
 		UiTheme::Orange);
+	const CString audioNotice = !_audioCatalog.IsUsable()
+		? CString(_T("오디오 파일을 불러오지 못해 무음으로 실행 중입니다"))
+		: (_settingsSaveFailed ? Text("notice.settings_save_failed") : Text("notice.auto_save"));
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(230, 490, 770, 525),
-		_settingsSaveFailed ? Text("notice.settings_save_failed") : Text("notice.auto_save"),
+		CRect(230, 500, 770, 535),
+		audioNotice,
 		100,
-		_settingsSaveFailed ? UiTheme::Danger : UiTheme::Green);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 560, 700, 618), Text("hint.back"));
+		(!_audioCatalog.IsUsable() || _settingsSaveFailed) ? UiTheme::Danger : UiTheme::Green);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 565, 700, 620), Text("hint.back"));
 }
 
 void CChildView::DrawResultScreen(CDC* deviceContext)
@@ -2175,7 +2200,7 @@ bool CChildView::StartStage(std::string_view stageId)
 		_game.GetPlayer().SetHp((std::min)(_runPlayerHealth, _game.GetStage().rules.playerHealth));
 	}
 	_runPlayerHealth = _game.GetPlayer().GetHp();
-	_screenMode = ScreenMode::Playing;
+	SetScreenMode(ScreenMode::Playing);
 	SetFocus();
 	return true;
 }
@@ -2188,7 +2213,7 @@ bool CChildView::StartSelectedStage()
 		{
 			_shopPurchased.fill(false);
 			_runNotice = _T("상품은 각각 한 번만 구매할 수 있습니다");
-			_screenMode = ScreenMode::Shop;
+			SetScreenMode(ScreenMode::Shop);
 			SetFocus();
 			return true;
 		}
@@ -2210,7 +2235,7 @@ bool CChildView::StartSelectedStage()
 		}
 		_shopPurchased.fill(false);
 		_runNotice = _T("상품은 각각 한 번만 구매할 수 있습니다");
-		_screenMode = ScreenMode::Shop;
+		SetScreenMode(ScreenMode::Shop);
 		SetFocus();
 		return true;
 	}
@@ -2253,7 +2278,7 @@ void CChildView::BeginNewRun()
 	_attackAnimations.clear();
 	_terminalTransition.Reset();
 	_orbTrail.clear();
-	_screenMode = ScreenMode::StageSelection;
+	SetScreenMode(ScreenMode::StageSelection);
 }
 
 bool CChildView::SelectRunReward(std::size_t index)
@@ -2304,7 +2329,7 @@ bool CChildView::SelectRunReward(std::size_t index)
 		_T("%s 획득 · %s"),
 		Utf8Text(selected->displayName).GetString(),
 		Utf8Text(DescribeRewardEffect(*selected)).GetString());
-	_screenMode = ScreenMode::Reward;
+	SetScreenMode(ScreenMode::Reward);
 	return true;
 }
 
@@ -2379,13 +2404,48 @@ bool CChildView::LeaveShop()
 		return false;
 	}
 	_runNotice = _T("상점을 나왔습니다 · 다음 경로를 선택하세요");
-	_screenMode = ScreenMode::StageSelection;
+	SetScreenMode(ScreenMode::StageSelection);
 	return true;
 }
 
 void CChildView::SaveOptions()
 {
 	_settingsSaveFailed = !_settingsStore.Save(_options);
+}
+
+void CChildView::ApplyAudioOptions()
+{
+	_audioPlayer.ApplyOptions(
+		_options.soundEnabled,
+		_options.effectsVolume,
+		_options.musicVolume);
+	UpdateScreenMusic();
+}
+
+void CChildView::UpdateScreenMusic()
+{
+	if (!_audioCatalog.IsUsable())
+	{
+		return;
+	}
+	if (_screenMode == ScreenMode::Playing)
+	{
+		_audioPlayer.StartMusic("battle_bgm");
+	}
+	else if (_screenMode == ScreenMode::Shop)
+	{
+		_audioPlayer.StartMusic("shop_bgm");
+	}
+	else
+	{
+		_audioPlayer.StartMusic("adventure_bgm");
+	}
+}
+
+void CChildView::SetScreenMode(ScreenMode mode)
+{
+	_screenMode = mode;
+	UpdateScreenMusic();
 }
 
 void CChildView::RecordResult(bool cleared)
@@ -2408,38 +2468,17 @@ void CChildView::RecordResult(bool cleared)
 
 void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 {
-	if (!_options.soundEnabled)
-	{
-		return;
-	}
-
-	if (eventType == GameEventType::PegHit)
-	{
-		static const std::vector<std::uint8_t> pegHitWave = CreateSoftPegHitWave();
-		::PlaySoundW(
-			reinterpret_cast<LPCWSTR>(pegHitWave.data()),
-			nullptr,
-			SND_MEMORY | SND_ASYNC | SND_NODEFAULT | SND_NOSTOP);
-		return;
-	}
-
-	UINT sound = MB_OK;
-	if (eventType == GameEventType::PlayerDamaged || eventType == GameEventType::Defeat)
-	{
-		sound = MB_ICONHAND;
-	}
-	else if (eventType == GameEventType::Victory
-		|| eventType == GameEventType::EnemyDefeated
-		|| pegType == PegType::Refresh)
-	{
-		sound = MB_ICONASTERISK;
-	}
-	else if (eventType == GameEventType::BombTriggered || pegType == PegType::Critical)
-	{
-		sound = MB_ICONEXCLAMATION;
-	}
-
-	::MessageBeep(sound);
+	std::string_view cue = "attack";
+	if (eventType == GameEventType::PegHit) cue = "peg_hit";
+	else if (eventType == GameEventType::BombTriggered || pegType == PegType::Critical) cue = "bomb";
+	else if (eventType == GameEventType::RefreshTriggered
+		|| eventType == GameEventType::RefreshGuaranteed
+		|| eventType == GameEventType::RefreshRelocated
+		|| pegType == PegType::Refresh) cue = "refresh";
+	else if (eventType == GameEventType::PlayerDamaged) cue = "damage";
+	else if (eventType == GameEventType::Victory) cue = "victory";
+	else if (eventType == GameEventType::Defeat) cue = "defeat";
+	_audioPlayer.PlayEffect(cue);
 }
 
 
@@ -2496,6 +2535,10 @@ bool CChildView::HandleMenuClick(CPoint point)
 
 void CChildView::ExecuteUiAction(const UiAction& action)
 {
+	if (action.command != UiCommand::None)
+	{
+		_audioPlayer.PlayEffect("ui_confirm");
+	}
 	switch (action.command)
 	{
 	case UiCommand::SelectStage:
@@ -2522,10 +2565,10 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		break;
 	case UiCommand::OpenLoadout:
 		_loadoutNotice.Empty();
-		_screenMode = ScreenMode::Loadout;
+		SetScreenMode(ScreenMode::Loadout);
 		break;
 	case UiCommand::OpenOptions:
-		_screenMode = ScreenMode::Options;
+		SetScreenMode(ScreenMode::Options);
 		break;
 	case UiCommand::SelectOrb:
 	{
@@ -2557,7 +2600,7 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 			BeginNewRun();
 			break;
 		}
-		_screenMode = ScreenMode::StageSelection;
+		SetScreenMode(ScreenMode::StageSelection);
 		break;
 	case UiCommand::ToggleDifficulty:
 		_options.CycleDifficulty();
@@ -2565,6 +2608,17 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		break;
 	case UiCommand::ToggleSound:
 		_options.ToggleSound();
+		ApplyAudioOptions();
+		SaveOptions();
+		break;
+	case UiCommand::CycleEffectsVolume:
+		_options.CycleEffectsVolume();
+		ApplyAudioOptions();
+		SaveOptions();
+		break;
+	case UiCommand::CycleMusicVolume:
+		_options.CycleMusicVolume();
+		ApplyAudioOptions();
 		SaveOptions();
 		break;
 	case UiCommand::TogglePegColorMode:
@@ -2661,12 +2715,12 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		}
 		else if (nChar == 'O')
 		{
-			_screenMode = ScreenMode::Options;
+			SetScreenMode(ScreenMode::Options);
 		}
 		else if (nChar == 'L')
 		{
 			_loadoutNotice.Empty();
-			_screenMode = ScreenMode::Loadout;
+			SetScreenMode(ScreenMode::Loadout);
 		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
@@ -2702,7 +2756,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)
 		{
-			_screenMode = ScreenMode::StageSelection;
+			SetScreenMode(ScreenMode::StageSelection);
 		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
@@ -2719,6 +2773,19 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		else if (nChar == 'M')
 		{
 			_options.ToggleSound();
+			ApplyAudioOptions();
+			SaveOptions();
+		}
+		else if (nChar == 'E')
+		{
+			_options.CycleEffectsVolume();
+			ApplyAudioOptions();
+			SaveOptions();
+		}
+		else if (nChar == 'V')
+		{
+			_options.CycleMusicVolume();
+			ApplyAudioOptions();
 			SaveOptions();
 		}
 		else if (nChar == 'C')
@@ -2734,7 +2801,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)
 		{
-			_screenMode = ScreenMode::StageSelection;
+			SetScreenMode(ScreenMode::StageSelection);
 		}
 		Invalidate();
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
@@ -2798,6 +2865,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if (nChar == 'M')
 	{
 		_options.ToggleSound();
+		ApplyAudioOptions();
 		SaveOptions();
 		Invalidate();
 	}
@@ -2807,7 +2875,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		_game.ResetGame();
 		_feedbackAnimations.clear();
 		_resultSummary.reset();
-		_screenMode = ScreenMode::StageSelection;
+		SetScreenMode(ScreenMode::StageSelection);
 		Invalidate();
 	}
 

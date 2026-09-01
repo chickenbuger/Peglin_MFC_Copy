@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+$')]
-    [string]$Version = '7.14',
+    [string]$Version = '7.15',
 
     [Parameter()]
     [string]$OutputRoot = 'dist',
@@ -108,6 +108,7 @@ New-Item -ItemType Directory -Path $contentDirectory | Out-Null
 $contentFiles = @(
     'stages.v1.ini',
     'gameplay.v1.ini',
+    'audio.v1.ini',
     'strings.ko-KR.v1.ini',
     'strings.en-US.v1.ini'
 )
@@ -118,6 +119,14 @@ foreach ($contentFile in $contentFiles) {
     }
     Copy-Item -LiteralPath $contentSource -Destination (Join-Path $contentDirectory $contentFile)
 }
+
+$audioSourceDirectory = Join-Path $repositoryRoot 'FinalProject_Peglin\content\audio'
+$audioDestinationDirectory = Join-Path $contentDirectory 'audio'
+if (-not (Test-Path -LiteralPath $audioSourceDirectory -PathType Container)) {
+    throw 'The versioned audio asset directory was not found.'
+}
+New-Item -ItemType Directory -Path $audioDestinationDirectory | Out-Null
+Copy-Item -Path (Join-Path $audioSourceDirectory '*.wav') -Destination $audioDestinationDirectory
 
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\Preflight.ps1') -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'distribution\README.txt') -Destination $packageDirectory

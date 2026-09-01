@@ -12,6 +12,8 @@
 #include <vector>
 
 #include "Background.h"
+#include "AudioCatalog.h"
+#include "AudioPlayer.h"
 #include "ContentCatalog.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -142,6 +144,9 @@ private:
 	bool PurchaseShopOffer(std::size_t index);
 	bool LeaveShop();
 	void SaveOptions();
+	void ApplyAudioOptions();
+	void UpdateScreenMusic();
+	void SetScreenMode(ScreenMode mode);
 	void RecordResult(bool cleared);
 	void ReloadLocalization();
 	CString Text(std::string_view key) const;
@@ -160,6 +165,8 @@ private:
 	float _gameplayVisualTimeSeconds = 0.0f;
 	float _orbTrailSampleSeconds = 0.0f;
 	GameOptions _options;
+	AudioCatalogLoadResult _audioCatalog;
+	AudioPlayer _audioPlayer;
 	GameSettingsStore _settingsStore;
 	GameRecordStore _recordStore;
 	GameRecordBook _records;

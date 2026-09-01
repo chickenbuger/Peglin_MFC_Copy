@@ -62,6 +62,8 @@ try {
     $missingContentRoot = Join-Path $temporaryRoot 'missing-content'
     $missingGameplayRoot = Join-Path $temporaryRoot 'missing-gameplay-content'
     $missingLocalizationRoot = Join-Path $temporaryRoot 'missing-localization-content'
+    $missingAudioCatalogRoot = Join-Path $temporaryRoot 'missing-audio-catalog'
+    $missingAudioAssetRoot = Join-Path $temporaryRoot 'missing-audio-asset'
     New-Item -ItemType Directory -Path $originalRoot -Force | Out-Null
     Expand-Archive -LiteralPath $resolvedZipPath -DestinationPath $originalRoot
 
@@ -96,8 +98,18 @@ try {
     Remove-Item -LiteralPath (Join-Path $missingLocalizationRoot 'content\strings.ko-KR.v1.ini') -Force
     Assert-PreflightFailure -PackageRoot $missingLocalizationRoot -Scenario 'missing localization content'
 
+    New-Item -ItemType Directory -Path $missingAudioCatalogRoot | Out-Null
+    Copy-Item -Path (Join-Path $originalRoot '*') -Destination $missingAudioCatalogRoot -Recurse
+    Remove-Item -LiteralPath (Join-Path $missingAudioCatalogRoot 'content\audio.v1.ini') -Force
+    Assert-PreflightFailure -PackageRoot $missingAudioCatalogRoot -Scenario 'missing audio catalog'
+
+    New-Item -ItemType Directory -Path $missingAudioAssetRoot | Out-Null
+    Copy-Item -Path (Join-Path $originalRoot '*') -Destination $missingAudioAssetRoot -Recurse
+    Remove-Item -LiteralPath (Join-Path $missingAudioAssetRoot 'content\audio\peg-hit.wav') -Force
+    Assert-PreflightFailure -PackageRoot $missingAudioAssetRoot -Scenario 'missing audio asset'
+
     Write-Output "PACKAGE TEST PASS: $resolvedZipPath"
-    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, gameplay, stage, and localization checks completed.'
+    Write-Output 'ZIP path safety, version, normal preflight, tampering, missing-runtime, gameplay, stage, localization, and audio checks completed.'
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {

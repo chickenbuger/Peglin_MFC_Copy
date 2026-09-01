@@ -257,10 +257,14 @@
 	<ClCompile Include="UiNavigation.cpp" />
   </ItemGroup>
   <ItemGroup>
+	<ClInclude Include="AudioCatalog.h" />
+	<ClInclude Include="AudioPlayer.h" />
     <ResourceCompile Include="FinalProjectPeglin.rc" />
 	<ResourceCompile Include="UiResources.rc" />
   </ItemGroup>
   <ItemGroup>
+	<ClCompile Include="AudioCatalog.cpp" />
+	<ClCompile Include="AudioPlayer.cpp" />
     <None Include="res\FinalProjectPeglin.rc2" />
 	<None Include="content\stages.v1.ini">
 	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -272,6 +276,12 @@
 	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
 	<None Include="content\strings.en-US.v1.ini">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
+	<None Include="content\audio.v1.ini">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
+	<None Include="content\audio\*.wav">
 	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
 	<None Include="res\ui-adventure-frame-v1.prompt.md" />

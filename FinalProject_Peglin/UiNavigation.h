@@ -27,6 +27,8 @@ enum class UiCommand
 	BackToStageSelection,
 	ToggleDifficulty,
 	ToggleSound,
+	CycleEffectsVolume,
+	CycleMusicVolume,
 	TogglePegColorMode,
 	ToggleLanguage,
 	SelectReward,

@@ -27,6 +27,8 @@ struct GameOptions
 {
 	GameDifficulty difficulty = GameDifficulty::Normal;
 	bool soundEnabled = true;
+	int effectsVolume = 70;
+	int musicVolume = 45;
 	bool showGameplayInfo = true;
 	PegColorMode pegColorMode = PegColorMode::Standard;
 	UiLanguage language = UiLanguage::Korean;
@@ -44,6 +46,16 @@ struct GameOptions
 	void ToggleSound() noexcept
 	{
 		soundEnabled = !soundEnabled;
+	}
+
+	void CycleEffectsVolume() noexcept
+	{
+		effectsVolume = effectsVolume >= 100 ? 0 : effectsVolume + 25;
+	}
+
+	void CycleMusicVolume() noexcept
+	{
+		musicVolume = musicVolume >= 100 ? 0 : musicVolume + 25;
 	}
 
 	void ToggleGameplayInfo() noexcept

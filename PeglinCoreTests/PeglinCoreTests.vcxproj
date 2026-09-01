@@ -49,6 +49,7 @@
     <Link><SubSystem>Console</SubSystem></Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+	<ClCompile Include="..\FinalProject_Peglin\AudioCatalog.cpp" />
     <ClCompile Include="PeglinCoreTests.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\ContentCatalog.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Enemy.cpp" />

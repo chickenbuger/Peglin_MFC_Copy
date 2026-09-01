@@ -23,12 +23,16 @@ PowerShell에서 다음 명령으로 필수 파일, x64 PE와 SHA-256 무결성�
   vcruntime140.dll, vcruntime140_1.dll
 - Preflight.ps1, SHA256SUMS.txt, PACKAGE_VERSION.txt
 - content\stages.v1.ini: 버전 1 스테이지·보스 행동 정의
+- content\gameplay.v1.ini: 버전 1 오브·유물·적 효과 정의
+- content\strings.*.v1.ini: 한국어·영어 UI 문자열
+- content\audio.v1.ini, content\audio\*.wav: 효과음·화면별 배경음
 
 자산 정책
 ---------
 배경, 플레이어, 적, 아이콘과 툴바 비트맵은 Windows 리소스로 EXE에 포함됩니다.
-스테이지 규칙은 content\stages.v1.ini에서 읽으며 누락·손상 시 검증된 내장 기본값으로
-안전하게 실행합니다. 외부 이미지 파일은 필요하지 않습니다.
+스테이지와 게임플레이 규칙은 버전 카탈로그에서 읽으며 누락·손상 시 검증된 내장
+기본값으로 안전하게 실행합니다. 오디오 카탈로그나 WAV가 손상되면 무음으로 실행합니다.
+외부 이미지 파일은 필요하지 않습니다.
 
 사용자 데이터
 -------------

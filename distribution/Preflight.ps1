@@ -48,6 +48,18 @@ $requiredFiles = @(
     'SHA256SUMS.txt',
     'content\stages.v1.ini',
     'content\gameplay.v1.ini',
+    'content\audio.v1.ini',
+    'content\audio\peg-hit.wav',
+    'content\audio\bomb.wav',
+    'content\audio\refresh.wav',
+    'content\audio\attack.wav',
+    'content\audio\damage.wav',
+    'content\audio\victory.wav',
+    'content\audio\defeat.wav',
+    'content\audio\ui-confirm.wav',
+    'content\audio\adventure-loop.wav',
+    'content\audio\battle-loop.wav',
+    'content\audio\shop-loop.wav',
     'content\strings.ko-KR.v1.ini',
     'content\strings.en-US.v1.ini'
 )

@@ -2,6 +2,7 @@
 #include "GameSettingsStore.h"
 
 #include <fstream>
+#include <charconv>
 #include <map>
 #include <system_error>
 #include <utility>
@@ -9,7 +10,7 @@
 namespace
 {
 	constexpr std::string_view SETTINGS_VERSION_KEY = "peglin_settings_version";
-	constexpr std::string_view SETTINGS_VERSION = "1";
+	constexpr std::string_view SETTINGS_VERSION = "2";
 
 	std::string DifficultyValue(GameDifficulty difficulty)
 	{
@@ -70,6 +71,20 @@ namespace
 		}
 
 		return false;
+	}
+
+	bool ParseVolume(std::string_view value, int& volume) noexcept
+	{
+		if (value.empty()) return false;
+		int parsed = 0;
+		const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+		if (result.ec != std::errc{} || result.ptr != value.data() + value.size()
+			|| parsed < 0 || parsed > 100)
+		{
+			return false;
+		}
+		volume = parsed;
+		return true;
 	}
 
 	bool ParsePegColor(std::string_view value, PegColorMode& colorMode) noexcept
@@ -230,6 +245,8 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		const auto version = values.find(std::string(SETTINGS_VERSION_KEY));
 		const auto difficulty = values.find("difficulty");
 		const auto sound = values.find("sound_enabled");
+		const auto effectsVolume = values.find("effects_volume");
+		const auto musicVolume = values.find("music_volume");
 		const auto gameplayInfo = values.find("show_gameplay_info");
 		const auto color = values.find("peg_color_mode");
 		const auto language = values.find("language");
@@ -248,6 +265,10 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		{
 			if (!ParseDifficulty(difficulty->second, result.options.difficulty)
 				|| !ParseSound(sound->second, result.options.soundEnabled)
+				|| effectsVolume == values.end()
+				|| musicVolume == values.end()
+				|| !ParseVolume(effectsVolume->second, result.options.effectsVolume)
+				|| !ParseVolume(musicVolume->second, result.options.musicVolume)
 				|| (gameplayInfo != values.end()
 					&& !ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
 				|| !ParsePegColor(color->second, result.options.pegColorMode)
@@ -261,6 +282,20 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 			}
 			result.state = SettingsLoadState::Loaded;
 			result.message.clear();
+			return result;
+		}
+
+		if (version->second == "1"
+			&& ParseDifficulty(difficulty->second, result.options.difficulty)
+			&& ParseSound(sound->second, result.options.soundEnabled)
+			&& (gameplayInfo == values.end()
+				|| ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
+			&& ParsePegColor(color->second, result.options.pegColorMode)
+			&& (language == values.end()
+				|| ParseLanguage(language->second, result.options.language)))
+		{
+			result.state = SettingsLoadState::Migrated;
+			result.message = "settings migrated from version 1";
 			return result;
 		}
 
@@ -323,6 +358,8 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 			<< SETTINGS_VERSION_KEY << '=' << SETTINGS_VERSION << '\n'
 			<< "difficulty=" << DifficultyValue(options.difficulty) << '\n'
 			<< "sound_enabled=" << (options.soundEnabled ? '1' : '0') << '\n'
+			<< "effects_volume=" << std::clamp(options.effectsVolume, 0, 100) << '\n'
+			<< "music_volume=" << std::clamp(options.musicVolume, 0, 100) << '\n'
 			<< "show_gameplay_info=" << (options.showGameplayInfo ? '1' : '0') << '\n'
 			<< "peg_color_mode=" << PegColorValue(options.pegColorMode) << '\n'
 			<< "language=" << LanguageValue(options.language) << '\n';

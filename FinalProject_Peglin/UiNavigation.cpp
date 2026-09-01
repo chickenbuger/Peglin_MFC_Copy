@@ -78,23 +78,31 @@ namespace
 
 	UiAction ResolveOptionsClick(Vector2 position) noexcept
 	{
-		if (UiRect{ 195.0f, 172.0f, 485.0f, 292.0f }.Contains(position))
+		if (UiRect{ 195.0f, 145.0f, 485.0f, 235.0f }.Contains(position))
 		{
 			return { UiCommand::ToggleDifficulty };
 		}
-		if (UiRect{ 515.0f, 172.0f, 805.0f, 292.0f }.Contains(position))
+		if (UiRect{ 515.0f, 145.0f, 805.0f, 235.0f }.Contains(position))
 		{
 			return { UiCommand::ToggleSound };
 		}
-		if (UiRect{ 195.0f, 322.0f, 485.0f, 442.0f }.Contains(position))
+		if (UiRect{ 195.0f, 255.0f, 485.0f, 345.0f }.Contains(position))
+		{
+			return { UiCommand::CycleEffectsVolume };
+		}
+		if (UiRect{ 515.0f, 255.0f, 805.0f, 345.0f }.Contains(position))
+		{
+			return { UiCommand::CycleMusicVolume };
+		}
+		if (UiRect{ 195.0f, 365.0f, 485.0f, 455.0f }.Contains(position))
 		{
 			return { UiCommand::TogglePegColorMode };
 		}
-		if (UiRect{ 515.0f, 322.0f, 805.0f, 442.0f }.Contains(position))
+		if (UiRect{ 515.0f, 365.0f, 805.0f, 455.0f }.Contains(position))
 		{
 			return { UiCommand::ToggleLanguage };
 		}
-		if (UiRect{ 300.0f, 560.0f, 700.0f, 618.0f }.Contains(position))
+		if (UiRect{ 300.0f, 565.0f, 700.0f, 620.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "GameWorld.h"
+#include "AudioCatalog.h"
 #include "ContentCatalog.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
@@ -92,6 +93,69 @@ namespace
 		Check(ReadWaveUInt16(wave, 44) == 0U, "soft peg sound begins without a click");
 		Check(ReadWaveUInt16(wave, wave.size() - 2U) == 0U,
 			"soft peg sound fades to silence");
+	}
+
+	void TestAudioCatalog()
+	{
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_AudioCatalogTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path audioDirectory = testDirectory / "audio";
+		const std::filesystem::path wavePath = audioDirectory / "test.wav";
+		const std::filesystem::path catalogPath = testDirectory / "audio.v1.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove_all(testDirectory, cleanupError);
+		std::filesystem::create_directories(audioDirectory);
+
+		const std::vector<std::uint8_t> sourceWave = CreateSoftPegHitWave();
+		{
+			std::ofstream wave(wavePath, std::ios::binary | std::ios::trunc);
+			wave.write(reinterpret_cast<const char*>(sourceWave.data()),
+				static_cast<std::streamsize>(sourceWave.size()));
+		}
+		{
+			std::ofstream catalog(catalogPath, std::ios::trunc);
+			catalog
+				<< "peglin_audio_version=1\n"
+				<< "cue=peg_hit|effect|audio/test.wav|0\n"
+				<< "cue=battle_bgm|music|audio/test.wav|1\n";
+		}
+
+		const AudioCatalogLoadResult loaded = LoadAudioCatalog(catalogPath);
+		Check(loaded.IsUsable(), "valid audio catalog loads from disk");
+		Check(loaded.catalog.cues.size() == 2U, "audio catalog preserves every cue");
+		const AudioCueDefinition* music = FindAudioCue(loaded.catalog, "battle_bgm");
+		Check(music != nullptr && music->kind == AudioCueKind::Music && music->loop,
+			"audio catalog preserves music kind and loop flag");
+		Check(FindAudioCue(loaded.catalog, "missing") == nullptr,
+			"audio catalog rejects an unknown cue lookup");
+
+		std::vector<std::uint8_t> loadedWave;
+		Check(LoadWaveAsset(wavePath, loadedWave), "PCM16 wave assets pass validation");
+		Check(loadedWave == sourceWave, "wave loader preserves source bytes");
+		const std::vector<std::uint8_t> muted = ScalePcm16Wave(sourceWave, 0);
+		Check(muted.size() == sourceWave.size(), "volume scaling preserves the RIFF container");
+		bool silent = true;
+		for (std::size_t offset = 44U; offset + 1U < muted.size(); offset += 2U)
+		{
+			silent = silent && ReadWaveUInt16(muted, offset) == 0U;
+		}
+		Check(silent, "zero effect volume silences every PCM sample");
+		Check(ScalePcm16Wave(sourceWave, 100) == sourceWave,
+			"full effect volume preserves PCM samples");
+
+		{
+			std::ofstream unsafeCatalog(catalogPath, std::ios::trunc);
+			unsafeCatalog
+				<< "peglin_audio_version=1\n"
+				<< "cue=unsafe|effect|../outside.wav|0\n";
+		}
+		const AudioCatalogLoadResult unsafe = LoadAudioCatalog(catalogPath);
+		Check(unsafe.state == AudioCatalogLoadState::Invalid
+			&& unsafe.error == AudioCatalogLoadError::UnsafePath,
+			"audio catalog rejects path traversal");
+
+		std::filesystem::remove_all(testDirectory, cleanupError);
 	}
 
 	void Launch(GameWorld& world)
@@ -390,21 +454,29 @@ namespace
 			"mouse returns from loadout");
 
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 230.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 190.0f }, 0).command
 				== UiCommand::ToggleDifficulty,
 			"mouse changes difficulty");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 650.0f, 230.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 190.0f }, 0).command
 				== UiCommand::ToggleSound,
 			"mouse toggles sound");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 380.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 410.0f }, 0).command
 				== UiCommand::TogglePegColorMode,
 			"mouse changes peg accessibility mode");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 650.0f, 380.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 410.0f }, 0).command
 				== UiCommand::ToggleLanguage,
 			"mouse changes the UI language");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 300.0f }, 0).command
+				== UiCommand::CycleEffectsVolume,
+			"mouse cycles the effects volume");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 300.0f }, 0).command
+				== UiCommand::CycleMusicVolume,
+			"mouse cycles the music volume");
 		Check(
 			ResolveUiClick(UiScreenKind::Options, { 500.0f, 590.0f }, 0).command
 				== UiCommand::BackToStageSelection,
@@ -1100,6 +1172,8 @@ namespace
 		GameOptions options;
 		Check(options.difficulty == GameDifficulty::Normal, "options default to normal difficulty");
 		Check(options.soundEnabled, "options default to sound enabled");
+		Check(options.effectsVolume == 70, "options default to seventy percent effects volume");
+		Check(options.musicVolume == 45, "options default to forty-five percent music volume");
 		Check(options.showGameplayInfo, "options default to visible gameplay information");
 		Check(options.pegColorMode == PegColorMode::Standard, "options default to standard peg colors");
 		Check(options.language == UiLanguage::Korean, "options default to Korean UI text");
@@ -1113,6 +1187,14 @@ namespace
 		Check(!options.soundEnabled, "sound option toggles off");
 		options.ToggleSound();
 		Check(options.soundEnabled, "sound option toggles back on");
+		options.effectsVolume = 75;
+		options.CycleEffectsVolume();
+		Check(options.effectsVolume == 100, "effects volume cycles to full volume");
+		options.CycleEffectsVolume();
+		Check(options.effectsVolume == 0, "effects volume wraps to mute");
+		options.musicVolume = 50;
+		options.CycleMusicVolume();
+		Check(options.musicVolume == 75, "music volume cycles independently");
 		options.ToggleGameplayInfo();
 		Check(!options.showGameplayInfo, "gameplay information toggles off");
 		options.ToggleGameplayInfo();
@@ -1173,6 +1255,8 @@ namespace
 		GameOptions saved;
 		saved.difficulty = GameDifficulty::Hard;
 		saved.soundEnabled = false;
+		saved.effectsVolume = 25;
+		saved.musicVolume = 75;
 		saved.showGameplayInfo = false;
 		saved.pegColorMode = PegColorMode::HighContrast;
 		saved.language = UiLanguage::English;
@@ -1185,12 +1269,16 @@ namespace
 		Check(loaded.state == SettingsLoadState::Loaded, "valid settings load from disk");
 		Check(loaded.options.difficulty == GameDifficulty::Hard, "settings preserve difficulty");
 		Check(!loaded.options.soundEnabled, "settings preserve mute state");
+		Check(loaded.options.effectsVolume == 25, "settings preserve effects volume");
+		Check(loaded.options.musicVolume == 75, "settings preserve music volume");
 		Check(!loaded.options.showGameplayInfo, "settings preserve hidden gameplay information");
 		Check(loaded.options.pegColorMode == PegColorMode::HighContrast, "settings preserve high contrast mode");
 		Check(loaded.options.language == UiLanguage::English, "settings preserve selected language");
 
 		saved.difficulty = GameDifficulty::Easy;
 		saved.soundEnabled = true;
+		saved.effectsVolume = 100;
+		saved.musicVolume = 0;
 		saved.showGameplayInfo = true;
 		saved.pegColorMode = PegColorMode::Standard;
 		saved.language = UiLanguage::Korean;
@@ -1198,6 +1286,8 @@ namespace
 		const SettingsLoadResult replaced = store.Load();
 		Check(replaced.options.difficulty == GameDifficulty::Easy, "replacement settings update difficulty");
 		Check(replaced.options.soundEnabled, "replacement settings update sound");
+		Check(replaced.options.effectsVolume == 100, "replacement settings update effects volume");
+		Check(replaced.options.musicVolume == 0, "replacement settings update music volume");
 		Check(replaced.options.showGameplayInfo, "replacement settings update gameplay information");
 		Check(replaced.options.pegColorMode == PegColorMode::Standard, "replacement settings update colors");
 		Check(replaced.options.language == UiLanguage::Korean, "replacement settings update language");
@@ -1225,7 +1315,9 @@ namespace
 				<< "peg_color_mode=high_contrast\n";
 		}
 		const SettingsLoadResult compatibleCurrent = store.Load();
-		Check(compatibleCurrent.state == SettingsLoadState::Loaded, "older version one settings remain compatible");
+		Check(compatibleCurrent.state == SettingsLoadState::Migrated, "older version one settings migrate safely");
+		Check(compatibleCurrent.options.effectsVolume == 70, "version one settings receive default effects volume");
+		Check(compatibleCurrent.options.musicVolume == 45, "version one settings receive default music volume");
 		Check(compatibleCurrent.options.showGameplayInfo, "older version one settings default gameplay information on");
 		Check(compatibleCurrent.options.language == UiLanguage::Korean, "older version one settings default to Korean");
 
@@ -1276,7 +1368,7 @@ namespace
 		Check(migrated.options.difficulty == GameDifficulty::Hard, "legacy numeric difficulty migrates");
 		Check(!migrated.options.soundEnabled, "legacy boolean sound migrates");
 		Check(migrated.options.pegColorMode == PegColorMode::HighContrast, "legacy numeric color mode migrates");
-		Check(store.Save(migrated.options), "migrated settings rewrite as version one");
+		Check(store.Save(migrated.options), "migrated settings rewrite as version two");
 		Check(store.Load().state == SettingsLoadState::Loaded, "rewritten settings load as current version");
 
 		{
@@ -2760,6 +2852,7 @@ int main()
 	TestStageSelectionAndResultSummary();
 	TestGameOptionsAndDifficulty();
 	TestSoftPegHitSound();
+	TestAudioCatalog();
 	TestGameSettingsPersistence();
 	TestStageRecordPersistence();
 	TestStageRulesConfigureWorld();
