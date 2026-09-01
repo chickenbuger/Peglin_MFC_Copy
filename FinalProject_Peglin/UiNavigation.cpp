@@ -100,29 +100,33 @@ namespace
 	UiAction ResolveOptionsClick(Vector2 position) noexcept
 	{
 		static constexpr UiRect tiles[]{
-			{185,145,390,225},{397,145,602,225},{609,145,815,225},
-			{185,235,390,315},{397,235,602,315},{609,235,815,315},
-			{185,325,390,405},{397,325,602,405},{609,325,815,405}
+			{185,125,390,190},{397,125,602,190},{609,125,815,190},
+			{185,198,390,263},{397,198,602,263},{609,198,815,263},
+			{185,271,390,336},{397,271,602,336},{609,271,815,336},
+			{185,344,390,409},{397,344,602,409},{609,344,815,409}
 		};
 		static constexpr UiCommand commands[]{
 			UiCommand::ToggleDifficulty, UiCommand::ToggleSound, UiCommand::CycleEffectsVolume,
 			UiCommand::CycleMusicVolume, UiCommand::TogglePegColorMode, UiCommand::ToggleLanguage,
 			UiCommand::CycleGamepadDeadzone, UiCommand::CycleGamepadSensitivity,
-			UiCommand::ToggleGamepadFireBinding
+			UiCommand::ToggleGamepadFireBinding,
+			UiCommand::CycleKeyboardPauseBinding,
+			UiCommand::CycleKeyboardCombatLogBinding,
+			UiCommand::ToggleMouseAimBinding
 		};
-		for (std::size_t index = 0; index < 9U; ++index)
+		for (std::size_t index = 0; index < 12U; ++index)
 		{
 			if (tiles[index].Contains(position)) return { commands[index] };
 		}
-		if (UiRect{ 195.0f, 430.0f, 485.0f, 478.0f }.Contains(position))
+		if (UiRect{ 195.0f, 425.0f, 485.0f, 468.0f }.Contains(position))
 		{
 			return { UiCommand::ResetSettingsData };
 		}
-		if (UiRect{ 515.0f, 430.0f, 805.0f, 478.0f }.Contains(position))
+		if (UiRect{ 515.0f, 425.0f, 805.0f, 468.0f }.Contains(position))
 		{
 			return { UiCommand::ResetRecordData };
 		}
-		if (UiRect{ 300.0f, 550.0f, 700.0f, 612.0f }.Contains(position))
+		if (UiRect{ 300.0f, 575.0f, 700.0f, 632.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}

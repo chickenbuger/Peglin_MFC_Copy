@@ -17,7 +17,7 @@ std::size_t GetGamepadFocusCount(UiScreenKind screen, std::size_t visibleStageCo
 	{
 	case UiScreenKind::StageSelection: return SafeStageCount(visibleStageCount) + 4U;
 	case UiScreenKind::Loadout: return 8U;
-	case UiScreenKind::Options: return 12U;
+	case UiScreenKind::Options: return 15U;
 	case UiScreenKind::Statistics: return 3U;
 	case UiScreenKind::Reward: return 3U;
 	case UiScreenKind::Shop: return 4U;
@@ -77,9 +77,12 @@ UiAction ResolveGamepadFocusedAction(
 		case 6U: return { UiCommand::CycleGamepadDeadzone };
 		case 7U: return { UiCommand::CycleGamepadSensitivity };
 		case 8U: return { UiCommand::ToggleGamepadFireBinding };
-		case 9U: return { UiCommand::ResetSettingsData };
-		case 10U: return { UiCommand::ResetRecordData };
-		case 11U: return { UiCommand::BackToStageSelection };
+		case 9U: return { UiCommand::CycleKeyboardPauseBinding };
+		case 10U: return { UiCommand::CycleKeyboardCombatLogBinding };
+		case 11U: return { UiCommand::ToggleMouseAimBinding };
+		case 12U: return { UiCommand::ResetSettingsData };
+		case 13U: return { UiCommand::ResetRecordData };
+		case 14U: return { UiCommand::BackToStageSelection };
 		default: break;
 		}
 		break;
@@ -157,12 +160,13 @@ UiFocusRect GetGamepadFocusRect(
 	case UiScreenKind::Options:
 	{
 		static constexpr UiFocusRect rects[]{
-			{185,145,390,225},{397,145,602,225},{609,145,815,225},
-			{185,235,390,315},{397,235,602,315},{609,235,815,315},
-			{185,325,390,405},{397,325,602,405},{609,325,815,405},
-			{195,430,485,478},{515,430,805,478},{300,550,700,612}
+			{185,125,390,190},{397,125,602,190},{609,125,815,190},
+			{185,198,390,263},{397,198,602,263},{609,198,815,263},
+			{185,271,390,336},{397,271,602,336},{609,271,815,336},
+			{185,344,390,409},{397,344,602,409},{609,344,815,409},
+			{195,425,485,468},{515,425,805,468},{300,575,700,632}
 		};
-		if (focusIndex < 12U) return rects[focusIndex];
+		if (focusIndex < 15U) return rects[focusIndex];
 		break;
 	}
 	case UiScreenKind::Statistics:

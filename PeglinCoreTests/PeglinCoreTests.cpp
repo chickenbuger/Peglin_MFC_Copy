@@ -563,41 +563,53 @@ namespace
 			"mouse returns from loadout");
 
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 190.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 155.0f }, 0).command
 				== UiCommand::ToggleDifficulty,
 			"mouse changes difficulty");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 190.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 155.0f }, 0).command
 				== UiCommand::ToggleSound,
 			"mouse toggles sound");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 275.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 230.0f }, 0).command
 				== UiCommand::TogglePegColorMode,
 			"mouse changes peg accessibility mode");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 700.0f, 275.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 230.0f }, 0).command
 				== UiCommand::ToggleLanguage,
 			"mouse changes the UI language");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 700.0f, 190.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 155.0f }, 0).command
 				== UiCommand::CycleEffectsVolume,
 			"mouse cycles the effects volume");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 275.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 230.0f }, 0).command
 				== UiCommand::CycleMusicVolume,
 			"mouse cycles the music volume");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 365.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 300.0f }, 0).command
 				== UiCommand::CycleGamepadDeadzone,
 			"mouse cycles gamepad deadzone");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 365.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 300.0f }, 0).command
 				== UiCommand::CycleGamepadSensitivity,
 			"mouse cycles gamepad sensitivity");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 700.0f, 365.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 300.0f }, 0).command
 				== UiCommand::ToggleGamepadFireBinding,
 			"mouse changes the gamepad fire button");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 375.0f }, 0).command
+				== UiCommand::CycleKeyboardPauseBinding,
+			"mouse edits the keyboard pause binding");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 375.0f }, 0).command
+				== UiCommand::CycleKeyboardCombatLogBinding,
+			"mouse edits the keyboard combat-log binding");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 375.0f }, 0).command
+				== UiCommand::ToggleMouseAimBinding,
+			"mouse edits the aim-button binding");
 		Check(
 			ResolveUiClick(UiScreenKind::Options, { 300.0f, 450.0f }, 0).command
 				== UiCommand::ResetSettingsData,
@@ -607,7 +619,7 @@ namespace
 				== UiCommand::ResetRecordData,
 			"mouse reaches the selective record reset");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 590.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 600.0f }, 0).command
 				== UiCommand::BackToStageSelection,
 			"mouse returns from the compact options grid");
 		Check(
@@ -764,8 +776,8 @@ namespace
 			"gamepad stage screen exposes routes, start, statistics, loadout, and options");
 		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 8U,
 			"gamepad can focus every loadout action");
-		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 12U,
-			"gamepad can focus every option, selective reset, and back");
+		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 15U,
+			"gamepad can focus every binding, option, selective reset, and back");
 		Check(GetGamepadFocusCount(UiScreenKind::Statistics, 0) == 3U,
 			"gamepad can focus statistics filter, sort, and back");
 		Check(GetGamepadFocusCount(UiScreenKind::Reward, 0) == 3U,
@@ -794,8 +806,14 @@ namespace
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 8, 0).command
 			== UiCommand::ToggleGamepadFireBinding, "gamepad reaches fire button binding");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 9, 0).command
-			== UiCommand::ResetSettingsData, "gamepad reaches selective settings reset");
+			== UiCommand::CycleKeyboardPauseBinding, "gamepad reaches keyboard pause binding");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 10, 0).command
+			== UiCommand::CycleKeyboardCombatLogBinding, "gamepad reaches combat-log binding");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 11, 0).command
+			== UiCommand::ToggleMouseAimBinding, "gamepad reaches mouse aim binding");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 12, 0).command
+			== UiCommand::ResetSettingsData, "gamepad reaches selective settings reset");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 13, 0).command
 			== UiCommand::ResetRecordData, "gamepad reaches selective record reset");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Reward, 2, 0).command
 			== UiCommand::SelectReward, "gamepad selects the third reward");
@@ -807,7 +825,7 @@ namespace
 			== UiCommand::LeaveShop, "gamepad B leaves the shop safely");
 		Check(!ResolveGamepadBackAction(UiScreenKind::Reward).IsHandled(),
 			"gamepad cannot skip a required reward");
-		Check(GetGamepadFocusRect(UiScreenKind::Options, 11, 0).IsValid(),
+		Check(GetGamepadFocusRect(UiScreenKind::Options, 14, 0).IsValid(),
 			"gamepad back focus has a visible rectangle");
 		Check(ApplyGamepadStickTuning({ 0.10f, 0.0f }, 25, 100).Length() == 0.0f,
 			"gamepad radial deadzone suppresses stick drift");
@@ -1593,6 +1611,35 @@ namespace
 		Check(options.gamepadSensitivityPercent == 100, "options default to one hundred percent gamepad sensitivity");
 		Check(options.gamepadFireBinding == GamepadFireBinding::SouthButton,
 			"options default to the south face button for firing");
+		Check(options.pauseBinding == KeyboardBinding::Space
+			&& options.combatLogBinding == KeyboardBinding::KeyH,
+			"options default to distinct keyboard pause and combat-log bindings");
+		Check(options.mouseAimBinding == MouseAimBinding::LeftButton,
+			"options default aiming to the left mouse button");
+		Check(!options.HasKeyboardBindingConflict(),
+			"default keyboard bindings have no conflict");
+		Check(!options.TrySetKeyboardBinding(KeyboardAction::Pause, KeyboardBinding::KeyH)
+			&& options.pauseBinding == KeyboardBinding::Space,
+			"pause rebinding rejects the combat-log key without mutation");
+		Check(options.TrySetKeyboardBinding(KeyboardAction::Pause, KeyboardBinding::KeyP),
+			"pause rebinding accepts an unused key");
+		Check(!options.TrySetKeyboardBinding(KeyboardAction::CombatLog, KeyboardBinding::KeyP)
+			&& options.combatLogBinding == KeyboardBinding::KeyH,
+			"combat-log rebinding rejects the pause key without mutation");
+		Check(options.CycleKeyboardBinding(KeyboardAction::Pause)
+			&& options.pauseBinding == KeyboardBinding::KeyC,
+			"keyboard binding cycle detects and skips a conflicting candidate");
+		Check(options.CycleKeyboardBinding(KeyboardAction::CombatLog)
+			&& options.combatLogBinding == KeyboardBinding::Space,
+			"second keyboard action also skips a conflicting candidate");
+		Check(KeyboardBindingVirtualKey(options.pauseBinding) == static_cast<unsigned int>('C'),
+			"keyboard binding resolves to the expected Windows virtual key");
+		options.ToggleMouseAimBinding();
+		Check(options.mouseAimBinding == MouseAimBinding::RightButton,
+			"mouse aim binding toggles to the right button");
+		options.pauseBinding = KeyboardBinding::Space;
+		options.combatLogBinding = KeyboardBinding::KeyH;
+		options.mouseAimBinding = MouseAimBinding::LeftButton;
 		options.CycleDifficulty();
 		Check(options.difficulty == GameDifficulty::Hard, "difficulty cycles from normal to hard");
 		options.CycleDifficulty();
@@ -1683,6 +1730,10 @@ namespace
 			"missing settings recover default gamepad tuning");
 		Check(missing.options.gamepadFireBinding == GamepadFireBinding::SouthButton,
 			"missing settings recover the default fire binding");
+		Check(missing.options.pauseBinding == KeyboardBinding::Space
+			&& missing.options.combatLogBinding == KeyboardBinding::KeyH
+			&& missing.options.mouseAimBinding == MouseAimBinding::LeftButton,
+			"missing settings recover conflict-free keyboard and mouse bindings");
 
 		GameOptions saved;
 		saved.difficulty = GameDifficulty::Hard;
@@ -1695,6 +1746,9 @@ namespace
 		saved.gamepadDeadzonePercent = 35;
 		saved.gamepadSensitivityPercent = 150;
 		saved.gamepadFireBinding = GamepadFireBinding::RightTrigger;
+		saved.pauseBinding = KeyboardBinding::KeyP;
+		saved.combatLogBinding = KeyboardBinding::KeyC;
+		saved.mouseAimBinding = MouseAimBinding::RightButton;
 		std::string saveError;
 		Check(store.Save(saved, &saveError), "settings save creates missing parent directories");
 		Check(saveError.empty(), "successful settings save clears its error");
@@ -1713,6 +1767,11 @@ namespace
 		Check(loaded.options.gamepadSensitivityPercent == 150, "settings preserve gamepad sensitivity");
 		Check(loaded.options.gamepadFireBinding == GamepadFireBinding::RightTrigger,
 			"settings preserve gamepad fire binding");
+		Check(loaded.options.pauseBinding == KeyboardBinding::KeyP
+			&& loaded.options.combatLogBinding == KeyboardBinding::KeyC,
+			"settings preserve conflict-free keyboard bindings");
+		Check(loaded.options.mouseAimBinding == MouseAimBinding::RightButton,
+			"settings preserve the selected mouse aim button");
 
 		saved.difficulty = GameDifficulty::Easy;
 		saved.soundEnabled = true;
@@ -1724,6 +1783,9 @@ namespace
 		saved.gamepadDeadzonePercent = 15;
 		saved.gamepadSensitivityPercent = 75;
 		saved.gamepadFireBinding = GamepadFireBinding::SouthButton;
+		saved.pauseBinding = KeyboardBinding::Space;
+		saved.combatLogBinding = KeyboardBinding::KeyH;
+		saved.mouseAimBinding = MouseAimBinding::LeftButton;
 		Check(store.Save(saved), "settings save atomically replaces an existing file");
 		const SettingsLoadResult replaced = store.Load();
 		Check(replaced.options.difficulty == GameDifficulty::Easy, "replacement settings update difficulty");
@@ -1738,6 +1800,10 @@ namespace
 			"replacement settings update gamepad tuning");
 		Check(replaced.options.gamepadFireBinding == GamepadFireBinding::SouthButton,
 			"replacement settings update fire binding");
+		Check(replaced.options.pauseBinding == KeyboardBinding::Space
+			&& replaced.options.combatLogBinding == KeyboardBinding::KeyH
+			&& replaced.options.mouseAimBinding == MouseAimBinding::LeftButton,
+			"replacement settings update keyboard and mouse bindings");
 		Check(std::filesystem::exists(store.GetBackupPath()),
 			"replacing valid settings creates a backup");
 		const SettingsLoadResult settingsBackup = GameSettingsStore(store.GetBackupPath()).Load();
@@ -1757,6 +1823,11 @@ namespace
 			&& recoveredSettings.options.language == UiLanguage::English,
 			"settings recovery restores the previous generation values");
 		Check(store.Save(saved), "settings can save again after recovery");
+		GameOptions conflicting = saved;
+		conflicting.pauseBinding = KeyboardBinding::KeyH;
+		conflicting.combatLogBinding = KeyboardBinding::KeyH;
+		Check(!store.Save(conflicting, &saveError) && !saveError.empty(),
+			"settings save rejects conflicting keyboard actions before writing");
 
 		{
 			std::ofstream damagedPrimary(settingsPath, std::ios::trunc);
@@ -1767,6 +1838,29 @@ namespace
 		Check(store.LoadWithRecovery().state == SettingsLoadState::Invalid,
 			"settings recovery refuses an invalid backup");
 		Check(store.Save(saved), "valid settings can replace a damaged primary without overwriting the backup first");
+
+		{
+			std::ofstream versionThree(settingsPath, std::ios::trunc);
+			versionThree
+				<< "peglin_settings_version=3\n"
+				<< "difficulty=normal\n"
+				<< "sound_enabled=1\n"
+				<< "effects_volume=50\n"
+				<< "music_volume=25\n"
+				<< "show_gameplay_info=1\n"
+				<< "peg_color_mode=standard\n"
+				<< "language=ko-KR\n"
+				<< "gamepad_deadzone_percent=25\n"
+				<< "gamepad_sensitivity_percent=100\n"
+				<< "gamepad_fire_binding=south_button\n";
+		}
+		const SettingsLoadResult versionThree = store.Load();
+		Check(versionThree.state == SettingsLoadState::Migrated,
+			"version three settings migrate to editable input defaults");
+		Check(versionThree.options.pauseBinding == KeyboardBinding::Space
+			&& versionThree.options.combatLogBinding == KeyboardBinding::KeyH
+			&& versionThree.options.mouseAimBinding == MouseAimBinding::LeftButton,
+			"version three migration supplies conflict-free input bindings");
 
 		{
 			std::ofstream versionTwo(settingsPath, std::ios::trunc);

@@ -3,6 +3,7 @@
 #include "StageDefinition.h"
 
 #include <algorithm>
+#include <iterator>
 
 enum class GameDifficulty
 {
@@ -29,6 +30,38 @@ enum class GamepadFireBinding
 	RightTrigger
 };
 
+enum class KeyboardAction
+{
+	Pause,
+	CombatLog
+};
+
+enum class KeyboardBinding
+{
+	Space,
+	KeyP,
+	KeyH,
+	KeyC
+};
+
+enum class MouseAimBinding
+{
+	LeftButton,
+	RightButton
+};
+
+inline unsigned int KeyboardBindingVirtualKey(KeyboardBinding binding) noexcept
+{
+	switch (binding)
+	{
+	case KeyboardBinding::Space: return 0x20U;
+	case KeyboardBinding::KeyP: return static_cast<unsigned int>('P');
+	case KeyboardBinding::KeyH: return static_cast<unsigned int>('H');
+	case KeyboardBinding::KeyC: return static_cast<unsigned int>('C');
+	}
+	return 0U;
+}
+
 struct GameOptions
 {
 	GameDifficulty difficulty = GameDifficulty::Normal;
@@ -41,6 +74,70 @@ struct GameOptions
 	int gamepadDeadzonePercent = 25;
 	int gamepadSensitivityPercent = 100;
 	GamepadFireBinding gamepadFireBinding = GamepadFireBinding::SouthButton;
+	KeyboardBinding pauseBinding = KeyboardBinding::Space;
+	KeyboardBinding combatLogBinding = KeyboardBinding::KeyH;
+	MouseAimBinding mouseAimBinding = MouseAimBinding::LeftButton;
+
+	bool HasKeyboardBindingConflict() const noexcept
+	{
+		return pauseBinding == combatLogBinding;
+	}
+
+	bool TrySetKeyboardBinding(KeyboardAction action, KeyboardBinding binding) noexcept
+	{
+		if (KeyboardBindingVirtualKey(binding) == 0U)
+		{
+			return false;
+		}
+		if ((action == KeyboardAction::Pause && binding == combatLogBinding)
+			|| (action == KeyboardAction::CombatLog && binding == pauseBinding))
+		{
+			return false;
+		}
+		if (action == KeyboardAction::Pause)
+		{
+			pauseBinding = binding;
+		}
+		else
+		{
+			combatLogBinding = binding;
+		}
+		return true;
+	}
+
+	bool CycleKeyboardBinding(KeyboardAction action) noexcept
+	{
+		static constexpr KeyboardBinding bindings[]{
+			KeyboardBinding::Space,
+			KeyboardBinding::KeyP,
+			KeyboardBinding::KeyH,
+			KeyboardBinding::KeyC
+		};
+		const KeyboardBinding current = action == KeyboardAction::Pause
+			? pauseBinding
+			: combatLogBinding;
+		std::size_t currentIndex = 0;
+		for (std::size_t index = 0; index < std::size(bindings); ++index)
+		{
+			if (bindings[index] == current)
+			{
+				currentIndex = index;
+				break;
+			}
+		}
+		bool skippedConflict = false;
+		for (std::size_t offset = 1; offset <= std::size(bindings); ++offset)
+		{
+			const KeyboardBinding candidate = bindings[
+				(currentIndex + offset) % std::size(bindings)];
+			if (TrySetKeyboardBinding(action, candidate))
+			{
+				return skippedConflict;
+			}
+			skippedConflict = true;
+		}
+		return skippedConflict;
+	}
 
 	void CycleDifficulty() noexcept
 	{
@@ -106,6 +203,13 @@ struct GameOptions
 		gamepadFireBinding = gamepadFireBinding == GamepadFireBinding::SouthButton
 			? GamepadFireBinding::RightTrigger
 			: GamepadFireBinding::SouthButton;
+	}
+
+	void ToggleMouseAimBinding() noexcept
+	{
+		mouseAimBinding = mouseAimBinding == MouseAimBinding::LeftButton
+			? MouseAimBinding::RightButton
+			: MouseAimBinding::LeftButton;
 	}
 };
 

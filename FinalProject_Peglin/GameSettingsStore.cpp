@@ -10,7 +10,7 @@
 namespace
 {
 	constexpr std::string_view SETTINGS_VERSION_KEY = "peglin_settings_version";
-	constexpr std::string_view SETTINGS_VERSION = "3";
+	constexpr std::string_view SETTINGS_VERSION = "4";
 
 	std::string DifficultyValue(GameDifficulty difficulty)
 	{
@@ -39,6 +39,23 @@ namespace
 	std::string GamepadFireValue(GamepadFireBinding binding)
 	{
 		return binding == GamepadFireBinding::RightTrigger ? "right_trigger" : "south_button";
+	}
+
+	std::string KeyboardBindingValue(KeyboardBinding binding)
+	{
+		switch (binding)
+		{
+		case KeyboardBinding::Space: return "space";
+		case KeyboardBinding::KeyP: return "p";
+		case KeyboardBinding::KeyH: return "h";
+		case KeyboardBinding::KeyC: return "c";
+		}
+		return "space";
+	}
+
+	std::string MouseAimValue(MouseAimBinding binding)
+	{
+		return binding == MouseAimBinding::RightButton ? "right_button" : "left_button";
 	}
 
 	bool ParseDifficulty(std::string_view value, GameDifficulty& difficulty) noexcept
@@ -119,6 +136,24 @@ namespace
 			return true;
 		}
 		return false;
+	}
+
+	bool ParseKeyboardBinding(std::string_view value, KeyboardBinding& binding) noexcept
+	{
+		if (value == "space") binding = KeyboardBinding::Space;
+		else if (value == "p") binding = KeyboardBinding::KeyP;
+		else if (value == "h") binding = KeyboardBinding::KeyH;
+		else if (value == "c") binding = KeyboardBinding::KeyC;
+		else return false;
+		return true;
+	}
+
+	bool ParseMouseAim(std::string_view value, MouseAimBinding& binding) noexcept
+	{
+		if (value == "left_button") binding = MouseAimBinding::LeftButton;
+		else if (value == "right_button") binding = MouseAimBinding::RightButton;
+		else return false;
+		return true;
 	}
 
 	bool ParsePegColor(std::string_view value, PegColorMode& colorMode) noexcept
@@ -287,6 +322,9 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		const auto gamepadDeadzone = values.find("gamepad_deadzone_percent");
 		const auto gamepadSensitivity = values.find("gamepad_sensitivity_percent");
 		const auto gamepadFire = values.find("gamepad_fire_binding");
+		const auto pauseBinding = values.find("keyboard_pause_binding");
+		const auto combatLogBinding = values.find("keyboard_combat_log_binding");
+		const auto mouseAimBinding = values.find("mouse_aim_binding");
 		if (version == values.end()
 			|| difficulty == values.end()
 			|| sound == values.end()
@@ -316,7 +354,14 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 				|| gamepadSensitivity == values.end()
 				|| !ParseIntegerRange(gamepadSensitivity->second, 50, 200, result.options.gamepadSensitivityPercent)
 				|| gamepadFire == values.end()
-				|| !ParseGamepadFire(gamepadFire->second, result.options.gamepadFireBinding))
+				|| !ParseGamepadFire(gamepadFire->second, result.options.gamepadFireBinding)
+				|| pauseBinding == values.end()
+				|| combatLogBinding == values.end()
+				|| mouseAimBinding == values.end()
+				|| !ParseKeyboardBinding(pauseBinding->second, result.options.pauseBinding)
+				|| !ParseKeyboardBinding(combatLogBinding->second, result.options.combatLogBinding)
+				|| !ParseMouseAim(mouseAimBinding->second, result.options.mouseAimBinding)
+				|| result.options.HasKeyboardBindingConflict())
 			{
 				result.options = GameOptions{};
 				result.state = SettingsLoadState::Invalid;
@@ -325,6 +370,30 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 			}
 			result.state = SettingsLoadState::Loaded;
 			result.message.clear();
+			return result;
+		}
+
+		if (version->second == "3"
+			&& ParseDifficulty(difficulty->second, result.options.difficulty)
+			&& ParseSound(sound->second, result.options.soundEnabled)
+			&& effectsVolume != values.end()
+			&& musicVolume != values.end()
+			&& ParseVolume(effectsVolume->second, result.options.effectsVolume)
+			&& ParseVolume(musicVolume->second, result.options.musicVolume)
+			&& (gameplayInfo == values.end()
+				|| ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
+			&& ParsePegColor(color->second, result.options.pegColorMode)
+			&& (language == values.end()
+				|| ParseLanguage(language->second, result.options.language))
+			&& gamepadDeadzone != values.end()
+			&& ParseIntegerRange(gamepadDeadzone->second, 5, 60, result.options.gamepadDeadzonePercent)
+			&& gamepadSensitivity != values.end()
+			&& ParseIntegerRange(gamepadSensitivity->second, 50, 200, result.options.gamepadSensitivityPercent)
+			&& gamepadFire != values.end()
+			&& ParseGamepadFire(gamepadFire->second, result.options.gamepadFireBinding))
+		{
+			result.state = SettingsLoadState::Migrated;
+			result.message = "settings migrated from version 3";
 			return result;
 		}
 
@@ -442,6 +511,13 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 {
 	try
 	{
+		if (options.HasKeyboardBindingConflict()
+			|| KeyboardBindingVirtualKey(options.pauseBinding) == 0U
+			|| KeyboardBindingVirtualKey(options.combatLogBinding) == 0U)
+		{
+			if (errorMessage != nullptr) *errorMessage = "input bindings conflict or are invalid";
+			return false;
+		}
 		std::error_code directoryError;
 		const std::filesystem::path parent = _filePath.parent_path();
 		if (!parent.empty())
@@ -480,7 +556,10 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 			<< "language=" << LanguageValue(options.language) << '\n'
 			<< "gamepad_deadzone_percent=" << std::clamp(options.gamepadDeadzonePercent, 5, 60) << '\n'
 			<< "gamepad_sensitivity_percent=" << std::clamp(options.gamepadSensitivityPercent, 50, 200) << '\n'
-			<< "gamepad_fire_binding=" << GamepadFireValue(options.gamepadFireBinding) << '\n';
+			<< "gamepad_fire_binding=" << GamepadFireValue(options.gamepadFireBinding) << '\n'
+			<< "keyboard_pause_binding=" << KeyboardBindingValue(options.pauseBinding) << '\n'
+			<< "keyboard_combat_log_binding=" << KeyboardBindingValue(options.combatLogBinding) << '\n'
+			<< "mouse_aim_binding=" << MouseAimValue(options.mouseAimBinding) << '\n';
 		stream.flush();
 		if (!stream)
 		{

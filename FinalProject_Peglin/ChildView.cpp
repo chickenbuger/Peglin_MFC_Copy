@@ -387,6 +387,18 @@ namespace
 		return std::filesystem::path(modulePath.data()).parent_path()
 			/ L"content" / fileName;
 	}
+
+	CString KeyboardBindingText(KeyboardBinding binding)
+	{
+		switch (binding)
+		{
+		case KeyboardBinding::Space: return _T("SPACE");
+		case KeyboardBinding::KeyP: return _T("P");
+		case KeyboardBinding::KeyH: return _T("H");
+		case KeyboardBinding::KeyC: return _T("C");
+		}
+		return _T("?");
+	}
 }
 
 // CChildView
@@ -503,6 +515,8 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
 	ON_WM_TIMER()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
+	ON_WM_RBUTTONDOWN()
+	ON_WM_RBUTTONUP()
 	ON_WM_ERASEBKGND()
 	ON_WM_MOUSEMOVE()
 	ON_WM_KEYDOWN()
@@ -2230,7 +2244,7 @@ void CChildView::DrawOptions(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
 	DrawMenuTitle(deviceContext, Text("screen.options"));
-	const CRect optionPanel(165, 105, 835, 650);
+	const CRect optionPanel(165, 85, 835, 685);
 	UiRenderer::DrawPanel(deviceContext, optionPanel);
 	CString optionsGuide;
 	optionsGuide.Format(
@@ -2238,7 +2252,7 @@ void CChildView::DrawOptions(CDC* deviceContext)
 		_gamepadConnected ? _T("연결됨") : _T("미연결"));
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(190, 122, 810, 150),
+		CRect(190, 96, 810, 122),
 		optionsGuide,
 		95,
 		UiTheme::MutedText);
@@ -2253,19 +2267,25 @@ void CChildView::DrawOptions(CDC* deviceContext)
 	const CString fireBinding = _options.gamepadFireBinding == GamepadFireBinding::SouthButton
 		? _T("A 버튼")
 		: _T("오른쪽 트리거");
-	DrawOptionTile(deviceContext, CRect(185, 145, 390, 225), _T("[D]"), Text("option.difficulty"), DifficultyTextForUi(_options.difficulty), UiTheme::Gold);
-	DrawOptionTile(deviceContext, CRect(397, 145, 602, 225), _T("[M]"), Text("option.sound"), Text(_options.soundEnabled ? "value.on" : "value.off"), _options.soundEnabled ? UiTheme::Green : UiTheme::Danger);
-	DrawOptionTile(deviceContext, CRect(609, 145, 815, 225), _T("[E]"), _T("효과음"), effectsVolume, UiTheme::Orange);
-	DrawOptionTile(deviceContext, CRect(185, 235, 390, 315), _T("[V]"), _T("배경음"), musicVolume, UiTheme::Blue);
-	DrawOptionTile(deviceContext, CRect(397, 235, 602, 315), _T("[C]"), Text("option.peg_color"), PegColorModeTextForUi(_options.pegColorMode), UiTheme::Blue);
-	DrawOptionTile(deviceContext, CRect(609, 235, 815, 315), _T("[L]"), Text("option.language"), Text(_options.language == UiLanguage::Korean ? "language.korean" : "language.english"), UiTheme::Orange);
-	DrawOptionTile(deviceContext, CRect(185, 325, 390, 405), _T("[Z]"), _T("패드 데드존"), deadzone, UiTheme::Green);
-	DrawOptionTile(deviceContext, CRect(397, 325, 602, 405), _T("[G]"), _T("패드 감도"), sensitivity, UiTheme::Gold);
-	DrawOptionTile(deviceContext, CRect(609, 325, 815, 405), _T("[F]"), _T("발사 버튼"), fireBinding, UiTheme::Orange);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(195, 430, 485, 478), _T("설정만 초기화 · X"));
+	const CString mouseBinding = _options.mouseAimBinding == MouseAimBinding::LeftButton
+		? _T("왼쪽 버튼")
+		: _T("오른쪽 버튼");
+	DrawOptionTile(deviceContext, CRect(185, 125, 390, 190), _T("[D]"), Text("option.difficulty"), DifficultyTextForUi(_options.difficulty), UiTheme::Gold);
+	DrawOptionTile(deviceContext, CRect(397, 125, 602, 190), _T("[M]"), Text("option.sound"), Text(_options.soundEnabled ? "value.on" : "value.off"), _options.soundEnabled ? UiTheme::Green : UiTheme::Danger);
+	DrawOptionTile(deviceContext, CRect(609, 125, 815, 190), _T("[E]"), _T("효과음"), effectsVolume, UiTheme::Orange);
+	DrawOptionTile(deviceContext, CRect(185, 198, 390, 263), _T("[V]"), _T("배경음"), musicVolume, UiTheme::Blue);
+	DrawOptionTile(deviceContext, CRect(397, 198, 602, 263), _T("[C]"), Text("option.peg_color"), PegColorModeTextForUi(_options.pegColorMode), UiTheme::Blue);
+	DrawOptionTile(deviceContext, CRect(609, 198, 815, 263), _T("[L]"), Text("option.language"), Text(_options.language == UiLanguage::Korean ? "language.korean" : "language.english"), UiTheme::Orange);
+	DrawOptionTile(deviceContext, CRect(185, 271, 390, 336), _T("[Z]"), _T("패드 데드존"), deadzone, UiTheme::Green);
+	DrawOptionTile(deviceContext, CRect(397, 271, 602, 336), _T("[G]"), _T("패드 감도"), sensitivity, UiTheme::Gold);
+	DrawOptionTile(deviceContext, CRect(609, 271, 815, 336), _T("[F]"), _T("패드 발사"), fireBinding, UiTheme::Orange);
+	DrawOptionTile(deviceContext, CRect(185, 344, 390, 409), _T("[K]"), _T("일시정지 키"), KeyboardBindingText(_options.pauseBinding), UiTheme::Green);
+	DrawOptionTile(deviceContext, CRect(397, 344, 602, 409), _T("[J]"), _T("전투 로그 키"), KeyboardBindingText(_options.combatLogBinding), UiTheme::Gold);
+	DrawOptionTile(deviceContext, CRect(609, 344, 815, 409), _T("[Q]"), _T("마우스 조준"), mouseBinding, UiTheme::Orange);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(195, 425, 485, 468), _T("설정만 초기화 · X"));
 	UiRenderer::DrawKeyHint(
 		deviceContext,
-		CRect(515, 430, 805, 478),
+		CRect(515, 425, 805, 468),
 		_T("전투 기록 초기화 · R"));
 	const CString audioNotice = !_audioCatalog.IsUsable()
 		? CString(_T("오디오 파일을 불러오지 못해 무음으로 실행 중입니다"))
@@ -2274,13 +2294,13 @@ void CChildView::DrawOptions(CDC* deviceContext)
 				: (_optionsNotice.IsEmpty() ? Text("notice.auto_save") : _optionsNotice)));
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(190, 486, 810, 535),
+		CRect(190, 478, 810, 545),
 		audioNotice,
 		100,
 		(!_audioCatalog.IsUsable() || _settingsSaveFailed || _recordSaveFailed)
 			? UiTheme::Danger
 			: UiTheme::Green);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 550, 700, 612), Text("hint.back"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 575, 700, 632), Text("hint.back"));
 }
 
 void CChildView::DrawStatisticsScreen(CDC* deviceContext)
@@ -3324,13 +3344,32 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 		CWnd::OnLButtonDown(nFlags, point);
 		return;
 	}
+	if (_options.mouseAimBinding == MouseAimBinding::LeftButton)
+	{
+		BeginAimFromPointer(point);
+	}
+	CWnd::OnLButtonDown(nFlags, point);
+}
 
-	if (_game.BeginAim({ static_cast<float>(logicalPoint.x), static_cast<float>(logicalPoint.y) }))
+void CChildView::OnRButtonDown(UINT nFlags, CPoint point)
+{
+	if (_screenMode == ScreenMode::Playing
+		&& _options.mouseAimBinding == MouseAimBinding::RightButton)
+	{
+		BeginAimFromPointer(point);
+	}
+	CWnd::OnRButtonDown(nFlags, point);
+}
+
+void CChildView::BeginAimFromPointer(CPoint point)
+{
+	CPoint logicalPoint;
+	if (TryMapClientPoint(point, logicalPoint, false)
+		&& _game.BeginAim({ static_cast<float>(logicalPoint.x), static_cast<float>(logicalPoint.y) }))
 	{
 		SetFocus();
 		SetCapture();
 	}
-	CWnd::OnLButtonDown(nFlags, point);
 }
 
 bool CChildView::TryMapClientPoint(
@@ -3505,6 +3544,30 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		break;
 	case UiCommand::ToggleGamepadFireBinding:
 		_options.ToggleGamepadFireBinding();
+		_optionsNotice = _T("게임패드 발사 바인딩을 변경했습니다");
+		SaveOptions();
+		break;
+	case UiCommand::CycleKeyboardPauseBinding:
+	{
+		const bool skippedConflict = _options.CycleKeyboardBinding(KeyboardAction::Pause);
+		_optionsNotice = skippedConflict
+			? _T("중복 키를 건너뛰고 일시정지 키를 변경했습니다")
+			: _T("일시정지 키를 변경했습니다");
+		SaveOptions();
+		break;
+	}
+	case UiCommand::CycleKeyboardCombatLogBinding:
+	{
+		const bool skippedConflict = _options.CycleKeyboardBinding(KeyboardAction::CombatLog);
+		_optionsNotice = skippedConflict
+			? _T("중복 키를 건너뛰고 전투 로그 키를 변경했습니다")
+			: _T("전투 로그 키를 변경했습니다");
+		SaveOptions();
+		break;
+	}
+	case UiCommand::ToggleMouseAimBinding:
+		_options.ToggleMouseAimBinding();
+		_optionsNotice = _T("마우스 조준 버튼을 변경했습니다");
 		SaveOptions();
 		break;
 	case UiCommand::ResetSettingsData:
@@ -3540,12 +3603,26 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 
 void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	if (_screenMode != ScreenMode::Playing)
+	if (_screenMode == ScreenMode::Playing
+		&& _options.mouseAimBinding == MouseAimBinding::LeftButton)
 	{
-		CWnd::OnLButtonUp(nFlags, point);
-		return;
+		EndAimFromPointer(point);
 	}
+	CWnd::OnLButtonUp(nFlags, point);
+}
 
+void CChildView::OnRButtonUp(UINT nFlags, CPoint point)
+{
+	if (_screenMode == ScreenMode::Playing
+		&& _options.mouseAimBinding == MouseAimBinding::RightButton)
+	{
+		EndAimFromPointer(point);
+	}
+	CWnd::OnRButtonUp(nFlags, point);
+}
+
+void CChildView::EndAimFromPointer(CPoint point)
+{
 	CPoint logicalPoint;
 	if (_game.GetBall().GetClick()
 		&& TryMapClientPoint(point, logicalPoint, true))
@@ -3555,7 +3632,6 @@ void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 			static_cast<float>(logicalPoint.y) });
 	}
 	ReleaseMouseInput(false);
-	CWnd::OnLButtonUp(nFlags, point);
 }
 
 
@@ -3773,6 +3849,29 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		else if (nChar == 'F')
 		{
 			_options.ToggleGamepadFireBinding();
+			_optionsNotice = _T("게임패드 발사 바인딩을 변경했습니다");
+			SaveOptions();
+		}
+		else if (nChar == 'K')
+		{
+			const bool skippedConflict = _options.CycleKeyboardBinding(KeyboardAction::Pause);
+			_optionsNotice = skippedConflict
+				? _T("중복 키를 건너뛰고 일시정지 키를 변경했습니다")
+				: _T("일시정지 키를 변경했습니다");
+			SaveOptions();
+		}
+		else if (nChar == 'J')
+		{
+			const bool skippedConflict = _options.CycleKeyboardBinding(KeyboardAction::CombatLog);
+			_optionsNotice = skippedConflict
+				? _T("중복 키를 건너뛰고 전투 로그 키를 변경했습니다")
+				: _T("전투 로그 키를 변경했습니다");
+			SaveOptions();
+		}
+		else if (nChar == 'Q')
+		{
+			_options.ToggleMouseAimBinding();
+			_optionsNotice = _T("마우스 조준 버튼을 변경했습니다");
 			SaveOptions();
 		}
 		else if (nChar == 'X')
@@ -3835,7 +3934,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	}
 
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-	if (nChar == VK_SPACE)
+	if (nChar == KeyboardBindingVirtualKey(_options.pauseBinding))
 	{
 		_game.TogglePause();
 
@@ -3853,7 +3952,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		SaveOptions();
 		Invalidate();
 	}
-	if (nChar == 'H')
+	if (nChar == KeyboardBindingVirtualKey(_options.combatLogBinding))
 	{
 		_combatLogVisible = !_combatLogVisible;
 		Invalidate(FALSE);
