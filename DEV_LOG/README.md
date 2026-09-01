@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 8 진행 중 |
-| 현재 버전 | Version 8.5 |
+| 현재 버전 | Version 8.6 |
 | 스프린트 목표 | 다양한 화면 환경의 UI 안정성, 콘텐츠 이해도와 제작 도구, 입력 설정 및 시연 품질 개선 |
-| 상태 | Sprint 8 P0 5/8 완료 · 효과음 밀도 제한과 장면 음악 페이드 완료 |
+| 상태 | Sprint 8 P0 6/8 완료 · 결정적 데모 런과 포트폴리오 촬영 지원 완료 |
 
 ## 문서
 
@@ -106,6 +106,7 @@
 - [Version 8.3 — 콘텐츠 검증 리포트와 미리보기 도구](./Version_8.3.md)
 - [Version 8.4 — 게임패드 조준 설정과 장치 상태 QA](./Version_8.4.md)
 - [Version 8.5 — 효과음 밀도 제한과 장면 음악 페이드](./Version_8.5.md)
+- [Version 8.6 — 결정적 데모 런과 포트폴리오 촬영 지원](./Version_8.6.md)
 - [Content Report 8.3 — 현재 외부 콘텐츠 검증·미리보기](./Content_Report_8.3.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)

@@ -80,9 +80,17 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 & '.\Release\tests\Win32\PeglinCoreTests.exe'
 ```
 
+## 포트폴리오 데모 실행
+
+Version 8.6부터 같은 스테이지와 조준 순서를 반복하는 촬영용 데모를 제공한다. Release x64 빌드 후 다음 명령으로 시작하며 실행 중 `F9`로 자동 조준을 켜거나 끌 수 있다.
+
+```powershell
+& '.\tools\Start-DemoCapture.ps1' -Configuration Release -Platform x64
+```
+
 ## 현재 검증 상태
 
-2026-09-01 Version 8.5 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 1,112개·총 4,448개 자동 검증과 분기형 전체 런, 5종 몬스터, 9개 적 안정 ID, Refresh Peg 보장·재배치, 오브·유물, 이동 페그, 상점, 칸 거리·사거리, 파일 오디오와 효과음 밀도 제한·BGM 페이드, 게임패드 설정·마이그레이션, 상세 통계, 세이브 복구, DPI·창 크기, 전투 로그와 콘텐츠 리포트를 검증했다. 자산 파이프라인은 22개 리소스와 21개 PNG→24-bit BMP 변환을 검증한다.
+2026-09-02 Version 8.6 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 1,124개·총 4,496개 자동 검증과 분기형 전체 런, 5종 몬스터, 9개 적 안정 ID, Refresh Peg 보장·재배치, 오브·유물, 이동 페그, 상점, 칸 거리·사거리, 파일 오디오와 효과음 밀도 제한·BGM 페이드, 게임패드 설정·마이그레이션, 결정적 데모 런, 상세 통계, 세이브 복구, DPI·창 크기, 전투 로그와 콘텐츠 리포트를 검증했다. 자산 파이프라인은 22개 리소스와 21개 PNG→24-bit BMP 변환을 검증한다.
 
 Version 7.4 Release x64 ZIP은 `dist/PeglinMFC-7.4-win-x64.zip`에 생성되며 크기는 7,054,453 bytes, SHA-256은 `62D7B57F5D7DD058785EE8717488EFA7FBE3636102C41F3F73247A878DB811FF`다.
 

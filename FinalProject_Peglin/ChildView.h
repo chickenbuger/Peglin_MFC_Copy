@@ -16,6 +16,7 @@
 #include "AudioPlayer.h"
 #include "CombatLog.h"
 #include "ContentCatalog.h"
+#include "DemoRun.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
 #include "GamepadNavigation.h"
@@ -131,6 +132,7 @@ private:
 	void DrawAimPreview(CDC* deviceContext);
 	void DrawCombatLog(CDC* deviceContext);
 	void DrawGameplayTooltip(CDC* deviceContext);
+	void DrawDemoBadge(CDC* deviceContext);
 	void DrawEnemyHealthBar(
 		CDC* deviceContext,
 		const EnemyCombatant& combatant,
@@ -169,6 +171,8 @@ private:
 	void UpdateScreenMusic();
 	void SetScreenMode(ScreenMode mode);
 	void PollGamepad();
+	void SetDemoMode(bool enabled);
+	void UpdateDemoRun(float deltaSeconds);
 	UiScreenKind CurrentUiScreen() const noexcept;
 	std::size_t VisibleStageCount() const noexcept;
 	void RecordResult(bool cleared);
@@ -202,6 +206,8 @@ private:
 	GameOptions _options;
 	AudioCatalogLoadResult _audioCatalog;
 	AudioPlayer _audioPlayer;
+	DemoRunController _demoRun;
+	bool _demoRequested = false;
 	GameSettingsStore _settingsStore;
 	GameRecordStore _recordStore;
 	GameRecordBook _records;

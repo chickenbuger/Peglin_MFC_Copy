@@ -395,6 +395,7 @@ CChildView::CChildView()
 	: _settingsStore(GetDefaultGameSettingsPath()),
 	_recordStore(GetDefaultGameRecordPath())
 {
+	_demoRequested = HasDemoCommandLineFlag(::GetCommandLineW());
 	const SettingsLoadResult settings = _settingsStore.LoadWithRecovery();
 	_options = settings.options;
 	if (settings.state == SettingsLoadState::Migrated)
@@ -589,6 +590,7 @@ void CChildView::OnPaint()
 	{
 		DrawGamepadFocus(&memDc);
 		DrawUiAnimations(&memDc, logicalBounds);
+		DrawDemoBadge(&memDc);
 		memDc.RestoreDC(logicalDrawingState);
 		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 		memDc.SelectObject(previousBitmap);
@@ -867,6 +869,10 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_lastFrameTime = std::chrono::steady_clock::now();
 	_accumulatedTimeSeconds = 0.0;
 	UpdateScreenMusic();
+	if (_demoRequested)
+	{
+		SetDemoMode(true);
+	}
 
 	return 0;
 }
@@ -973,6 +979,7 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 {
 	_audioPlayer.Update(deltaSeconds);
 	PollGamepad();
+	UpdateDemoRun(deltaSeconds);
 	_screenTransition.Update(deltaSeconds);
 	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);
 	if (_resetConfirmation != ResetConfirmation::None)
@@ -1017,6 +1024,51 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 
 	_terminalTransition.Queue(result);
 	FinishPendingTerminalTransition();
+}
+
+void CChildView::SetDemoMode(bool enabled)
+{
+	_demoRequested = false;
+	_demoRun.SetEnabled(enabled);
+	if (enabled && _screenMode != ScreenMode::Playing)
+	{
+		BeginNewRun();
+		StartSelectedStage();
+	}
+	Invalidate(FALSE);
+}
+
+void CChildView::UpdateDemoRun(float deltaSeconds)
+{
+	if (!_demoRun.IsEnabled() || _screenMode != ScreenMode::Playing)
+	{
+		return;
+	}
+	const std::optional<DemoAction> action = _demoRun.Update(deltaSeconds, _game.GetState());
+	if (!action.has_value())
+	{
+		return;
+	}
+
+	const Vector2 ballPosition = _game.GetBall().GetPosition();
+	const Vector2 direction = action->direction.Normalized();
+	const Vector2 dragPosition = ballPosition - direction * action->dragDistance;
+	if (action->type == DemoActionType::BeginAim)
+	{
+		if (_game.BeginAim(ballPosition)) _game.UpdateAim(dragPosition);
+	}
+	else if (_game.GetBall().GetClick())
+	{
+		_game.ReleaseShot(dragPosition);
+	}
+}
+
+void CChildView::DrawDemoBadge(CDC* deviceContext)
+{
+	if (!_demoRun.IsEnabled()) return;
+	const CRect badge(852, 18, 968, 50);
+	UiRenderer::DrawPanel(deviceContext, badge, true, UiTheme::Orange);
+	UiRenderer::DrawText(deviceContext, badge, _T("DEMO · F9"), 88, UiTheme::Orange);
 }
 
 void CChildView::FinishPendingTerminalTransition()
@@ -3404,6 +3456,12 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 
 void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
+	if (nChar == VK_F9)
+	{
+		SetDemoMode(!_demoRun.IsEnabled());
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
 	if (_screenMode == ScreenMode::StageSelection)
 	{
 		if (nChar == VK_RETURN

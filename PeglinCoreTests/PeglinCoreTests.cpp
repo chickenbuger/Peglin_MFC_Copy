@@ -16,6 +16,7 @@
 #include "ContentCatalog.h"
 #include "CombatLog.h"
 #include "ContentReport.h"
+#include "DemoRun.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -187,6 +188,36 @@ namespace
 		fade.SetTarget(1.0f);
 		Check(Near(fade.Update(0.28f, 0.28f), 1.0f) && fade.IsAtTarget(),
 			"audio fade restores full scene level");
+	}
+
+	void TestDemoRun()
+	{
+		Check(HasDemoCommandLineFlag(L"Peglin.exe --demo"), "demo flag accepts a standalone command line switch");
+		Check(HasDemoCommandLineFlag(L"\"Peglin Game.exe\" \"--demo\""), "demo flag accepts a quoted switch");
+		Check(!HasDemoCommandLineFlag(L"Peglin.exe --demonstration"), "demo flag rejects a longer lookalike switch");
+
+		DemoRunController demo;
+		Check(!demo.IsEnabled() && !demo.Update(2.0f, GameState::Aiming).has_value(),
+			"disabled demo mode never takes control");
+		demo.SetEnabled(true);
+		Check(!demo.Update(0.5f, GameState::Aiming).has_value(), "demo mode leaves a readable pre-aim pause");
+		const std::optional<DemoAction> aim = demo.Update(0.06f, GameState::Aiming);
+		Check(aim.has_value() && aim->type == DemoActionType::BeginAim && aim->shotIndex == 0,
+			"demo mode presents the first deterministic aim");
+		Check(!demo.Update(0.67f, GameState::Aiming).has_value(), "demo mode holds the aim guide before firing");
+		const std::optional<DemoAction> fire = demo.Update(0.03f, GameState::Aiming);
+		Check(fire.has_value() && fire->type == DemoActionType::Fire
+			&& fire->direction.x == aim->direction.x && fire->dragDistance == aim->dragDistance,
+			"demo mode fires the exact previewed shot");
+		Check(!demo.Update(1.0f, GameState::Aiming).has_value(), "demo mode fires only once per aiming state");
+		demo.Update(0.01f, GameState::BallInFlight);
+		Check(!demo.Update(0.5f, GameState::Aiming).has_value(), "next demo shot keeps the same pre-aim pause");
+		const std::optional<DemoAction> secondAim = demo.Update(0.06f, GameState::Aiming);
+		Check(secondAim.has_value() && secondAim->shotIndex == 1
+			&& secondAim->direction.x != aim->direction.x,
+			"demo mode advances through a stable varied shot sequence");
+		demo.SetEnabled(false);
+		Check(demo.GetNextShotIndex() == 0, "disabling demo mode resets its sequence");
 	}
 
 	void Launch(GameWorld& world)
@@ -3310,6 +3341,7 @@ int main(int argc, char* argv[])
 	TestSoftPegHitSound();
 	TestAudioCatalog();
 	TestAudioMixing();
+	TestDemoRun();
 	TestGameSettingsPersistence();
 	TestStageRecordPersistence();
 	TestStageRulesConfigureWorld();

@@ -272,6 +272,7 @@
 	<ClInclude Include="AudioMixing.h" />
 	<ClInclude Include="AudioPlayer.h" />
 	<ClInclude Include="CombatLog.h" />
+	<ClInclude Include="DemoRun.h" />
     <ResourceCompile Include="FinalProjectPeglin.rc" />
 	<ResourceCompile Include="UiResources.rc" />
   </ItemGroup>
