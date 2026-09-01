@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 7 완료 |
-| 현재 버전 | Version 7.20 |
-| 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 20/20 및 최종 회귀·배포 검증 완료 · Sprint 8 계획 준비 |
+| 현재 스프린트 | Sprint 8 진행 중 |
+| 현재 버전 | Version 8.1 |
+| 스프린트 목표 | 다양한 화면 환경의 UI 안정성, 콘텐츠 이해도와 제작 도구, 입력 설정 및 시연 품질 개선 |
+| 상태 | Sprint 8 P0 1/8 완료 · DPI·창 크기 대응 검증 완료 |
 
 ## 문서
 
@@ -101,6 +101,7 @@
 - [Version 7.18 — 스테이지·난이도·오브 상세 통계](./Version_7.18.md)
 - [Version 7.19 — 세이브 백업·손상 복구·선택형 초기화](./Version_7.19.md)
 - [Version 7.20 — Sprint 7 최종 회귀·배포 검증](./Version_7.20.md)
+- [Version 8.1 — DPI·해상도·창 크기 대응 레이아웃](./Version_8.1.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

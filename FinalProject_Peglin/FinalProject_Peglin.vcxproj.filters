@@ -119,6 +119,9 @@
 	<ClInclude Include="UiNavigation.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="UiViewport.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
 	<ClInclude Include="PeglinUiAnimation.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>

@@ -27,6 +27,7 @@
 #include "PeglinUiAnimation.h"
 #include "UiNavigation.h"
 #include "UiRenderer.h"
+#include "UiViewport.h"
 
 // CChildView 창
 
@@ -146,6 +147,7 @@ private:
 	void DrawOrbIcon(CDC* deviceContext, const CRect& bounds, const OrbDefinition& orb);
 	void DrawRelicIcon(CDC* deviceContext, const CRect& bounds, const RelicDefinition& relic);
 	bool HandleMenuClick(CPoint point);
+	bool TryMapClientPoint(CPoint clientPoint, CPoint& logicalPoint, bool clampToViewport) const;
 	void ExecuteUiAction(const UiAction& action);
 	CBitmap* GetEnemySprite(EnemyVisualKind visual) noexcept;
 	CBitmap* GetOrbIcon(std::string_view imageKey) noexcept;

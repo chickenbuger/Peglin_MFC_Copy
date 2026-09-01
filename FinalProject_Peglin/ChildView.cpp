@@ -507,16 +507,30 @@ BOOL CChildView::PreCreateWindow(CREATESTRUCT& cs)
 void CChildView::OnPaint() 
 {
 	CPaintDC dc(this); // 그리기를 위한 디바이스 컨텍스트입니다.
-	
-	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
 	CRect rect;
 	GetClientRect(&rect);
+	const UiViewport viewport = CreateUiViewport(rect.Width(), rect.Height());
+	if (!viewport.IsValid())
+	{
+		return;
+	}
+	const CRect logicalBounds(
+		0,
+		0,
+		static_cast<int>(std::lround(viewport.logicalWidth)),
+		static_cast<int>(std::lround(viewport.logicalHeight)));
 
 	CDC memDc;
 	memDc.CreateCompatibleDC(&dc);
 	CBitmap  bitmap;
 	bitmap.CreateCompatibleBitmap(&dc, rect.right, rect.bottom);
 	CBitmap* previousBitmap = memDc.SelectObject(&bitmap);
+	memDc.FillSolidRect(rect, RGB(4, 6, 10));
+	const int logicalDrawingState = memDc.SaveDC();
+	memDc.SetMapMode(MM_ANISOTROPIC);
+	memDc.SetWindowExt(logicalBounds.Width(), logicalBounds.Height());
+	memDc.SetViewportExt(viewport.pixelWidth, viewport.pixelHeight);
+	memDc.SetViewportOrg(viewport.offsetX, viewport.offsetY);
 	
 	_background.draw(
 		&memDc,
@@ -524,7 +538,8 @@ void CChildView::OnPaint()
 	auto PresentFrame = [&]()
 	{
 		DrawGamepadFocus(&memDc);
-		DrawUiAnimations(&memDc, rect);
+		DrawUiAnimations(&memDc, logicalBounds);
+		memDc.RestoreDC(logicalDrawingState);
 		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 		memDc.SelectObject(previousBitmap);
 	};
@@ -2268,8 +2283,7 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 
 void CChildView::DrawMenuBackdrop(CDC* deviceContext)
 {
-	CRect bounds;
-	GetClientRect(&bounds);
+	const CRect bounds(0, 0, 1000, 700);
 	UiRenderer::DrawBackdrop(
 		deviceContext,
 		_uiBackgroundLoaded ? &_uiBackground : nullptr,
@@ -2907,9 +2921,15 @@ void CChildView::PlayEventSound(GameEventType eventType, PegType pegType)
 
 void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 {
+	CPoint logicalPoint;
+	if (!TryMapClientPoint(point, logicalPoint, false))
+	{
+		CWnd::OnLButtonDown(nFlags, point);
+		return;
+	}
 	if (_screenMode != ScreenMode::Playing)
 	{
-		if (HandleMenuClick(point))
+		if (HandleMenuClick(logicalPoint))
 		{
 			SetFocus();
 			Invalidate(FALSE);
@@ -2918,12 +2938,34 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 		return;
 	}
 
-	if (_game.BeginAim({ static_cast<float>(point.x), static_cast<float>(point.y) }))
+	if (_game.BeginAim({ static_cast<float>(logicalPoint.x), static_cast<float>(logicalPoint.y) }))
 	{
 		SetFocus();
 		SetCapture();
 	}
 	CWnd::OnLButtonDown(nFlags, point);
+}
+
+bool CChildView::TryMapClientPoint(
+	CPoint clientPoint,
+	CPoint& logicalPoint,
+	bool clampToViewport) const
+{
+	CRect clientBounds;
+	GetClientRect(&clientBounds);
+	const UiViewport viewport = CreateUiViewport(clientBounds.Width(), clientBounds.Height());
+	Vector2 logical;
+	if (!viewport.TryClientToLogical(
+		{ static_cast<float>(clientPoint.x), static_cast<float>(clientPoint.y) },
+		logical,
+		clampToViewport))
+	{
+		return false;
+	}
+	logicalPoint = CPoint(
+		static_cast<int>(std::lround(logical.x)),
+		static_cast<int>(std::lround(logical.y)));
+	return true;
 }
 
 bool CChildView::HandleMenuClick(CPoint point)
@@ -3096,7 +3138,14 @@ void CChildView::OnLButtonUp(UINT nFlags, CPoint point)
 		return;
 	}
 
-	_game.ReleaseShot({ static_cast<float>(point.x), static_cast<float>(point.y) });
+	CPoint logicalPoint;
+	if (_game.GetBall().GetClick()
+		&& TryMapClientPoint(point, logicalPoint, true))
+	{
+		_game.ReleaseShot({
+			static_cast<float>(logicalPoint.x),
+			static_cast<float>(logicalPoint.y) });
+	}
 	ReleaseMouseInput(false);
 	CWnd::OnLButtonUp(nFlags, point);
 }
@@ -3121,8 +3170,14 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 	//드래그 처리
 	if (_game.GetBall().GetClick())
 	{
-		_game.UpdateAim({ static_cast<float>(point.x), static_cast<float>(point.y) });
-		Invalidate();
+		CPoint logicalPoint;
+		if (TryMapClientPoint(point, logicalPoint, true))
+		{
+			_game.UpdateAim({
+				static_cast<float>(logicalPoint.x),
+				static_cast<float>(logicalPoint.y) });
+			Invalidate();
+		}
 	}
 
 	CWnd::OnMouseMove(nFlags, point);

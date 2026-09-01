@@ -27,6 +27,7 @@
 #include "TerminalTransitionGate.h"
 #include "UiNavigation.h"
 #include "PeglinUiAnimation.h"
+#include "UiViewport.h"
 
 namespace
 {
@@ -554,6 +555,44 @@ namespace
 		timeline.Reset();
 		Check(!timeline.IsActive() && Near(timeline.Progress(), 0.0f),
 			"UI animation reset restores idle state");
+	}
+
+	void TestUiViewportScaling()
+	{
+		const UiViewport native = CreateUiViewport(1000, 700);
+		Check(native.IsValid() && native.offsetX == 0 && native.offsetY == 0,
+			"native viewport fills the reference client area");
+		Check(native.pixelWidth == 1000 && native.pixelHeight == 700,
+			"native viewport preserves the reference dimensions");
+		Vector2 logical;
+		Check(native.TryClientToLogical({ 500.0f, 350.0f }, logical)
+			&& Near(logical.x, 500.0f) && Near(logical.y, 350.0f),
+			"native viewport maps input without drift");
+
+		const UiViewport wide = CreateUiViewport(1600, 900);
+		Check(wide.IsValid() && wide.offsetX > 0 && wide.offsetY == 0,
+			"wide viewport centers horizontal letterboxing");
+		const Vector2 wideCenter = wide.LogicalToClient({ 500.0f, 350.0f });
+		Check(Near(wideCenter.x, 800.0f, 1.0f) && Near(wideCenter.y, 450.0f, 1.0f),
+			"wide viewport keeps the logical center aligned");
+		Check(wide.TryClientToLogical(wideCenter, logical)
+			&& Near(logical.x, 500.0f, 1.0f) && Near(logical.y, 350.0f, 1.0f),
+			"wide viewport reverses rendered coordinates for input");
+		Check(!wide.TryClientToLogical({ 10.0f, 450.0f }, logical),
+			"letterbox clicks are ignored");
+		Check(wide.TryClientToLogical({ 10.0f, 450.0f }, logical, true)
+			&& Near(logical.x, 0.0f),
+			"captured drags clamp to the logical playfield");
+
+		const UiViewport tall = CreateUiViewport(800, 800);
+		Check(tall.offsetX == 0 && tall.offsetY > 0,
+			"tall viewport centers vertical letterboxing");
+		const UiViewport highDpi = CreateUiViewport(1500, 1050);
+		Check(highDpi.pixelWidth == 1500 && highDpi.pixelHeight == 1050,
+			"one hundred fifty percent DPI scales both axes equally");
+		Check(!CreateUiViewport(0, 700).IsValid()
+			&& !CreateUiViewport(1000, 0).IsValid(),
+			"zero-sized clients do not produce an input transform");
 	}
 
 	void TestGamepadNavigation()
@@ -3068,6 +3107,7 @@ int main()
 	TestStateAndRestitutionRules();
 	TestMouseUiNavigation();
 	TestUiAnimationTimeline();
+	TestUiViewportScaling();
 	TestGamepadNavigation();
 	TestAdventureRunProgression();
 	TestLayoutConfiguration();

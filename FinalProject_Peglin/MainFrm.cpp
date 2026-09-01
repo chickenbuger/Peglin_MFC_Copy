@@ -80,9 +80,9 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 	if (!CFrameWnd::PreCreateWindow(cs))
 		return FALSE;
 
-	// 윈도우 크기 설정 수정
-	cs.cx = 1000;
-	cs.cy = 800;
+	const UINT dpi = ::GetDpiForSystem();
+	cs.cx = ::MulDiv(1000, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+	cs.cy = ::MulDiv(800, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
 
 	// 불필요한 클라이언트 엣지 제거
 	cs.dwExStyle &= ~WS_EX_CLIENTEDGE;
@@ -125,11 +125,11 @@ BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO*
 
 void CMainFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
-	// 최소 및 최대 창 크기 설정
-	lpMMI->ptMinTrackSize.x = static_cast<LONG>(GameLayout::WindowWidth);
-	lpMMI->ptMinTrackSize.y = static_cast<LONG>(GameLayout::WindowHeight);
-	lpMMI->ptMaxTrackSize.x = static_cast<LONG>(GameLayout::WindowWidth);
-	lpMMI->ptMaxTrackSize.y = static_cast<LONG>(GameLayout::WindowHeight);
+	const UINT dpi = GetSafeHwnd() != nullptr
+		? ::GetDpiForWindow(GetSafeHwnd())
+		: USER_DEFAULT_SCREEN_DPI;
+	lpMMI->ptMinTrackSize.x = ::MulDiv(800, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+	lpMMI->ptMinTrackSize.y = ::MulDiv(640, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
 
 	CFrameWnd::OnGetMinMaxInfo(lpMMI);
 }
