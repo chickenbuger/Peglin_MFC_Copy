@@ -167,6 +167,16 @@ effect=enemy-rootbound-hide
 
 검증에 실패하면 오류 원인과 줄 번호를 보존하고 내장 오브·유물·스테이지 규칙으로 안전하게 복구한다.
 
+## 제작용 검증 리포트
+
+Release x64 빌드 후 다음 명령을 실행하면 게임과 동일한 C++ 로더로 두 INI를 검증하고 `artifacts/content-report.md`를 만든다.
+
+```powershell
+& '.\tools\Write-ContentReport.ps1' -Configuration Release -Platform x64
+```
+
+리포트는 전체 콘텐츠 수, 스테이지별 페그·이동·Refresh·적·체력·공격력과 비교용 위협 지표, 적 안정 ID·피해 배율·사거리, 오브·유물의 최종 합성 효과를 제공한다. 위협 지표는 배치 간 빠른 비교를 위한 제작 지표이며 실제 턴 피해 예측값은 아니다. 출력은 저장소 내부 경로만 허용한다.
+
 ## UI 문자열과 지역화
 
 - 문자열 파일은 `version=1`, `locale=ko-KR` 또는 `locale=en-US`로 시작한다.

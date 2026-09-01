@@ -52,6 +52,7 @@
 	<ClCompile Include="..\FinalProject_Peglin\AudioCatalog.cpp" />
     <ClCompile Include="PeglinCoreTests.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\ContentCatalog.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\ContentReport.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Enemy.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\GameWorld.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\GameRecordStore.cpp" />

@@ -42,6 +42,7 @@
 [Rr]elease/
 x64/
 dist/
+artifacts/
 
 # Visual C++ intermediate and diagnostic files
 *.pdb

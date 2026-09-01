@@ -42,6 +42,9 @@
 	<ClInclude Include="ContentCatalog.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="ContentReport.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
     <ClInclude Include="Resource.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -138,6 +141,9 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
 	<ClCompile Include="ContentCatalog.cpp">
+	  <Filter>소스 파일</Filter>
+	</ClCompile>
+	<ClCompile Include="ContentReport.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
     <ClCompile Include="pch.cpp">

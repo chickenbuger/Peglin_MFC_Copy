@@ -199,6 +199,7 @@
     <ClInclude Include="Background.h" />
     <ClInclude Include="ChildView.h" />
 	<ClInclude Include="ContentCatalog.h" />
+	<ClInclude Include="ContentReport.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="FinalProject_Peglin.h" />
     <ClInclude Include="framework.h" />
@@ -237,6 +238,7 @@
     <ClCompile Include="Background.cpp" />
     <ClCompile Include="ChildView.cpp" />
 	<ClCompile Include="ContentCatalog.cpp" />
+	<ClCompile Include="ContentReport.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="FinalProject_Peglin.cpp" />
     <ClCompile Include="GameWorld.cpp" />

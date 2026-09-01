@@ -14,6 +14,7 @@
 #include "GameStatistics.h"
 #include "ContentCatalog.h"
 #include "CombatLog.h"
+#include "ContentReport.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -619,6 +620,39 @@ namespace
 		log.Add(L"restart");
 		Check(log.GetEntries().size() == 1 && log.GetEntries().front().sequence == 1,
 			"combat log reset starts a clean encounter sequence");
+	}
+
+	void TestContentReportGeneration()
+	{
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		const std::filesystem::path stagePath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "stages.v1.ini";
+		const std::filesystem::path gameplayPath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "gameplay.v1.ini";
+		const std::filesystem::path reportPath = std::filesystem::temp_directory_path()
+			/ "peglin-content-report-test.md";
+		const ContentReportResult report = GenerateContentReport(
+			stagePath,
+			gameplayPath,
+			reportPath);
+		Check(report.success, "content report accepts the shipped authoritative catalogs");
+		Check(report.stageCount == 8 && report.orbCount == 3 && report.relicCount == 3,
+			"content report summarizes stage, orb, and relic totals");
+		Check(report.movingPegCount > 0 && report.refreshPegCount >= report.stageCount,
+			"content report previews moving pegs and refresh coverage");
+		std::ifstream generated(reportPath, std::ios::binary);
+		const std::string markdown(
+			(std::istreambuf_iterator<char>(generated)),
+			std::istreambuf_iterator<char>());
+		Check(markdown.find("## Stage Preview") != std::string::npos
+			&& markdown.find("stage-3") != std::string::npos,
+			"content report includes a reviewable stage preview table");
+		Check(markdown.find("## Orb Preview") != std::string::npos
+			&& markdown.find("## Relic Preview") != std::string::npos,
+			"content report includes exact orb and relic effect previews");
+		std::error_code removeError;
+		std::filesystem::remove(reportPath, removeError);
 	}
 
 	void TestGamepadNavigation()
@@ -3120,8 +3154,22 @@ namespace
 	}
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	if (argc == 5 && std::string_view(argv[1]) == "--content-report")
+	{
+		const ContentReportResult report = GenerateContentReport(
+			std::filesystem::path(argv[2]),
+			std::filesystem::path(argv[3]),
+			std::filesystem::path(argv[4]));
+		std::cout << report.message << '\n';
+		return report.success ? 0 : 2;
+	}
+	if (argc != 1)
+	{
+		std::cerr << "Usage: PeglinCoreTests [--content-report <stages.ini> <gameplay.ini> <output.md>]\n";
+		return 64;
+	}
 	TestZeroLengthShot();
 	TestTerminalTransitionGate();
 	TestWallReflection();
@@ -3135,6 +3183,7 @@ int main()
 	TestUiAnimationTimeline();
 	TestUiViewportScaling();
 	TestCombatLogRetention();
+	TestContentReportGeneration();
 	TestGamepadNavigation();
 	TestAdventureRunProgression();
 	TestLayoutConfiguration();
