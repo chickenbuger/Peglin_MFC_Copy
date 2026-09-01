@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.13 |
+| 현재 버전 | Version 7.14 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 13/19 완료 — 일러스트 기반 스테이지 선택 카드와 런 경로 UI 완료 |
+| 상태 | Sprint 7 P0 14/20 완료 — Steam Peglin 참고 UI 계층과 전체 화면 배치 최적화 완료 |
 
 ## 문서
 
@@ -94,6 +94,7 @@
 - [Version 7.11 — 몬스터 칸 거리와 개별 공격 사거리](./Version_7.11.md)
 - [Version 7.12 — 매 턴 Refresh Peg 위치 변경과 파괴 후 재배치](./Version_7.12.md)
 - [Version 7.13 — 일러스트 기반 스테이지 선택 카드와 런 경로 UI](./Version_7.13.md)
+- [Version 7.14 — Steam Peglin 참고 UI 계층과 전체 화면 배치 최적화](./Version_7.14.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

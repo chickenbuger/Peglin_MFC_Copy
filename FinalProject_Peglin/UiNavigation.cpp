@@ -54,22 +54,22 @@ namespace
 	{
 		for (std::size_t index = 0; index < 3; ++index)
 		{
-			const float left = 75.0f + static_cast<float>(index) * 305.0f;
-			if (UiRect{ left, 185.0f, left + 270.0f, 335.0f }.Contains(position))
+			const float left = 55.0f + static_cast<float>(index) * 305.0f;
+			if (UiRect{ left, 148.0f, left + 280.0f, 320.0f }.Contains(position))
 			{
 				return { UiCommand::SelectOrb, index };
 			}
-			if (UiRect{ left, 390.0f, left + 270.0f, 555.0f }.Contains(position))
+			if (UiRect{ left, 360.0f, left + 280.0f, 545.0f }.Contains(position))
 			{
 				return { UiCommand::AcquireRelic, index };
 			}
 		}
 
-		if (UiRect{ 75.0f, 640.0f, 300.0f, 690.0f }.Contains(position))
+		if (UiRect{ 55.0f, 630.0f, 300.0f, 688.0f }.Contains(position))
 		{
 			return { UiCommand::ResetProgression };
 		}
-		if (UiRect{ 680.0f, 640.0f, 905.0f, 690.0f }.Contains(position))
+		if (UiRect{ 700.0f, 630.0f, 945.0f, 688.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}
@@ -78,23 +78,23 @@ namespace
 
 	UiAction ResolveOptionsClick(Vector2 position) noexcept
 	{
-		if (UiRect{ 285.0f, 205.0f, 695.0f, 285.0f }.Contains(position))
+		if (UiRect{ 195.0f, 172.0f, 485.0f, 292.0f }.Contains(position))
 		{
 			return { UiCommand::ToggleDifficulty };
 		}
-		if (UiRect{ 285.0f, 315.0f, 695.0f, 395.0f }.Contains(position))
+		if (UiRect{ 515.0f, 172.0f, 805.0f, 292.0f }.Contains(position))
 		{
 			return { UiCommand::ToggleSound };
 		}
-		if (UiRect{ 285.0f, 425.0f, 695.0f, 505.0f }.Contains(position))
+		if (UiRect{ 195.0f, 322.0f, 485.0f, 442.0f }.Contains(position))
 		{
 			return { UiCommand::TogglePegColorMode };
 		}
-		if (UiRect{ 285.0f, 520.0f, 695.0f, 600.0f }.Contains(position))
+		if (UiRect{ 515.0f, 322.0f, 805.0f, 442.0f }.Contains(position))
 		{
 			return { UiCommand::ToggleLanguage };
 		}
-		if (UiRect{ 300.0f, 640.0f, 680.0f, 690.0f }.Contains(position))
+		if (UiRect{ 300.0f, 560.0f, 700.0f, 618.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}
@@ -103,11 +103,11 @@ namespace
 
 	UiAction ResolveResultClick(Vector2 position) noexcept
 	{
-		if (UiRect{ 260.0f, 640.0f, 480.0f, 690.0f }.Contains(position))
+		if (UiRect{ 260.0f, 635.0f, 480.0f, 690.0f }.Contains(position))
 		{
 			return { UiCommand::RetryStage };
 		}
-		if (UiRect{ 500.0f, 640.0f, 720.0f, 690.0f }.Contains(position))
+		if (UiRect{ 520.0f, 635.0f, 740.0f, 690.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}
@@ -118,8 +118,8 @@ namespace
 	{
 		for (std::size_t index = 0; index < 3; ++index)
 		{
-			const float left = 75.0f + static_cast<float>(index) * 305.0f;
-			if (UiRect{ left, 245.0f, left + 270.0f, 485.0f }.Contains(position))
+			const float left = 60.0f + static_cast<float>(index) * 310.0f;
+			if (UiRect{ left, 175.0f, left + 280.0f, 520.0f }.Contains(position))
 			{
 				return { UiCommand::SelectReward, index };
 			}
@@ -131,13 +131,13 @@ namespace
 	{
 		for (std::size_t index = 0; index < 3; ++index)
 		{
-			const float left = 300.0f + static_cast<float>(index) * 215.0f;
-			if (UiRect{ left, 190.0f, left + 200.0f, 520.0f }.Contains(position))
+			const float left = 290.0f + static_cast<float>(index) * 225.0f;
+			if (UiRect{ left, 165.0f, left + 210.0f, 535.0f }.Contains(position))
 			{
 				return { UiCommand::BuyShopOffer, index };
 			}
 		}
-		if (UiRect{ 340.0f, 640.0f, 660.0f, 690.0f }.Contains(position))
+		if (UiRect{ 340.0f, 630.0f, 660.0f, 688.0f }.Contains(position))
 		{
 			return { UiCommand::LeaveShop };
 		}

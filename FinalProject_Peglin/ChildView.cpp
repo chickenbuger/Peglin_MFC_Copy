@@ -206,6 +206,39 @@ namespace
 		return text;
 	}
 
+	void DrawMenuTitle(
+		CDC* deviceContext,
+		const CString& title,
+		COLORREF accent = UiTheme::Gold)
+	{
+		const CRect banner(330, 18, 670, 76);
+		UiRenderer::DrawPanel(deviceContext, banner, true, accent);
+		UiRenderer::DrawText(deviceContext, banner, title, 225, accent);
+	}
+
+	void DrawOptionTile(
+		CDC* deviceContext,
+		const CRect& bounds,
+		const CString& shortcut,
+		const CString& label,
+		const CString& value,
+		COLORREF accent)
+	{
+		UiRenderer::DrawPanel(deviceContext, bounds, false, accent);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(bounds.left + 12, bounds.top + 10, bounds.right - 12, bounds.top + 38),
+			shortcut + _T("  ") + label,
+			95,
+			UiTheme::MutedText);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(bounds.left + 12, bounds.top + 38, bounds.right - 12, bounds.bottom - 8),
+			value,
+			165,
+			accent);
+	}
+
 	void DrawFallbackOrbIcon(CDC* deviceContext, const CRect& bounds, std::string_view orbId)
 	{
 		const int savedDc = deviceContext->SaveDC();
@@ -587,35 +620,50 @@ void CChildView::OnPaint()
 
 	DrawAimPreview(&memDc);
 
-	const int statusTextState = memDc.SaveDC();
-	memDc.SetBkMode(TRANSPARENT);
-	memDc.SetTextColor(RGB(238, 232, 211));
-	if (_game.GetPlayer().GetHp() > 0.0f)
-	{
-		CString Text;
-		Text.Format(_T("플레이어 체력 : %d "), static_cast<int>(_game.GetPlayer().GetHp()));
-		memDc.TextOut(
-			static_cast<int>(std::lround(GameLayout::PlayerHealthText.x)),
-			static_cast<int>(std::lround(GameLayout::PlayerHealthText.y)),
-			Text);
-	}
+	CString playerHealth;
+	playerHealth.Format(
+		_T("%d / %d"),
+		static_cast<int>(std::lround(_game.GetPlayer().GetHp())),
+		static_cast<int>(std::lround(_game.GetStage().rules.playerHealth)));
+	UiRenderer::DrawText(
+		&memDc,
+		CRect(86, 42, 254, 66),
+		_T("PLAYER"),
+		90,
+		UiTheme::MutedText);
+	UiRenderer::DrawProgressBar(
+		&memDc,
+		CRect(86, 67, 254, 92),
+		_game.GetStage().rules.playerHealth <= 0.0f
+			? 0.0f
+			: _game.GetPlayer().GetHp() / _game.GetStage().rules.playerHealth,
+		playerHealth,
+		UiTheme::Green,
+		UiTheme::Gold);
+	CString runStatus;
+	runStatus.Format(
+		_T("G %d  ·  NODE %zu/%zu"),
+		_run.GetGold(),
+		(std::min)(_run.GetClearedStageCount() + 1, _run.GetStageCount()),
+		_run.GetStageCount());
+	UiRenderer::DrawText(
+		&memDc,
+		CRect(82, 94, 258, 116),
+		runStatus,
+		78,
+		UiTheme::Gold);
+
 	if (_game.GetEnemy().GetHp() > 0.0f)
 	{
-		CString Text1;
-		Text1.Format(
-			_T("%s HP %d/%d · 남은 %zu"),
-			Utf8Text(_game.GetActiveEnemyDefinition().displayName).GetString(),
-			static_cast<int>(std::lround(_game.GetEnemy().GetHp())),
-			static_cast<int>(std::lround(_game.GetActiveEnemyDefinition().health)),
-			_game.GetLivingEnemyCount());
-		memDc.TextOut(
-			680,
-			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY)),
-			Text1);
 		const EnemyCombatant& activeEnemy = enemyRoster[_game.GetActiveEnemyIndex()];
+		CString targetTitle;
+		targetTitle.Format(
+			_T("TARGET  ·  %s  ·  %zu 남음"),
+			Utf8Text(_game.GetActiveEnemyDefinition().displayName).GetString(),
+			_game.GetLivingEnemyCount());
 		CString enemyAction;
 		enemyAction.Format(
-			_T("거리 %d칸 · 사거리 %d칸 · "),
+			_T("거리 %d  ·  사거리 %d  ·  "),
 			activeEnemy.distanceToPlayerCells,
 			activeEnemy.definition.attackRangeCells);
 		enemyAction += EnemyActionText(_game.GetNextEnemyAction());
@@ -627,37 +675,50 @@ void CChildView::OnPaint()
 				static_cast<int>(std::lround(_game.GetEnemyShield())));
 			enemyAction += shieldText;
 		}
-		memDc.TextOut(
-			680,
-			static_cast<int>(std::lround(GameLayout::EnemyHealthTextY + 20.0f)),
-			enemyAction);
+		const CRect targetPanel(640, 39, 970, 110);
+		UiRenderer::DrawPanel(&memDc, targetPanel, false, UiTheme::Orange);
+		UiRenderer::DrawText(
+			&memDc,
+			CRect(650, 45, 960, 70),
+			targetTitle,
+			88,
+			UiTheme::Gold);
+		UiRenderer::DrawText(
+			&memDc,
+			CRect(650, 72, 960, 103),
+			enemyAction,
+			80,
+			activeEnemy.IsPlayerInRange() ? UiTheme::Danger : UiTheme::Text);
 	}
-	memDc.RestoreDC(statusTextState);
 
 	if (_options.showGameplayInfo)
 	{
-		const int textState = memDc.SaveDC();
-		memDc.SetBkMode(TRANSPARENT);
-		memDc.SetTextColor(RGB(238, 232, 211));
-		memDc.TextOut(
-			static_cast<int>(std::lround(GameLayout::StateText.x)),
-			static_cast<int>(std::lround(GameLayout::StateText.y)),
-			StateText(_game.GetState()));
-		memDc.TextOut(
-			static_cast<int>(std::lround(GameLayout::FeedbackText.x)),
-			static_cast<int>(std::lround(GameLayout::FeedbackText.y)),
-			FeedbackText(_game.GetFeedback(), _game.GetScore()));
+		const CRect infoPanel(280, 39, 620, 116);
+		UiRenderer::DrawPanel(&memDc, infoPanel, false, UiTheme::Blue);
+		UiRenderer::DrawText(
+			&memDc,
+			CRect(292, 44, 608, 67),
+			StateText(_game.GetState()),
+			83,
+			UiTheme::Blue);
+		UiRenderer::DrawText(
+			&memDc,
+			CRect(290, 68, 610, 91),
+			FeedbackText(_game.GetFeedback(), _game.GetScore()),
+			76,
+			UiTheme::Text);
 		CString optionsText;
 		optionsText.Format(
-			_T("%s · %s (M) · %s"),
+			_T("%s  ·  %s(M)  ·  %s"),
 			DifficultyTextForUi(_game.GetDifficulty()).GetString(),
 			_options.soundEnabled ? _T("소리") : _T("음소거"),
 			_options.pegColorMode == PegColorMode::HighContrast ? _T("고대비") : _T("표준"));
-		memDc.TextOut(
-			static_cast<int>(std::lround(GameLayout::OptionsText.x)),
-			static_cast<int>(std::lround(GameLayout::OptionsText.y)),
-			optionsText);
-		memDc.RestoreDC(textState);
+		UiRenderer::DrawText(
+			&memDc,
+			CRect(290, 92, 610, 111),
+			optionsText,
+			70,
+			UiTheme::MutedText);
 	}
 	DrawPlayingLoadout(&memDc);
 
@@ -1355,32 +1416,59 @@ void CChildView::DrawEnemyHealthBar(
 void CChildView::DrawStageSelection(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(230, 20, 970, 78), Text("screen.stage_selection"), 265, UiTheme::Gold);
+	DrawMenuTitle(deviceContext, Text("screen.stage_selection"));
 
 	const CRect statusPanel(24, 105, 225, 700);
 	UiRenderer::DrawPanel(deviceContext, statusPanel);
 	UiRenderer::DrawText(deviceContext, CRect(40, 122, 209, 164), _T("ADVENTURE"), 150, UiTheme::Gold);
 	CString runProgress;
 	runProgress.Format(
-		_T("경로 %zu / %zu\n체력 %d\n골드 %d"),
+		_T("FLOOR  %zu / %zu"),
 		(std::min)(_run.GetClearedStageCount() + 1, _run.GetStageCount()),
-		_run.GetStageCount(),
-		static_cast<int>(std::lround(_runPlayerHealth > 0.0f ? _runPlayerHealth : _game.GetPlayer().GetHp())),
-		_run.GetGold());
-	UiRenderer::DrawText(deviceContext, CRect(42, 178, 207, 255), runProgress, 105, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawText(deviceContext, CRect(42, 278, 207, 308), _T("현재 오브"), 100, UiTheme::MutedText);
+		_run.GetStageCount());
+	UiRenderer::DrawText(deviceContext, CRect(42, 178, 207, 208), runProgress, 105, UiTheme::Green);
+	const float displayedHealth = _runPlayerHealth > 0.0f
+		? _runPlayerHealth
+		: _game.GetPlayer().GetHp();
+	const float maximumHealth = _game.GetStage().rules.playerHealth > 0.0f
+		? _game.GetStage().rules.playerHealth
+		: 100.0f;
+	CString healthText;
+	healthText.Format(
+		_T("HP  %d / %d"),
+		static_cast<int>(std::lround(displayedHealth)),
+		static_cast<int>(std::lround(maximumHealth)));
+	UiRenderer::DrawProgressBar(
+		deviceContext,
+		CRect(43, 216, 206, 242),
+		displayedHealth / maximumHealth,
+		healthText,
+		UiTheme::Green,
+		UiTheme::Gold);
+	CString goldText;
+	goldText.Format(_T("GOLD  %d"), _run.GetGold());
+	UiRenderer::DrawPanel(deviceContext, CRect(43, 254, 206, 296), false, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(50, 258, 199, 292), goldText, 110, UiTheme::Gold);
+
+	UiRenderer::DrawText(deviceContext, CRect(42, 315, 207, 342), _T("CURRENT ORB"), 90, UiTheme::MutedText);
+	UiRenderer::DrawPanel(deviceContext, CRect(43, 346, 206, 432), false, UiTheme::Blue);
+	DrawOrbIcon(
+		deviceContext,
+		CRect(52, 361, 108, 417),
+		_game.GetLoadout().GetSelectedOrb());
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(42, 310, 207, 350),
+		CRect(112, 357, 199, 421),
 		Utf8Text(_game.GetLoadout().GetSelectedOrb().displayName),
-		130,
-		UiTheme::Text);
-	UiRenderer::DrawText(deviceContext, CRect(42, 372, 207, 402), _T("보유 유물"), 100, UiTheme::MutedText);
+		95,
+		UiTheme::Text,
+		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawText(deviceContext, CRect(42, 449, 207, 476), _T("RELICS"), 90, UiTheme::MutedText);
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(43, 405, 206, 555),
+		CRect(43, 478, 206, 555),
 		RelicSummary(_game.GetLoadout()),
-		95,
+		82,
 		UiTheme::Green,
 		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 575, 206, 625), Text("hint.loadout"));
@@ -1563,6 +1651,24 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 		}
 		DrawHealIcon(deviceContext, bounds);
 	};
+	CString rewardHealth;
+	rewardHealth.Format(
+		_T("HP  %d / %d"),
+		static_cast<int>(std::lround(_runPlayerHealth)),
+		static_cast<int>(std::lround(_game.GetStage().rules.playerHealth)));
+	UiRenderer::DrawProgressBar(
+		deviceContext,
+		CRect(55, 96, 235, 122),
+		_game.GetStage().rules.playerHealth <= 0.0f
+			? 0.0f
+			: _runPlayerHealth / _game.GetStage().rules.playerHealth,
+		rewardHealth,
+		UiTheme::Green,
+		UiTheme::Gold);
+	CString rewardGold;
+	rewardGold.Format(_T("GOLD  %d"), _run.GetGold());
+	UiRenderer::DrawPanel(deviceContext, CRect(765, 91, 945, 127), false, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(775, 95, 935, 123), rewardGold, 100, UiTheme::Gold);
 
 	if (_acquiredReward.has_value())
 	{
@@ -1570,32 +1676,32 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 		const COLORREF color = acquired.kind == RunRewardKind::Orb
 			? UiTheme::Blue
 			: (acquired.kind == RunRewardKind::Relic ? UiTheme::Gold : UiTheme::Green);
-		UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), _T("보상 획득 완료"), 300, UiTheme::Gold);
-		UiRenderer::DrawText(deviceContext, CRect(160, 125, 820, 170), _T("효과 적용을 확인한 뒤 다음 경로로 이동합니다"), 125, UiTheme::MutedText);
-		const CRect acquiredCard(270, 190, 730, 540);
+		DrawMenuTitle(deviceContext, _T("보상 획득"), color);
+		UiRenderer::DrawText(deviceContext, CRect(250, 95, 750, 135), _T("효과 적용 후 다음 경로로 이동합니다"), 105, UiTheme::MutedText);
+		const CRect acquiredCard(270, 165, 730, 550);
 		UiRenderer::DrawPanel(deviceContext, acquiredCard, true, color);
-		DrawRewardIcon(acquired, CRect(450, 220, 550, 320));
-		UiRenderer::DrawText(deviceContext, CRect(300, 325, 700, 375), Utf8Text(acquired.displayName), 180, color);
+		DrawRewardIcon(acquired, CRect(444, 195, 556, 307));
+		UiRenderer::DrawText(deviceContext, CRect(300, 315, 700, 370), Utf8Text(acquired.displayName), 180, color);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(310, 385, 690, 510),
+			CRect(310, 380, 690, 515),
 			Utf8Text(DescribeRewardEffect(acquired)),
 			110,
 			UiTheme::Text,
 			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-		UiRenderer::DrawText(deviceContext, CRect(280, 575, 720, 615), _T("획득 효과 적용 완료"), 115, UiTheme::Green);
+		UiRenderer::DrawText(deviceContext, CRect(280, 575, 720, 615), _T("획득 효과 적용 완료"), 105, UiTheme::Green);
 		return;
 	}
 
-	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), Text("screen.reward"), 300, UiTheme::Gold);
-	UiRenderer::DrawText(deviceContext, CRect(120, 120, 880, 175), _T("효과 수치와 보유 한도를 확인한 뒤 보상 하나를 선택하세요"), 125, UiTheme::MutedText);
+	DrawMenuTitle(deviceContext, Text("screen.reward"));
+	UiRenderer::DrawText(deviceContext, CRect(245, 94, 755, 132), _T("다음 전투를 위한 보상 하나를 선택하세요"), 105, UiTheme::MutedText);
 
 	const auto& rewards = _run.GetRewardChoices();
 	for (std::size_t index = 0; index < rewards.size(); ++index)
 	{
 		const RunReward& reward = rewards[index];
-		const int left = 75 + static_cast<int>(index) * 305;
-		const CRect card(left, 245, left + 270, 485);
+		const int left = 60 + static_cast<int>(index) * 310;
+		const CRect card(left, 175, left + 280, 520);
 		const COLORREF color = reward.kind == RunRewardKind::Orb
 			? UiTheme::Blue
 			: (reward.kind == RunRewardKind::Relic ? UiTheme::Gold : UiTheme::Green);
@@ -1609,28 +1715,29 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 		}
 		CString title;
 		title.Format(_T("[%zu] %s"), index + 1, category.GetString());
-		UiRenderer::DrawText(deviceContext, CRect(left + 15, 253, left + 255, 285), title, 120, color);
-		DrawRewardIcon(reward, CRect(left + 99, 285, left + 171, 357));
-		UiRenderer::DrawText(deviceContext, CRect(left + 12, 358, left + 258, 392), Utf8Text(reward.displayName), 125, UiTheme::Text, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		UiRenderer::DrawText(deviceContext, CRect(left + 15, 185, left + 265, 220), title, 115, color);
+		DrawRewardIcon(reward, CRect(left + 96, 225, left + 184, 313));
+		UiRenderer::DrawText(deviceContext, CRect(left + 12, 320, left + 268, 360), Utf8Text(reward.displayName), 125, UiTheme::Text, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 12, 395, left + 258, 478),
+			CRect(left + 14, 368, left + 266, 508),
 			Utf8Text(DescribeRewardEffect(reward)),
-			82,
+			80,
 			UiTheme::MutedText,
 			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
-	UiRenderer::DrawText(deviceContext, CRect(120, 525, 880, 595), _runNotice, 105, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 720, 690), _T("보상 카드 클릭 · 1/2/3 선택"));
+	UiRenderer::DrawText(deviceContext, CRect(120, 535, 880, 595), _runNotice, 100, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(270, 630, 730, 688), _T("보상 카드 클릭 · 1/2/3 선택"));
 }
 
 void CChildView::DrawShopScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(190, 35, 810, 105), _T("GOBLIN MARKET"), 285, UiTheme::Gold);
+	DrawMenuTitle(deviceContext, _T("GOBLIN MARKET"), UiTheme::Green);
 	CString wallet;
-	wallet.Format(_T("보유 골드  %d G"), _run.GetGold());
-	UiRenderer::DrawText(deviceContext, CRect(300, 110, 930, 150), wallet, 145, UiTheme::Gold);
+	wallet.Format(_T("GOLD  %d"), _run.GetGold());
+	UiRenderer::DrawPanel(deviceContext, CRect(780, 91, 950, 130), false, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(790, 95, 940, 126), wallet, 110, UiTheme::Gold);
 
 	const CRect merchantPanel(25, 145, 280, 610);
 	UiRenderer::DrawPanel(deviceContext, merchantPanel, true, UiTheme::Green);
@@ -1651,8 +1758,8 @@ void CChildView::DrawShopScreen(CDC* deviceContext)
 	for (std::size_t index = 0; index < offers.size(); ++index)
 	{
 		const RunShopOffer& offer = offers[index];
-		const int left = 300 + static_cast<int>(index) * 215;
-		const CRect card(left, 190, left + 200, 520);
+		const int left = 290 + static_cast<int>(index) * 225;
+		const CRect card(left, 165, left + 210, 535);
 		const bool purchased = _shopPurchased[index];
 		const bool affordable = _run.GetGold() >= offer.price;
 		const COLORREF categoryColor = offer.reward.kind == RunRewardKind::Orb
@@ -1673,14 +1780,14 @@ void CChildView::DrawShopScreen(CDC* deviceContext)
 		}
 		CString header;
 		header.Format(_T("[%zu] %s · %d G"), index + 1, category.GetString(), offer.price);
-		UiRenderer::DrawText(deviceContext, CRect(left + 8, 200, left + 192, 232), header, 95, categoryColor);
+		UiRenderer::DrawText(deviceContext, CRect(left + 8, 176, left + 202, 210), header, 95, categoryColor);
 
 		if (offer.reward.kind == RunRewardKind::Orb)
 		{
 			const OrbDefinition* orb = FindOrbDefinition(offer.reward.id);
 			if (orb != nullptr)
 			{
-				DrawOrbIcon(deviceContext, CRect(left + 64, 238, left + 136, 310), *orb);
+				DrawOrbIcon(deviceContext, CRect(left + 66, 217, left + 144, 295), *orb);
 			}
 		}
 		else if (offer.reward.kind == RunRewardKind::Relic)
@@ -1688,65 +1795,66 @@ void CChildView::DrawShopScreen(CDC* deviceContext)
 			const RelicDefinition* relic = FindRelicDefinition(offer.reward.id);
 			if (relic != nullptr)
 			{
-				DrawRelicIcon(deviceContext, CRect(left + 64, 238, left + 136, 310), *relic);
+				DrawRelicIcon(deviceContext, CRect(left + 66, 217, left + 144, 295), *relic);
 			}
 		}
 		else
 		{
-			DrawHealIcon(deviceContext, CRect(left + 64, 238, left + 136, 310));
+			DrawHealIcon(deviceContext, CRect(left + 66, 217, left + 144, 295));
 		}
 
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 8, 315, left + 192, 350),
+			CRect(left + 8, 302, left + 202, 340),
 			Utf8Text(offer.reward.displayName),
 			105,
 			UiTheme::Text);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 10, 355, left + 190, 445),
+			CRect(left + 10, 348, left + 200, 465),
 			Utf8Text(DescribeRewardEffect(offer.reward)),
 			70,
 			UiTheme::MutedText,
 			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 10, 465, left + 190, 505),
+			CRect(left + 10, 485, left + 200, 523),
 			purchased ? _T("구매 완료") : (affordable ? _T("구매 가능") : _T("골드 부족")),
 			95,
 			purchased ? UiTheme::Green : (affordable ? UiTheme::Gold : UiTheme::Danger));
 	}
 
-	UiRenderer::DrawText(deviceContext, CRect(300, 545, 930, 610), _runNotice, 95, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(340, 640, 660, 690), _T("상점 나가기 · ENTER / ESC"));
+	UiRenderer::DrawText(deviceContext, CRect(290, 548, 950, 605), _runNotice, 95, UiTheme::Orange, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(340, 630, 660, 688), _T("상점 나가기 · ENTER / ESC"));
 }
 
 void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(160, 35, 820, 110), Text("screen.loadout"), 285, UiTheme::Gold);
-	UiRenderer::DrawText(deviceContext, CRect(80, 125, 900, 165), _T("보유 오브 목록 · 선택한 오브는 다음 전투의 첫 순서로 우선됩니다"), 115, UiTheme::MutedText);
+	DrawMenuTitle(deviceContext, Text("screen.loadout"));
+	UiRenderer::DrawText(deviceContext, CRect(150, 88, 850, 118), _T("선택한 오브는 다음 전투의 첫 순서로 배치됩니다"), 100, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(55, 120, 945, 145), _T("ORB BAG"), 95, UiTheme::Blue, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
 	const auto& orbs = GetOrbDefinitions();
 	const auto& ownedOrbs = _game.GetLoadout().GetOwnedOrbs();
 	for (std::size_t index = 0; index < orbs.size(); ++index)
 	{
 		const OrbDefinition& orb = orbs[index];
-		const int left = 75 + static_cast<int>(index) * 305;
-		const CRect card(left, 185, left + 270, 335);
+		const int left = 55 + static_cast<int>(index) * 305;
+		const CRect card(left, 148, left + 280, 320);
 		const bool selected = _game.GetLoadout().GetSelectedOrbId() == orb.id;
 		const std::size_t ownedCount = static_cast<std::size_t>(std::count_if(
 			ownedOrbs.begin(),
 			ownedOrbs.end(),
 			[&orb](const std::string& id) { return id == orb.id; }));
 		UiRenderer::DrawPanel(deviceContext, card, selected, UiTheme::Gold);
-		DrawOrbIcon(deviceContext, CRect(left + 14, 198, left + 68, 252), orb);
+		DrawOrbIcon(deviceContext, CRect(left + 14, 162, left + 70, 218), orb);
 		CString title;
 		title.Format(_T("[%zu] %s · x%zu"), index + 1, Utf8Text(orb.displayName).GetString(), ownedCount);
-		UiRenderer::DrawText(deviceContext, CRect(left + 72, 198, left + 260, 252), title, 115, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		UiRenderer::DrawText(deviceContext, CRect(left + 76, 160, left + 268, 220), title, 110, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 12, 255, left + 258, 327),
+			CRect(left + 12, 226, left + 268, 312),
 			Utf8Text(DescribeOrbEffect(orb)),
 			78,
 			UiTheme::MutedText,
@@ -1754,21 +1862,22 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 	}
 
 	const auto& relics = GetRelicDefinitions();
+	UiRenderer::DrawText(deviceContext, CRect(55, 333, 945, 358), _T("RELICS"), 95, UiTheme::Green, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 	for (std::size_t index = 0; index < relics.size(); ++index)
 	{
 		const RelicDefinition& relic = relics[index];
-		const int left = 75 + static_cast<int>(index) * 305;
-		const CRect card(left, 390, left + 270, 555);
+		const int left = 55 + static_cast<int>(index) * 305;
+		const CRect card(left, 360, left + 280, 545);
 		const std::size_t stacks = _game.GetLoadout().GetRelicStackCount(relic.id);
 		const bool atLimit = stacks >= relic.maxStacks;
 		UiRenderer::DrawPanel(deviceContext, card, atLimit, UiTheme::Green);
 		CString title;
 		title.Format(_T("[%zu] %s · %zu/%zu"), index + 4, Utf8Text(relic.displayName).GetString(), stacks, relic.maxStacks);
-		DrawRelicIcon(deviceContext, CRect(left + 14, 402, left + 68, 456), relic);
-		UiRenderer::DrawText(deviceContext, CRect(left + 72, 400, left + 260, 458), title, 108, atLimit ? UiTheme::Green : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		DrawRelicIcon(deviceContext, CRect(left + 14, 374, left + 70, 430), relic);
+		UiRenderer::DrawText(deviceContext, CRect(left + 76, 372, left + 268, 432), title, 105, atLimit ? UiTheme::Green : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 12, 462, left + 258, 548),
+			CRect(left + 12, 438, left + 268, 535),
 			Utf8Text(DescribeRelicEffect(relic)),
 			72,
 			UiTheme::MutedText,
@@ -1782,55 +1891,62 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 		modifiers.pegDamageMultiplier,
 		modifiers.scoreMultiplier,
 		modifiers.incomingDamageMultiplier);
-	UiRenderer::DrawText(deviceContext, CRect(140, 565, 840, 605), total, 115, UiTheme::Green);
-	UiRenderer::DrawText(deviceContext, CRect(140, 605, 840, 635), _loadoutNotice, 100, UiTheme::Orange);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(75, 640, 300, 690), _T("초기화 · X"));
-	UiRenderer::DrawText(deviceContext, CRect(305, 642, 675, 688), _T("카드 클릭 또는 1-6 키"), 100, UiTheme::MutedText);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(680, 640, 905, 690), _T("돌아가기 · ESC"));
+	UiRenderer::DrawText(deviceContext, CRect(140, 557, 860, 590), total, 105, UiTheme::Green);
+	UiRenderer::DrawText(deviceContext, CRect(140, 592, 860, 620), _loadoutNotice, 95, UiTheme::Orange);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(55, 630, 300, 688), _T("초기화 · X"));
+	UiRenderer::DrawText(deviceContext, CRect(305, 632, 695, 686), _T("카드 클릭 또는 1-6 키"), 95, UiTheme::MutedText);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(700, 630, 945, 688), _T("돌아가기 · ESC"));
 }
 
 void CChildView::DrawOptions(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawPanel(deviceContext, CRect(235, 125, 745, 670));
-	UiRenderer::DrawText(deviceContext, CRect(300, 55, 680, 120), Text("screen.options"), 300, UiTheme::Gold);
-	CString difficulty;
-	difficulty.Format(
-		_T("[D] %s    %s"),
-		Text("option.difficulty").GetString(),
-		DifficultyTextForUi(_options.difficulty).GetString());
-	UiRenderer::DrawPanel(deviceContext, CRect(285, 205, 695, 285));
-	UiRenderer::DrawText(deviceContext, CRect(300, 215, 680, 275), difficulty, 165);
-	CString sound;
-	sound.Format(
-		_T("[M] %s    %s"),
-		Text("option.sound").GetString(),
-		Text(_options.soundEnabled ? "value.on" : "value.off").GetString());
-	UiRenderer::DrawPanel(deviceContext, CRect(285, 315, 695, 395));
-	UiRenderer::DrawText(deviceContext, CRect(300, 325, 680, 385), sound, 165);
-	CString colorMode;
-	colorMode.Format(
-		_T("[C] %s    %s"),
-		Text("option.peg_color").GetString(),
-		PegColorModeTextForUi(_options.pegColorMode).GetString());
-	UiRenderer::DrawPanel(deviceContext, CRect(285, 425, 695, 505));
-	UiRenderer::DrawText(deviceContext, CRect(300, 435, 680, 495), colorMode, 155);
-	CString language;
-	language.Format(
-		_T("[L] %s    %s"),
-		Text("option.language").GetString(),
-		Text(_options.language == UiLanguage::Korean
-			? "language.korean"
-			: "language.english").GetString());
-	UiRenderer::DrawPanel(deviceContext, CRect(285, 520, 695, 600));
-	UiRenderer::DrawText(deviceContext, CRect(300, 530, 680, 590), language, 155);
+	DrawMenuTitle(deviceContext, Text("screen.options"));
+	const CRect optionPanel(165, 105, 835, 640);
+	UiRenderer::DrawPanel(deviceContext, optionPanel);
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(275, 605, 705, 635),
-		_settingsSaveFailed ? Text("notice.settings_save_failed") : Text("notice.auto_save"),
+		CRect(190, 122, 810, 150),
+		_T("클릭하거나 단축키로 즉시 변경할 수 있습니다"),
 		95,
+		UiTheme::MutedText);
+	DrawOptionTile(
+		deviceContext,
+		CRect(195, 172, 485, 292),
+		_T("[D]"),
+		Text("option.difficulty"),
+		DifficultyTextForUi(_options.difficulty),
+		UiTheme::Gold);
+	DrawOptionTile(
+		deviceContext,
+		CRect(515, 172, 805, 292),
+		_T("[M]"),
+		Text("option.sound"),
+		Text(_options.soundEnabled ? "value.on" : "value.off"),
+		_options.soundEnabled ? UiTheme::Green : UiTheme::Danger);
+	DrawOptionTile(
+		deviceContext,
+		CRect(195, 322, 485, 442),
+		_T("[C]"),
+		Text("option.peg_color"),
+		PegColorModeTextForUi(_options.pegColorMode),
+		UiTheme::Blue);
+	DrawOptionTile(
+		deviceContext,
+		CRect(515, 322, 805, 442),
+		_T("[L]"),
+		Text("option.language"),
+		Text(_options.language == UiLanguage::Korean
+			? "language.korean"
+			: "language.english"),
+		UiTheme::Orange);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(230, 490, 770, 525),
+		_settingsSaveFailed ? Text("notice.settings_save_failed") : Text("notice.auto_save"),
+		100,
 		_settingsSaveFailed ? UiTheme::Danger : UiTheme::Green);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 640, 680, 690), Text("hint.back"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 560, 700, 618), Text("hint.back"));
 }
 
 void CChildView::DrawResultScreen(CDC* deviceContext)
@@ -1838,25 +1954,24 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 	DrawMenuBackdrop(deviceContext);
 	const bool victory = _resultSummary.has_value()
 		&& _resultSummary->result == GameUpdateResult::Victory;
-	UiRenderer::DrawPanel(deviceContext, CRect(250, 135, 730, 650), true, victory ? UiTheme::Green : UiTheme::Danger);
-	UiRenderer::DrawText(
+	const COLORREF resultColor = victory ? UiTheme::Green : UiTheme::Danger;
+	DrawMenuTitle(
 		deviceContext,
-		CRect(250, 55, 730, 125),
 		Text(victory ? "screen.run_complete" : "screen.run_failed"),
-		300,
-		victory ? UiTheme::Green : UiTheme::Danger);
+		resultColor);
+	UiRenderer::DrawPanel(deviceContext, CRect(250, 120, 750, 620), true, resultColor);
 	if (_resultSummary.has_value())
 	{
-		UiRenderer::DrawText(deviceContext, CRect(280, 175, 700, 225), Utf8Text(_resultSummary->stageName), 165, UiTheme::Gold);
+		UiRenderer::DrawText(deviceContext, CRect(280, 155, 720, 210), Utf8Text(_resultSummary->stageName), 165, UiTheme::Gold);
 		CString scoreText;
 		scoreText.Format(_T("SCORE  %d"), _resultSummary->totalScore);
-		UiRenderer::DrawText(deviceContext, CRect(280, 275, 700, 325), scoreText, 180);
+		UiRenderer::DrawText(deviceContext, CRect(280, 245, 720, 300), scoreText, 180);
 		CString comboText;
 		comboText.Format(_T("BEST COMBO  %d"), _resultSummary->bestCombo);
-		UiRenderer::DrawText(deviceContext, CRect(280, 350, 700, 400), comboText, 160);
+		UiRenderer::DrawText(deviceContext, CRect(280, 325, 720, 375), comboText, 160);
 		CString turnText;
 		turnText.Format(_T("TURNS  %d"), _resultSummary->turns);
-		UiRenderer::DrawText(deviceContext, CRect(280, 420, 700, 470), turnText, 150);
+		UiRenderer::DrawText(deviceContext, CRect(280, 395, 720, 445), turnText, 150);
 		const StageRecord record = _records.Get(_resultSummary->stageId, _options.difficulty);
 		CString recordText;
 		recordText.Format(
@@ -1864,14 +1979,14 @@ void CChildView::DrawResultScreen(CDC* deviceContext)
 			record.highScore,
 			record.bestCombo,
 			record.clearCount);
-		UiRenderer::DrawText(deviceContext, CRect(280, 500, 700, 545), recordText, 115, UiTheme::Green);
+		UiRenderer::DrawText(deviceContext, CRect(280, 480, 720, 530), recordText, 115, UiTheme::Green);
 	}
 	if (_recordSaveFailed)
 	{
-		UiRenderer::DrawText(deviceContext, CRect(275, 565, 705, 610), _T("기록 저장 실패 · 현재 실행에서만 유지"), 105, UiTheme::Danger);
+		UiRenderer::DrawText(deviceContext, CRect(275, 550, 725, 595), _T("기록 저장 실패 · 현재 실행에서만 유지"), 105, UiTheme::Danger);
 	}
-	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 640, 480, 690), Text("hint.retry"));
-	UiRenderer::DrawKeyHint(deviceContext, CRect(500, 640, 720, 690), Text("hint.new_run"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(260, 635, 480, 690), Text("hint.retry"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(520, 635, 740, 690), Text("hint.new_run"));
 }
 
 void CChildView::DrawMenuBackdrop(CDC* deviceContext)

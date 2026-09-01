@@ -390,25 +390,36 @@ namespace
 			"mouse returns from loadout");
 
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 245.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 230.0f }, 0).command
 				== UiCommand::ToggleDifficulty,
 			"mouse changes difficulty");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 355.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 230.0f }, 0).command
 				== UiCommand::ToggleSound,
 			"mouse toggles sound");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 465.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 380.0f }, 0).command
 				== UiCommand::TogglePegColorMode,
 			"mouse changes peg accessibility mode");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 500.0f, 560.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 380.0f }, 0).command
 				== UiCommand::ToggleLanguage,
 			"mouse changes the UI language");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 590.0f }, 0).command
+				== UiCommand::BackToStageSelection,
+			"mouse returns from the compact options grid");
+		Check(
+			!ResolveUiClick(UiScreenKind::Options, { 500.0f, 480.0f }, 0).IsHandled(),
+			"options grid leaves its status area non-interactive");
 		Check(
 			ResolveUiClick(UiScreenKind::Result, { 350.0f, 665.0f }, 0).command
 				== UiCommand::RetryStage,
 			"mouse retries from result screen");
+		Check(
+			ResolveUiClick(UiScreenKind::Result, { 620.0f, 665.0f }, 0).command
+				== UiCommand::BackToStageSelection,
+			"mouse starts a new run from the result screen");
 		Check(
 			!ResolveUiClick(UiScreenKind::StageSelection, { 10.0f, 10.0f }, 3).IsHandled(),
 			"mouse ignores non-interactive background");
