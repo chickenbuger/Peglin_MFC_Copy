@@ -24,6 +24,7 @@
 #include "SoftPegSound.h"
 #include "TerminalTransitionGate.h"
 #include "UiNavigation.h"
+#include "PeglinUiAnimation.h"
 
 namespace
 {
@@ -511,6 +512,26 @@ namespace
 		Check(
 			!ResolveUiClick(UiScreenKind::Shop, { 20.0f, 20.0f }, 0).IsHandled(),
 			"shop screen ignores non-interactive background");
+	}
+
+	void TestUiAnimationTimeline()
+	{
+		UiAnimationTimeline timeline;
+		Check(!timeline.IsActive(), "UI animation timeline starts idle");
+		Check(Near(timeline.Progress(), 0.0f), "idle UI animation begins at zero progress");
+		timeline.Start(0.4f);
+		Check(timeline.IsActive(), "starting a UI animation activates its timeline");
+		timeline.Update(0.1f);
+		Check(Near(timeline.Progress(), 0.25f), "UI animation advances by elapsed time");
+		Check(timeline.EaseOutProgress() > timeline.Progress(), "UI transition uses an ease-out curve");
+		timeline.Update(-1.0f);
+		Check(Near(timeline.Progress(), 0.25f), "negative animation time is ignored");
+		timeline.Update(1.0f);
+		Check(!timeline.IsActive() && Near(timeline.Progress(), 1.0f),
+			"UI animation clamps and finishes at full progress");
+		timeline.Reset();
+		Check(!timeline.IsActive() && Near(timeline.Progress(), 0.0f),
+			"UI animation reset restores idle state");
 	}
 
 	void TestAdventureRunProgression()
@@ -2838,6 +2859,7 @@ int main()
 	TestDefeatTransition();
 	TestStateAndRestitutionRules();
 	TestMouseUiNavigation();
+	TestUiAnimationTimeline();
 	TestAdventureRunProgression();
 	TestLayoutConfiguration();
 	TestSeededPegLayout();

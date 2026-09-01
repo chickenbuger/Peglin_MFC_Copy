@@ -223,6 +223,7 @@
     <ClInclude Include="TargetBall.h" />
 	<ClInclude Include="UiRenderer.h" />
 	<ClInclude Include="UiNavigation.h" />
+	<ClInclude Include="PeglinUiAnimation.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Vector2.h" />
   </ItemGroup>

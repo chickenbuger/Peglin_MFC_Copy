@@ -511,47 +511,47 @@ void CChildView::OnPaint()
 	_background.draw(
 		&memDc,
 		_gameplayBackground.GetSafeHandle() != nullptr ? &_gameplayBackground : nullptr);
+	auto PresentFrame = [&]()
+	{
+		DrawUiAnimations(&memDc, rect);
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
+		memDc.SelectObject(previousBitmap);
+	};
 
 	if (_screenMode == ScreenMode::StageSelection)
 	{
 		DrawStageSelection(&memDc);
-		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-		memDc.SelectObject(previousBitmap);
+		PresentFrame();
 		return;
 	}
 	if (_screenMode == ScreenMode::Loadout)
 	{
 		DrawLoadoutScreen(&memDc);
-		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-		memDc.SelectObject(previousBitmap);
+		PresentFrame();
 		return;
 	}
 	if (_screenMode == ScreenMode::Options)
 	{
 		DrawOptions(&memDc);
-		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-		memDc.SelectObject(previousBitmap);
+		PresentFrame();
 		return;
 	}
 	if (_screenMode == ScreenMode::Reward)
 	{
 		DrawRewardScreen(&memDc);
-		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-		memDc.SelectObject(previousBitmap);
+		PresentFrame();
 		return;
 	}
 	if (_screenMode == ScreenMode::Shop)
 	{
 		DrawShopScreen(&memDc);
-		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-		memDc.SelectObject(previousBitmap);
+		PresentFrame();
 		return;
 	}
 	if (_screenMode == ScreenMode::Result)
 	{
 		DrawResultScreen(&memDc);
-		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-		memDc.SelectObject(previousBitmap);
+		PresentFrame();
 		return;
 	}
 
@@ -727,8 +727,7 @@ void CChildView::OnPaint()
 
 	DrawFeedbackAnimations(&memDc);
 
-	dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
-	memDc.SelectObject(previousBitmap);
+	PresentFrame();
 	// 그리기 메시지에 대해서는 CWnd::OnPaint()를 호출하지 마십시오.
 }
 
@@ -888,6 +887,8 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
+	_screenTransition.Update(deltaSeconds);
+	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);
 	if (_screenMode != ScreenMode::Playing)
 	{
 		UpdateFeedbackAnimations(deltaSeconds);
@@ -943,6 +944,10 @@ void CChildView::FinishPendingTerminalTransition()
 
 void CChildView::ConsumeGameEvents()
 {
+	std::size_t queuedToastCount = static_cast<std::size_t>(std::count_if(
+		_feedbackAnimations.begin(),
+		_feedbackAnimations.end(),
+		[](const FeedbackAnimation& animation) { return animation.toast; }));
 	for (const GameEvent& event : _game.ConsumeEvents())
 	{
 		FeedbackAnimation animation;
@@ -975,6 +980,7 @@ void CChildView::ConsumeGameEvents()
 			animation.text = _T("REFRESH READY");
 			animation.color = RGB(0, 210, 120);
 			animation.lifetimeSeconds = 1.1f;
+			animation.toast = true;
 			break;
 		case GameEventType::RefreshRelocated:
 			if (event.affectedPegs > 1)
@@ -987,6 +993,7 @@ void CChildView::ConsumeGameEvents()
 			}
 			animation.color = RGB(0, 225, 155);
 			animation.lifetimeSeconds = 1.0f;
+			animation.toast = true;
 			break;
 		case GameEventType::PlayerAttack:
 		{
@@ -1006,6 +1013,7 @@ void CChildView::ConsumeGameEvents()
 				? RGB(190, 110, 245)
 				: RGB(255, 194, 62);
 			animation.lifetimeSeconds = 1.0f;
+			animation.toast = true;
 
 			const auto& enemies = _game.GetEnemies();
 			const Vector2 start = GameLayout::PlayerPosition
@@ -1035,25 +1043,31 @@ void CChildView::ConsumeGameEvents()
 			animation.text.Format(_T("TURN +%d"), event.scoreAwarded);
 			animation.position = GameLayout::TurnEffectPosition;
 			animation.color = RGB(40, 100, 220);
+			animation.toast = true;
 			break;
 		case GameEventType::EnemyAdvanced:
 			animation.text.Format(_T("1칸 전진 · 거리 %d칸"), event.affectedPegs);
 			animation.color = RGB(240, 180, 80);
+			animation.toast = true;
 			break;
 		case GameEventType::EnemyFortified:
 			animation.text.Format(_T("SHIELD +%d"), static_cast<int>(std::lround(event.damage)));
 			animation.color = RGB(90, 180, 255);
 			animation.lifetimeSeconds = 1.1f;
+			animation.toast = true;
 			break;
 		case GameEventType::EnemyDefeated:
 			animation.text.Format(_T("DEFEATED · %d LEFT"), event.affectedPegs);
 			animation.color = RGB(255, 194, 62);
 			animation.lifetimeSeconds = 1.25f;
+			animation.toast = true;
 			break;
 		case GameEventType::PlayerDamaged:
 			animation.text.Format(_T("HP -%d"), static_cast<int>(event.damage));
 			animation.color = RGB(220, 0, 0);
 			animation.lifetimeSeconds = 1.2f;
+			animation.toast = true;
+			_damageFlashSeconds = 0.45f;
 			if (event.targetEnemyIndex < _game.GetEnemies().size())
 			{
 				const bool enemyGroup = _game.GetEnemies().size() > 1;
@@ -1079,14 +1093,21 @@ void CChildView::ConsumeGameEvents()
 			animation.text = _T("CLEAR!");
 			animation.position = GameLayout::TurnEffectPosition;
 			animation.color = RGB(0, 150, 60);
+			animation.toast = true;
 			break;
 		case GameEventType::Defeat:
 			animation.text = _T("GAME OVER");
 			animation.position = GameLayout::TurnEffectPosition;
 			animation.color = RGB(220, 0, 0);
+			animation.toast = true;
 			break;
 		}
 
+		if (animation.toast)
+		{
+			animation.position = { 500.0f, 275.0f };
+			animation.ageSeconds = -0.34f * static_cast<float>(queuedToastCount++);
+		}
 		_feedbackAnimations.push_back(std::move(animation));
 		PlayEventSound(event.type, event.pegType);
 	}
@@ -1184,8 +1205,20 @@ void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
 
 	for (const FeedbackAnimation& animation : _feedbackAnimations)
 	{
+		if (animation.ageSeconds < 0.0f)
+		{
+			continue;
+		}
 		const float progress = animation.ageSeconds / animation.lifetimeSeconds;
 		deviceContext->SetTextColor(animation.color);
+		if (animation.toast)
+		{
+			const int lift = static_cast<int>(std::lround(progress * 8.0f));
+			const CRect toastBounds(330, 250 - lift, 670, 294 - lift);
+			UiRenderer::DrawPanel(deviceContext, toastBounds, true, animation.color);
+			UiRenderer::DrawText(deviceContext, toastBounds, animation.text, 115, animation.color);
+			continue;
+		}
 		deviceContext->TextOut(
 			static_cast<int>(std::lround(animation.position.x - 30.0f)),
 			static_cast<int>(std::lround(animation.position.y - progress * 45.0f)),
@@ -1193,6 +1226,41 @@ void CChildView::DrawFeedbackAnimations(CDC* deviceContext)
 	}
 
 	deviceContext->RestoreDC(savedDc);
+}
+
+void CChildView::DrawUiAnimations(CDC* deviceContext, const CRect& clientBounds)
+{
+	if (_damageFlashSeconds > 0.0f)
+	{
+		const float intensity = std::clamp(_damageFlashSeconds / 0.45f, 0.0f, 1.0f);
+		const int thickness = 3 + static_cast<int>(std::lround(intensity * 9.0f));
+		const int savedDc = deviceContext->SaveDC();
+		CPen damagePen(PS_SOLID, thickness, RGB(220, 45, 45));
+		deviceContext->SelectObject(&damagePen);
+		deviceContext->SelectStockObject(NULL_BRUSH);
+		CRect damageBounds(clientBounds);
+		damageBounds.DeflateRect(thickness, thickness);
+		deviceContext->Rectangle(damageBounds);
+		deviceContext->RestoreDC(savedDc);
+	}
+
+	if (!_screenTransition.IsActive())
+	{
+		return;
+	}
+	const float revealed = _screenTransition.EaseOutProgress();
+	const int coverHeight = static_cast<int>(std::lround(
+		static_cast<float>(clientBounds.Height()) * 0.5f * (1.0f - revealed)));
+	if (coverHeight <= 0)
+	{
+		return;
+	}
+	deviceContext->FillSolidRect(
+		CRect(clientBounds.left, clientBounds.top, clientBounds.right, clientBounds.top + coverHeight),
+		UiTheme::Canvas);
+	deviceContext->FillSolidRect(
+		CRect(clientBounds.left, clientBounds.bottom - coverHeight, clientBounds.right, clientBounds.bottom),
+		UiTheme::Canvas);
 }
 
 void CChildView::DrawAttackAnimations(CDC* deviceContext)
@@ -1684,6 +1752,17 @@ void CChildView::DrawRewardScreen(CDC* deviceContext)
 		UiRenderer::DrawText(deviceContext, CRect(250, 95, 750, 135), _T("효과 적용 후 다음 경로로 이동합니다"), 105, UiTheme::MutedText);
 		const CRect acquiredCard(270, 165, 730, 550);
 		UiRenderer::DrawPanel(deviceContext, acquiredCard, true, color);
+		const float pulse = std::sin(std::clamp(_rewardAcquisitionSeconds / 0.8f, 0.0f, 1.0f) * 3.14159265f);
+		CRect pulseBounds(acquiredCard);
+		pulseBounds.InflateRect(
+			6 + static_cast<int>(std::lround(pulse * 14.0f)),
+			6 + static_cast<int>(std::lround(pulse * 14.0f)));
+		const int savedDc = deviceContext->SaveDC();
+		CPen pulsePen(PS_SOLID, 3, color);
+		deviceContext->SelectObject(&pulsePen);
+		deviceContext->SelectStockObject(NULL_BRUSH);
+		deviceContext->RoundRect(pulseBounds, CPoint(20, 20));
+		deviceContext->RestoreDC(savedDc);
 		DrawRewardIcon(acquired, CRect(444, 195, 556, 307));
 		UiRenderer::DrawText(deviceContext, CRect(300, 315, 700, 370), Utf8Text(acquired.displayName), 180, color);
 		UiRenderer::DrawText(
@@ -2444,7 +2523,12 @@ void CChildView::UpdateScreenMusic()
 
 void CChildView::SetScreenMode(ScreenMode mode)
 {
+	if (_screenMode == mode)
+	{
+		return;
+	}
 	_screenMode = mode;
+	_screenTransition.Start(0.28f);
 	UpdateScreenMusic();
 }
 

@@ -22,6 +22,7 @@
 #include "Localization.h"
 #include "RunProgression.h"
 #include "TerminalTransitionGate.h"
+#include "PeglinUiAnimation.h"
 #include "UiNavigation.h"
 #include "UiRenderer.h"
 
@@ -83,6 +84,7 @@ private:
 		COLORREF color = RGB(255, 255, 255);
 		float ageSeconds = 0.0f;
 		float lifetimeSeconds = 0.9f;
+		bool toast = false;
 	};
 
 	struct OrbTrailPoint
@@ -110,6 +112,7 @@ private:
 	void UpdateOrbVisuals(float deltaSeconds);
 	void FinishPendingTerminalTransition();
 	void DrawFeedbackAnimations(CDC* deviceContext);
+	void DrawUiAnimations(CDC* deviceContext, const CRect& clientBounds);
 	void DrawAttackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
@@ -161,6 +164,8 @@ private:
 	std::vector<FeedbackAnimation> _feedbackAnimations;
 	std::vector<AttackAnimation> _attackAnimations;
 	std::vector<OrbTrailPoint> _orbTrail;
+	UiAnimationTimeline _screenTransition;
+	float _damageFlashSeconds = 0.0f;
 	TerminalTransitionGate _terminalTransition;
 	float _gameplayVisualTimeSeconds = 0.0f;
 	float _orbTrailSampleSeconds = 0.0f;
