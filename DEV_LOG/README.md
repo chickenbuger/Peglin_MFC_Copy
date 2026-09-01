@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 8 진행 중 |
-| 현재 버전 | Version 8.1 |
+| 현재 버전 | Version 8.2 |
 | 스프린트 목표 | 다양한 화면 환경의 UI 안정성, 콘텐츠 이해도와 제작 도구, 입력 설정 및 시연 품질 개선 |
-| 상태 | Sprint 8 P0 1/8 완료 · DPI·창 크기 대응 검증 완료 |
+| 상태 | Sprint 8 P0 2/8 완료 · 상세 툴팁과 전투 로그 검증 완료 |
 
 ## 문서
 
@@ -102,6 +102,7 @@
 - [Version 7.19 — 세이브 백업·손상 복구·선택형 초기화](./Version_7.19.md)
 - [Version 7.20 — Sprint 7 최종 회귀·배포 검증](./Version_7.20.md)
 - [Version 8.1 — DPI·해상도·창 크기 대응 레이아웃](./Version_8.1.md)
+- [Version 8.2 — 상세 툴팁과 전투 로그](./Version_8.2.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

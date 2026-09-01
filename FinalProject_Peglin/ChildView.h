@@ -14,6 +14,7 @@
 #include "Background.h"
 #include "AudioCatalog.h"
 #include "AudioPlayer.h"
+#include "CombatLog.h"
 #include "ContentCatalog.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -128,6 +129,8 @@ private:
 	void DrawAttackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
+	void DrawCombatLog(CDC* deviceContext);
+	void DrawGameplayTooltip(CDC* deviceContext);
 	void DrawEnemyHealthBar(
 		CDC* deviceContext,
 		const EnemyCombatant& combatant,
@@ -182,6 +185,9 @@ private:
 	std::vector<FeedbackAnimation> _feedbackAnimations;
 	std::vector<AttackAnimation> _attackAnimations;
 	std::vector<OrbTrailPoint> _orbTrail;
+	CombatLog _combatLog{ 12 };
+	std::optional<Vector2> _pointerLogical;
+	bool _combatLogVisible = false;
 	UiAnimationTimeline _screenTransition;
 	float _damageFlashSeconds = 0.0f;
 	DWORD _previousGamepadButtons = 0;

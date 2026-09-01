@@ -268,6 +268,7 @@
   <ItemGroup>
 	<ClInclude Include="AudioCatalog.h" />
 	<ClInclude Include="AudioPlayer.h" />
+	<ClInclude Include="CombatLog.h" />
     <ResourceCompile Include="FinalProjectPeglin.rc" />
 	<ResourceCompile Include="UiResources.rc" />
   </ItemGroup>

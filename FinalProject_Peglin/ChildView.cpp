@@ -205,6 +205,56 @@ namespace
 		return text;
 	}
 
+	bool Contains(const CRect& bounds, Vector2 point) noexcept
+	{
+		return point.x >= static_cast<float>(bounds.left)
+			&& point.y >= static_cast<float>(bounds.top)
+			&& point.x < static_cast<float>(bounds.right)
+			&& point.y < static_cast<float>(bounds.bottom);
+	}
+
+	CombatLogTone CombatTone(GameEventType eventType) noexcept
+	{
+		switch (eventType)
+		{
+		case GameEventType::RefreshTriggered:
+		case GameEventType::RefreshGuaranteed:
+		case GameEventType::RefreshRelocated:
+		case GameEventType::EnemyDefeated:
+		case GameEventType::Victory:
+			return CombatLogTone::Positive;
+		case GameEventType::BombTriggered:
+		case GameEventType::PlayerAttack:
+		case GameEventType::TurnResolved:
+		case GameEventType::EnemyAdvanced:
+		case GameEventType::EnemyFortified:
+			return CombatLogTone::Warning;
+		case GameEventType::PlayerDamaged:
+		case GameEventType::Defeat:
+			return CombatLogTone::Danger;
+		case GameEventType::PegHit:
+			return CombatLogTone::Neutral;
+		}
+		return CombatLogTone::Neutral;
+	}
+
+	bool IsCombatLogEvent(GameEventType eventType) noexcept
+	{
+		return eventType != GameEventType::PegHit;
+	}
+
+	COLORREF CombatToneColor(CombatLogTone tone) noexcept
+	{
+		switch (tone)
+		{
+		case CombatLogTone::Positive: return UiTheme::Green;
+		case CombatLogTone::Warning: return UiTheme::Gold;
+		case CombatLogTone::Danger: return UiTheme::Danger;
+		case CombatLogTone::Neutral: return UiTheme::Text;
+		}
+		return UiTheme::Text;
+	}
+
 	void DrawMenuTitle(
 		CDC* deviceContext,
 		const CString& title,
@@ -756,6 +806,8 @@ void CChildView::OnPaint()
 			UiTheme::MutedText);
 	}
 	DrawPlayingLoadout(&memDc);
+	DrawGameplayTooltip(&memDc);
+	DrawCombatLog(&memDc);
 
 	DrawFeedbackAnimations(&memDc);
 
@@ -1151,6 +1203,12 @@ void CChildView::ConsumeGameEvents()
 			animation.ageSeconds = -0.34f * static_cast<float>(queuedToastCount++);
 		}
 		_feedbackAnimations.push_back(std::move(animation));
+		if (IsCombatLogEvent(event.type))
+		{
+			_combatLog.Add(
+				std::wstring(_feedbackAnimations.back().text.GetString()),
+				CombatTone(event.type));
+		}
 		PlayEventSound(event.type, event.pegType);
 	}
 }
@@ -2446,6 +2504,152 @@ void CChildView::DrawPlayingLoadout(CDC* deviceContext)
 	UiRenderer::DrawText(deviceContext, CRect(hud.left + 8, hud.top + 342, hud.right - 8, hud.bottom - 6), RelicSummary(loadout), 72, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 }
 
+void CChildView::DrawCombatLog(CDC* deviceContext)
+{
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(800, 286, 970, 310),
+		_combatLogVisible ? _T("[H] 전투 로그 닫기") : _T("[H] 전투 로그"),
+		72,
+		_combatLogVisible ? UiTheme::Gold : UiTheme::MutedText);
+	if (!_combatLogVisible)
+	{
+		return;
+	}
+
+	const CRect panel(270, 438, 730, 680);
+	UiRenderer::DrawPanel(deviceContext, panel, true, UiTheme::Gold);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(panel.left + 14, panel.top + 10, panel.right - 14, panel.top + 40),
+		_T("전투 로그 · 최신 이벤트"),
+		110,
+		UiTheme::Gold);
+	const auto& entries = _combatLog.GetEntries();
+	const std::size_t first = entries.size() > 7 ? entries.size() - 7 : 0;
+	int y = panel.top + 46;
+	for (std::size_t index = first; index < entries.size(); ++index)
+	{
+		CString line;
+		line.Format(
+			_T("%02zu  %s"),
+			entries[index].sequence,
+			entries[index].text.c_str());
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(panel.left + 16, y, panel.right - 16, y + 25),
+			line,
+			76,
+			CombatToneColor(entries[index].tone),
+			DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+		y += 26;
+	}
+}
+
+void CChildView::DrawGameplayTooltip(CDC* deviceContext)
+{
+	if (!_pointerLogical.has_value())
+	{
+		return;
+	}
+
+	const Vector2 pointer = *_pointerLogical;
+	const CRect currentCard(810, 370, 960, 495);
+	const CRect nextCard(810, 505, 960, 630);
+	const CRect relicArea(808, 638, 962, 678);
+	CString title;
+	CString detail;
+	COLORREF accent = UiTheme::Blue;
+
+	if (Contains(currentCard, pointer) || Contains(nextCard, pointer))
+	{
+		const bool current = Contains(currentCard, pointer);
+		const OrbDefinition& orb = current
+			? _game.GetLoadout().GetSelectedOrb()
+			: _game.GetLoadout().GetNextOrb();
+		title = (current ? _T("현재 오브 · ") : _T("다음 오브 · "))
+			+ Utf8Text(orb.displayName);
+		detail = Utf8Text(DescribeOrbEffect(orb));
+		accent = OrbAccent(orb.id);
+	}
+	else if (Contains(relicArea, pointer))
+	{
+		title = _T("보유 유물 상세");
+		for (const RelicDefinition& relic : GetRelicDefinitions())
+		{
+			const std::size_t stacks = _game.GetLoadout().GetRelicStackCount(relic.id);
+			if (stacks == 0)
+			{
+				continue;
+			}
+			if (!detail.IsEmpty()) detail += _T("\n");
+			CString relicLine;
+			relicLine.Format(
+				_T("%s x%zu · %s"),
+				Utf8Text(relic.displayName).GetString(),
+				stacks,
+				Utf8Text(DescribeRelicEffect(relic)).GetString());
+			detail += relicLine;
+		}
+		if (detail.IsEmpty()) detail = _T("현재 보유한 유물이 없습니다.");
+		accent = UiTheme::Green;
+	}
+	else
+	{
+		const auto& enemies = _game.GetEnemies();
+		const bool enemyGroup = enemies.size() > 1;
+		for (std::size_t index = 0; index < enemies.size(); ++index)
+		{
+			const EnemyCombatant& enemy = enemies[index];
+			if (!enemy.IsAlive()) continue;
+			const Vector2 size = enemyGroup ? GameLayout::EnemyGroupSize : GameLayout::EnemySize;
+			const float drawY = enemyGroup ? GameLayout::EnemyGroupY : GameLayout::EnemyInitialPosition.y;
+			const CRect enemyBounds(
+				static_cast<int>(std::lround(enemy.actor.GetX())),
+				static_cast<int>(std::lround(drawY - 22.0f)),
+				static_cast<int>(std::lround(enemy.actor.GetX() + size.x)),
+				static_cast<int>(std::lround(drawY + size.y + 20.0f)));
+			if (!Contains(enemyBounds, pointer)) continue;
+
+			title.Format(
+				_T("%s%s"),
+				Utf8Text(enemy.definition.displayName).GetString(),
+				index == _game.GetActiveEnemyIndex() ? _T(" · 현재 대상") : _T(""));
+			detail.Format(
+				_T("HP %d/%d · 피해 배율 ×%.2f\n거리 %d칸 · 공격 사거리 %d칸\n%s · 방어막 %d"),
+				static_cast<int>(std::lround(enemy.actor.GetHp())),
+				static_cast<int>(std::lround(enemy.definition.health)),
+				enemy.definition.damageTakenMultiplier,
+				enemy.distanceToPlayerCells,
+				enemy.definition.attackRangeCells,
+				EnemyActionText(_game.GetNextEnemyAction(index)).GetString(),
+				static_cast<int>(std::lround(enemy.shield)));
+			accent = enemy.IsPlayerInRange() ? UiTheme::Danger : UiTheme::Orange;
+			break;
+		}
+	}
+
+	if (title.IsEmpty())
+	{
+		return;
+	}
+	const CRect panel(260, 285, 740, 430);
+	UiRenderer::DrawPanel(deviceContext, panel, true, accent);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(panel.left + 16, panel.top + 10, panel.right - 16, panel.top + 43),
+		title,
+		112,
+		accent);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(panel.left + 20, panel.top + 48, panel.right - 20, panel.bottom - 12),
+		detail,
+		78,
+		UiTheme::Text,
+		DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+}
+
 bool CChildView::StartStage(std::string_view stageId)
 {
 	const StageDefinition* stage = FindContentStage(_contentCatalog.stages, stageId);
@@ -2456,6 +2660,11 @@ bool CChildView::StartStage(std::string_view stageId)
 
 	_feedbackAnimations.clear();
 	_attackAnimations.clear();
+	_combatLog.Clear();
+	_combatLog.Add(
+		_T("전투 시작 · ") + std::wstring(Utf8Text(stage->displayName).GetString()),
+		CombatLogTone::Neutral);
+	_combatLogVisible = false;
 	_terminalTransition.Reset();
 	_orbTrail.clear();
 	_orbTrailSampleSeconds = 0.0f;
@@ -3161,6 +3370,17 @@ BOOL CChildView::OnEraseBkgnd(CDC* pDC)
 
 void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 {
+	CPoint pointerPoint;
+	if (TryMapClientPoint(point, pointerPoint, false))
+	{
+		_pointerLogical = Vector2{
+			static_cast<float>(pointerPoint.x),
+			static_cast<float>(pointerPoint.y) };
+	}
+	else
+	{
+		_pointerLogical.reset();
+	}
 	if (_screenMode != ScreenMode::Playing)
 	{
 		CWnd::OnMouseMove(nFlags, point);
@@ -3176,8 +3396,12 @@ void CChildView::OnMouseMove(UINT nFlags, CPoint point)
 			_game.UpdateAim({
 				static_cast<float>(logicalPoint.x),
 				static_cast<float>(logicalPoint.y) });
-			Invalidate();
+			Invalidate(FALSE);
 		}
+	}
+	else
+	{
+		Invalidate(FALSE);
 	}
 
 	CWnd::OnMouseMove(nFlags, point);
@@ -3393,6 +3617,11 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		ApplyAudioOptions();
 		SaveOptions();
 		Invalidate();
+	}
+	if (nChar == 'H')
+	{
+		_combatLogVisible = !_combatLogVisible;
+		Invalidate(FALSE);
 	}
 	if (nChar == 'S' && _game.GetState() == GameState::Aiming)
 	{

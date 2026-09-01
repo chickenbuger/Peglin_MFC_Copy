@@ -13,6 +13,7 @@
 #include "GamepadNavigation.h"
 #include "GameStatistics.h"
 #include "ContentCatalog.h"
+#include "CombatLog.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -593,6 +594,31 @@ namespace
 		Check(!CreateUiViewport(0, 700).IsValid()
 			&& !CreateUiViewport(1000, 0).IsValid(),
 			"zero-sized clients do not produce an input transform");
+	}
+
+	void TestCombatLogRetention()
+	{
+		CombatLog log(3);
+		Check(log.GetCapacity() == 3 && log.IsEmpty(),
+			"combat log initializes with bounded capacity");
+		log.Add(L"first", CombatLogTone::Neutral);
+		log.Add(L"second", CombatLogTone::Warning);
+		log.Add(L"third", CombatLogTone::Danger);
+		log.Add(L"fourth", CombatLogTone::Positive);
+		const auto& entries = log.GetEntries();
+		Check(entries.size() == 3, "combat log never exceeds its capacity");
+		Check(entries.front().text == L"second" && entries.back().text == L"fourth",
+			"combat log retains newest entries in display order");
+		Check(entries.front().sequence == 2 && entries.back().sequence == 4,
+			"combat log keeps stable monotonically increasing sequence numbers");
+		Check(entries.back().tone == CombatLogTone::Positive,
+			"combat log preserves event tone metadata");
+		log.Add(L"");
+		Check(log.GetEntries().size() == 3, "combat log ignores empty events");
+		log.Clear();
+		log.Add(L"restart");
+		Check(log.GetEntries().size() == 1 && log.GetEntries().front().sequence == 1,
+			"combat log reset starts a clean encounter sequence");
 	}
 
 	void TestGamepadNavigation()
@@ -3108,6 +3134,7 @@ int main()
 	TestMouseUiNavigation();
 	TestUiAnimationTimeline();
 	TestUiViewportScaling();
+	TestCombatLogRetention();
 	TestGamepadNavigation();
 	TestAdventureRunProgression();
 	TestLayoutConfiguration();
