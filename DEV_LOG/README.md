@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.16 |
+| 현재 버전 | Version 7.17 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 16/20 완료 — 화면 전환·보상·피해 애니메이션 완료 |
+| 상태 | Sprint 7 P0 17/20 완료 — 게임패드 전체 런 입력 동등성 완료 |
 
 ## 문서
 
@@ -97,6 +97,7 @@
 - [Version 7.14 — Steam Peglin 참고 UI 계층과 전체 화면 배치 최적화](./Version_7.14.md)
 - [Version 7.15 — 파일 기반 오디오 카탈로그와 개별 볼륨](./Version_7.15.md)
 - [Version 7.16 — 화면 전환·보상·피해 UI 애니메이션](./Version_7.16.md)
+- [Version 7.17 — 게임패드 전체 런 입력 동등성](./Version_7.17.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

@@ -10,6 +10,7 @@
 
 #include "GameWorld.h"
 #include "AudioCatalog.h"
+#include "GamepadNavigation.h"
 #include "ContentCatalog.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
@@ -532,6 +533,47 @@ namespace
 		timeline.Reset();
 		Check(!timeline.IsActive() && Near(timeline.Progress(), 0.0f),
 			"UI animation reset restores idle state");
+	}
+
+	void TestGamepadNavigation()
+	{
+		Check(GetGamepadFocusCount(UiScreenKind::StageSelection, 2) == 5U,
+			"gamepad stage screen exposes routes, start, loadout, and options");
+		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 8U,
+			"gamepad can focus every loadout action");
+		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 7U,
+			"gamepad can focus every option and back");
+		Check(GetGamepadFocusCount(UiScreenKind::Reward, 0) == 3U,
+			"gamepad can focus every reward");
+		Check(GetGamepadFocusCount(UiScreenKind::Shop, 0) == 4U,
+			"gamepad can focus every shop offer and leave");
+		Check(GetGamepadFocusCount(UiScreenKind::Result, 0) == 2U,
+			"gamepad can focus retry and new run");
+		Check(MoveGamepadFocus(0, 5, -1) == 4U, "gamepad focus wraps backward");
+		Check(MoveGamepadFocus(4, 5, 1) == 0U, "gamepad focus wraps forward");
+		Check(MoveGamepadFocus(2, 5, 0) == 2U, "neutral gamepad input preserves focus");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::StageSelection, 1, 2).command
+			== UiCommand::SelectStage, "gamepad confirms the focused route");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::StageSelection, 2, 2).command
+			== UiCommand::StartSelectedStage, "gamepad starts a selected stage");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Loadout, 4, 0).command
+			== UiCommand::AcquireRelic, "gamepad reaches relic acquisition");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 3, 0).command
+			== UiCommand::CycleMusicVolume, "gamepad reaches independent music volume");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Reward, 2, 0).command
+			== UiCommand::SelectReward, "gamepad selects the third reward");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Shop, 3, 0).command
+			== UiCommand::LeaveShop, "gamepad leaves the shop");
+		Check(ResolveGamepadBackAction(UiScreenKind::Options).command
+			== UiCommand::BackToStageSelection, "gamepad B returns from options");
+		Check(ResolveGamepadBackAction(UiScreenKind::Shop).command
+			== UiCommand::LeaveShop, "gamepad B leaves the shop safely");
+		Check(!ResolveGamepadBackAction(UiScreenKind::Reward).IsHandled(),
+			"gamepad cannot skip a required reward");
+		Check(GetGamepadFocusRect(UiScreenKind::Options, 6, 0).IsValid(),
+			"gamepad back focus has a visible rectangle");
+		Check(!GetGamepadFocusRect(UiScreenKind::Result, 9, 0).IsValid(),
+			"invalid gamepad focus has no rectangle");
 	}
 
 	void TestAdventureRunProgression()
@@ -2860,6 +2902,7 @@ int main()
 	TestStateAndRestitutionRules();
 	TestMouseUiNavigation();
 	TestUiAnimationTimeline();
+	TestGamepadNavigation();
 	TestAdventureRunProgression();
 	TestLayoutConfiguration();
 	TestSeededPegLayout();

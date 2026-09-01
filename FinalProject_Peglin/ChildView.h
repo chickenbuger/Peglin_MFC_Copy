@@ -17,6 +17,7 @@
 #include "ContentCatalog.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
+#include "GamepadNavigation.h"
 #include "GameplayCatalog.h"
 #include "GameWorld.h"
 #include "Localization.h"
@@ -113,6 +114,7 @@ private:
 	void FinishPendingTerminalTransition();
 	void DrawFeedbackAnimations(CDC* deviceContext);
 	void DrawUiAnimations(CDC* deviceContext, const CRect& clientBounds);
+	void DrawGamepadFocus(CDC* deviceContext);
 	void DrawAttackAnimations(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
@@ -150,6 +152,9 @@ private:
 	void ApplyAudioOptions();
 	void UpdateScreenMusic();
 	void SetScreenMode(ScreenMode mode);
+	void PollGamepad();
+	UiScreenKind CurrentUiScreen() const noexcept;
+	std::size_t VisibleStageCount() const noexcept;
 	void RecordResult(bool cleared);
 	void ReloadLocalization();
 	CString Text(std::string_view key) const;
@@ -166,6 +171,12 @@ private:
 	std::vector<OrbTrailPoint> _orbTrail;
 	UiAnimationTimeline _screenTransition;
 	float _damageFlashSeconds = 0.0f;
+	DWORD _previousGamepadButtons = 0;
+	bool _gamepadTriggerDown = false;
+	bool _gamepadStickLatched = false;
+	bool _gamepadConnected = false;
+	std::size_t _gamepadFocusIndex = 0;
+	Vector2 _gamepadAimDirection{ 0.0f, -1.0f };
 	TerminalTransitionGate _terminalTransition;
 	float _gameplayVisualTimeSeconds = 0.0f;
 	float _orbTrailSampleSeconds = 0.0f;

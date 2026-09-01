@@ -8,11 +8,13 @@
 #include "ChildView.h"
 #include "GameLayout.h"
 #include "RewardPresentation.h"
+#include <Xinput.h>
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
 #pragma comment(lib, "Msimg32.lib")
+#pragma comment(lib, "Xinput9_1_0.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -513,6 +515,7 @@ void CChildView::OnPaint()
 		_gameplayBackground.GetSafeHandle() != nullptr ? &_gameplayBackground : nullptr);
 	auto PresentFrame = [&]()
 	{
+		DrawGamepadFocus(&memDc);
 		DrawUiAnimations(&memDc, rect);
 		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 		memDc.SelectObject(previousBitmap);
@@ -887,6 +890,7 @@ void CChildView::OnTimer(UINT_PTR nIDEvent)
 
 void CChildView::UpdateGameStep(float deltaSeconds)
 {
+	PollGamepad();
 	_screenTransition.Update(deltaSeconds);
 	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);
 	if (_screenMode != ScreenMode::Playing)
@@ -1261,6 +1265,40 @@ void CChildView::DrawUiAnimations(CDC* deviceContext, const CRect& clientBounds)
 	deviceContext->FillSolidRect(
 		CRect(clientBounds.left, clientBounds.bottom - coverHeight, clientBounds.right, clientBounds.bottom),
 		UiTheme::Canvas);
+}
+
+void CChildView::DrawGamepadFocus(CDC* deviceContext)
+{
+	if (!_gamepadConnected || _screenMode == ScreenMode::Playing)
+	{
+		return;
+	}
+	const UiFocusRect focus = GetGamepadFocusRect(
+		CurrentUiScreen(),
+		_gamepadFocusIndex,
+		VisibleStageCount());
+	if (!focus.IsValid())
+	{
+		return;
+	}
+	const int savedDc = deviceContext->SaveDC();
+	CPen focusPen(PS_SOLID, 4, UiTheme::Gold);
+	deviceContext->SelectObject(&focusPen);
+	deviceContext->SelectStockObject(NULL_BRUSH);
+	CRect bounds(
+		static_cast<int>(std::lround(focus.left)),
+		static_cast<int>(std::lround(focus.top)),
+		static_cast<int>(std::lround(focus.right)),
+		static_cast<int>(std::lround(focus.bottom)));
+	bounds.InflateRect(4, 4);
+	deviceContext->RoundRect(bounds, CPoint(18, 18));
+	deviceContext->RestoreDC(savedDc);
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(bounds.right - 46, bounds.top - 2, bounds.right - 4, bounds.top + 28),
+		_T("[A]"),
+		85,
+		UiTheme::Gold);
 }
 
 void CChildView::DrawAttackAnimations(CDC* deviceContext)
@@ -2528,8 +2566,114 @@ void CChildView::SetScreenMode(ScreenMode mode)
 		return;
 	}
 	_screenMode = mode;
+	_gamepadFocusIndex = 0;
 	_screenTransition.Start(0.28f);
 	UpdateScreenMusic();
+}
+
+UiScreenKind CChildView::CurrentUiScreen() const noexcept
+{
+	switch (_screenMode)
+	{
+	case ScreenMode::StageSelection: return UiScreenKind::StageSelection;
+	case ScreenMode::Loadout: return UiScreenKind::Loadout;
+	case ScreenMode::Options: return UiScreenKind::Options;
+	case ScreenMode::Reward: return UiScreenKind::Reward;
+	case ScreenMode::Shop: return UiScreenKind::Shop;
+	case ScreenMode::Result: return UiScreenKind::Result;
+	case ScreenMode::Playing: return UiScreenKind::StageSelection;
+	}
+	return UiScreenKind::StageSelection;
+}
+
+std::size_t CChildView::VisibleStageCount() const noexcept
+{
+	if (_run.GetStatus() == RunStatus::StageChoice)
+	{
+		return _run.GetAvailableStageIds().size();
+	}
+	return _run.GetStatus() == RunStatus::StageReady ? std::size_t{ 1 } : std::size_t{ 0 };
+}
+
+void CChildView::PollGamepad()
+{
+	XINPUT_STATE state{};
+	if (::XInputGetState(0, &state) != ERROR_SUCCESS)
+	{
+		_gamepadConnected = false;
+		_previousGamepadButtons = 0;
+		_gamepadTriggerDown = false;
+		_gamepadStickLatched = false;
+		return;
+	}
+
+	_gamepadConnected = true;
+	const DWORD buttons = state.Gamepad.wButtons;
+	const DWORD pressed = buttons & ~_previousGamepadButtons;
+	_previousGamepadButtons = buttons;
+	const bool triggerDown = state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+	const bool triggerPressed = triggerDown && !_gamepadTriggerDown;
+	_gamepadTriggerDown = triggerDown;
+
+	const float stickX = static_cast<float>(state.Gamepad.sThumbLX) / 32767.0f;
+	const float stickY = -static_cast<float>(state.Gamepad.sThumbLY) / 32767.0f;
+	const Vector2 stick{ stickX, stickY };
+	const float stickLength = stick.Length();
+
+	if (_screenMode == ScreenMode::Playing)
+	{
+		if ((pressed & XINPUT_GAMEPAD_START) != 0U)
+		{
+			_game.TogglePause();
+		}
+		if ((pressed & XINPUT_GAMEPAD_B) != 0U && _game.GetBall().GetClick())
+		{
+			_game.ResetBallToAiming();
+			return;
+		}
+		if (_game.GetState() == GameState::Aiming && stickLength >= 0.35f)
+		{
+			_gamepadAimDirection = stick.Normalized();
+			const Vector2 ballPosition = _game.GetBall().GetPosition();
+			if (!_game.GetBall().GetClick())
+			{
+				_game.BeginAim(ballPosition);
+			}
+			const Vector2 dragPosition = ballPosition - _gamepadAimDirection * 160.0f;
+			_game.UpdateAim(dragPosition);
+			if ((pressed & XINPUT_GAMEPAD_A) != 0U || triggerPressed)
+			{
+				_game.ReleaseShot(dragPosition);
+			}
+		}
+		return;
+	}
+
+	const bool previous = (buttons & (XINPUT_GAMEPAD_DPAD_LEFT | XINPUT_GAMEPAD_DPAD_UP)) != 0U
+		|| stickX <= -0.55f || stickY <= -0.55f;
+	const bool next = (buttons & (XINPUT_GAMEPAD_DPAD_RIGHT | XINPUT_GAMEPAD_DPAD_DOWN)) != 0U
+		|| stickX >= 0.55f || stickY >= 0.55f;
+	const bool navigationHeld = previous || next;
+	if (navigationHeld && !_gamepadStickLatched)
+	{
+		_gamepadFocusIndex = MoveGamepadFocus(
+			_gamepadFocusIndex,
+			GetGamepadFocusCount(CurrentUiScreen(), VisibleStageCount()),
+			previous ? -1 : 1);
+	}
+	_gamepadStickLatched = navigationHeld;
+
+	if ((pressed & XINPUT_GAMEPAD_A) != 0U)
+	{
+		ExecuteUiAction(ResolveGamepadFocusedAction(
+			CurrentUiScreen(),
+			_gamepadFocusIndex,
+			VisibleStageCount()));
+	}
+	else if ((pressed & XINPUT_GAMEPAD_B) != 0U)
+	{
+		ExecuteUiAction(ResolveGamepadBackAction(CurrentUiScreen()));
+	}
 }
 
 void CChildView::RecordResult(bool cleared)
