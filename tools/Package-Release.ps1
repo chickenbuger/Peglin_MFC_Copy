@@ -2,7 +2,7 @@
 param(
     [Parameter()]
     [ValidatePattern('^\d+\.\d+$')]
-    [string]$Version = '7.11',
+    [string]$Version = '7.12',
 
     [Parameter()]
     [string]$OutputRoot = 'dist',

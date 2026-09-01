@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.11 |
+| 현재 버전 | Version 7.12 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 11/17 완료 — 몬스터 칸 거리와 개별 공격 사거리 완료 |
+| 상태 | Sprint 7 P0 12/18 완료 — 매 턴 Refresh Peg 위치 변경과 파괴 후 재배치 완료 |
 
 ## 문서
 
@@ -92,6 +92,7 @@
 - [Version 7.9 — 시작 전 스테이지 재선택과 명시적 경로 확정](./Version_7.9.md)
 - [Version 7.10 — 골드 기반 Goblin Market 상점 스테이지](./Version_7.10.md)
 - [Version 7.11 — 몬스터 칸 거리와 개별 공격 사거리](./Version_7.11.md)
+- [Version 7.12 — 매 턴 Refresh Peg 위치 변경과 파괴 후 재배치](./Version_7.12.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

@@ -113,6 +113,24 @@ namespace
 		return count;
 	}
 
+	std::vector<std::size_t> GetActivePegSourcesOfType(
+		const GameWorld& world,
+		PegType type)
+	{
+		std::vector<std::size_t> sourceIndices;
+		auto position = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (position != nullptr)
+		{
+			const TargetBall& peg = world.GetTargets()._targetBallList.GetNext(position);
+			if (peg.type == type)
+			{
+				sourceIndices.push_back(peg.GetSourceIndex());
+			}
+		}
+		std::sort(sourceIndices.begin(), sourceIndices.end());
+		return sourceIndices;
+	}
+
 	int CountMovingPegs(const StageDefinition& stage)
 	{
 		return static_cast<int>(std::count_if(
@@ -827,6 +845,15 @@ namespace
 		}
 		Check(restoredNormalFound, "refresh restores the removed peg with its original type");
 		Check(activeRefreshPegs == 1, "refresh activation always adds one replacement refresh peg");
+		const std::vector<std::size_t> relocatedSources =
+			GetActivePegSourcesOfType(world, PegType::Refresh);
+		Check(relocatedSources.size() == 1 && relocatedSources.front() != 1,
+			"destroyed refresh peg respawns at a different source position");
+		const std::vector<GameEvent> refreshEvents = world.ConsumeEvents();
+		Check(std::any_of(refreshEvents.begin(), refreshEvents.end(), [](const GameEvent& event)
+			{
+				return event.type == GameEventType::RefreshRelocated;
+			}), "refresh destruction emits relocation feedback");
 	}
 
 	void TestRefreshPegMinimumAfterTurn()
@@ -877,13 +904,47 @@ namespace
 		existingRefresh.GetBall().SetPosition({ 500.0f, 801.0f });
 		existingRefresh.Update(0.0f);
 		existingRefresh.Update(0.0f);
+		const std::vector<std::size_t> firstTurnRefreshSources =
+			GetActivePegSourcesOfType(existingRefresh, PegType::Refresh);
 		const std::vector<GameEvent> existingEvents = existingRefresh.ConsumeEvents();
 		Check(CountActivePegsOfType(existingRefresh, PegType::Refresh) == 1,
-			"turn completion preserves an already active refresh peg");
+			"turn completion preserves the configured refresh peg count");
+		Check(firstTurnRefreshSources.size() == 1 && firstTurnRefreshSources.front() != 0,
+			"turn completion moves an existing refresh peg to another source");
 		Check(std::none_of(existingEvents.begin(), existingEvents.end(), [](const GameEvent& event)
 			{
 				return event.type == GameEventType::RefreshGuaranteed;
-			}), "existing refresh peg avoids an unnecessary conversion event");
+			}), "existing refresh peg avoids an unnecessary guarantee event");
+		Check(std::any_of(existingEvents.begin(), existingEvents.end(), [](const GameEvent& event)
+			{
+				return event.type == GameEventType::RefreshRelocated;
+			}), "turn completion emits refresh relocation feedback");
+
+		Launch(existingRefresh);
+		existingRefresh.GetBall().SetPosition({ 500.0f, 801.0f });
+		existingRefresh.Update(0.0f);
+		existingRefresh.Update(0.0f);
+		const std::vector<std::size_t> secondTurnRefreshSources =
+			GetActivePegSourcesOfType(existingRefresh, PegType::Refresh);
+		Check(secondTurnRefreshSources.size() == 1
+			&& secondTurnRefreshSources != firstTurnRefreshSources,
+			"refresh peg changes source position on every completed turn");
+
+		PegLayoutDefinition blastedRefreshLayout;
+		blastedRefreshLayout.pegs = {
+			{ { 500.0f, 500.0f }, PegType::Bomb },
+			{ { 580.0f, 500.0f }, PegType::Refresh },
+			{ { 720.0f, 500.0f }, PegType::Normal }
+		};
+		GameWorld blastedRefresh(blastedRefreshLayout);
+		Launch(blastedRefresh);
+		blastedRefresh.GetBall().SetPosition({ 485.0f, 500.0f });
+		blastedRefresh.GetBall().SetVelocity({ 2.0f, 0.0f });
+		blastedRefresh.Update(0.0f);
+		const std::vector<std::size_t> blastedRefreshSources =
+			GetActivePegSourcesOfType(blastedRefresh, PegType::Refresh);
+		Check(blastedRefreshSources.size() == 1 && blastedRefreshSources.front() != 1,
+			"blast-destroyed refresh peg immediately respawns at a different source");
 	}
 
 	void TestStageCatalogAndValidation()
@@ -1498,8 +1559,22 @@ namespace
 		world.GetBall().SetVelocity({ 2.0f, 0.0f });
 		world.Update(0.0f);
 		Check(world.GetTargets()._targetBallList.GetCount() == 3, "first refresh restores itself without duplicating positions");
+		Check(CountActivePegsOfType(world, PegType::Refresh) == 2,
+			"first refresh relocation preserves configured refresh count");
 
-		world.GetBall().SetPosition({ 585.0f, 500.0f });
+		Vector2 nextRefreshPosition;
+		auto refreshPosition = world.GetTargets()._targetBallList.GetHeadPosition();
+		while (refreshPosition != nullptr)
+		{
+			const TargetBall& candidate =
+				world.GetTargets()._targetBallList.GetNext(refreshPosition);
+			if (candidate.type == PegType::Refresh)
+			{
+				nextRefreshPosition = candidate.position;
+				break;
+			}
+		}
+		world.GetBall().SetPosition(nextRefreshPosition + Vector2{ -15.0f, 0.0f });
 		world.GetBall().SetVelocity({ 2.0f, 0.0f });
 		world.Update(0.0f);
 		Check(world.GetTargets()._targetBallList.GetCount() == 3, "second refresh also restores itself without duplicates");
@@ -1513,7 +1588,8 @@ namespace
 			normalCount += active.type == PegType::Normal ? 1 : 0;
 			refreshCount += active.type == PegType::Refresh ? 1 : 0;
 		}
-		Check(normalCount == 1 && refreshCount == 2, "refresh cycle preserves every original peg and refresh type");
+		Check(normalCount == 1 && refreshCount == 2,
+			"refresh cycle preserves the configured refresh count after relocation");
 	}
 
 	void TestGameEventFeedbackStream()

@@ -62,7 +62,7 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
 
 ```powershell
-& '.\tools\Package-Release.ps1' -Version '7.11'
+& '.\tools\Package-Release.ps1' -Version '7.12'
 ```
 
 패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 이미지 변환·크기·색심도와 외부 스테이지·게임플레이·한국어·영어 카탈로그를 먼저 검증한다. 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함하며, `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 경로 탈출, 파일 변조, MFC 런타임·외부 카탈로그 누락을 자동 탐지한다.
@@ -80,7 +80,7 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 
 ## 현재 검증 상태
 
-2026-09-01 Version 7.11 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 939개·총 3,756개 자동 검증과 5종 몬스터, 9개 적 안정 ID, Refresh Peg 보장, 오브·유물 보상 안내, 이동 페그, 시작 전 경로 재선택, Goblin Market 상점, 몬스터별 칸 거리·공격 사거리를 검증했다. 자산 파이프라인은 17개 리소스와 16개 PNG→24-bit BMP 변환을 검증한다.
+2026-09-01 Version 7.12 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 952개·총 3,808개 자동 검증과 5종 몬스터, 9개 적 안정 ID, Refresh Peg 최소 보장·매 턴 재배치·파괴 후 즉시 재생성, 오브·유물 보상 안내, 이동 페그, 시작 전 경로 재선택, Goblin Market 상점, 몬스터별 칸 거리·공격 사거리를 검증했다. 자산 파이프라인은 17개 리소스와 16개 PNG→24-bit BMP 변환을 검증한다.
 
 Version 7.4 Release x64 ZIP은 `dist/PeglinMFC-7.4-win-x64.zip`에 생성되며 크기는 7,054,453 bytes, SHA-256은 `62D7B57F5D7DD058785EE8717488EFA7FBE3636102C41F3F73247A878DB811FF`다.
 
@@ -95,3 +95,5 @@ Version 7.9 Release x64 ZIP은 `dist/PeglinMFC-7.9-win-x64.zip`에 생성되며 
 Version 7.10 Release x64 ZIP은 `dist/PeglinMFC-7.10-win-x64.zip`에 생성되며 크기는 7,263,894 bytes, SHA-256은 `5613357A126FA72ED18EBF404783A871BC2A0B3052F252BD111503358E7D8D80`다.
 
 Version 7.11 Release x64 ZIP은 `dist/PeglinMFC-7.11-win-x64.zip`에 생성되며 크기는 7,265,630 bytes, SHA-256은 `E6DC32DD7F28CF49B6B13577BF24F8CCB9AC796CC4B7151337B9DBEEF282BB14`다.
+
+Version 7.12 Release x64 ZIP은 `dist/PeglinMFC-7.12-win-x64.zip`에 생성되며 크기는 7,267,552 bytes, SHA-256은 `87AC8B72ACF59080BDBE06B61C2E393FDA83B7710A42F7D8C33003464F4C2BE4`다.

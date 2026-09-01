@@ -122,6 +122,15 @@ void GameWorld::ResetGame()
 	_aimCurrent = _aimStart;
 	_aimInProgress = false;
 	_pegMotionElapsedSeconds = 0.0f;
+	_refreshSourceIndices.clear();
+	_requiredRefreshPegCount = (std::max)(
+		std::size_t{ 1 },
+		static_cast<std::size_t>(std::count_if(
+			_stage.pegLayout.pegs.begin(),
+			_stage.pegLayout.pegs.end(),
+			[](const PegDefinition& peg) { return peg.type == PegType::Refresh; })));
+	_refreshRelocationSerial = 0;
+	_refreshRelocatedThisTurn = false;
 	_terminalResultReported = false;
 	_pegRestitution = _stage.rules.pegRestitution;
 	_ball.Init();
@@ -155,6 +164,7 @@ void GameWorld::ResetGame()
 	}
 	_activeEnemyIndex = 0;
 	InitializeTargets();
+	SynchronizeRefreshSourceIndices();
 }
 
 void GameWorld::ResetBallToAiming()
@@ -168,6 +178,7 @@ void GameWorld::ResetBallToAiming()
 	_aimStart = _ball.GetPosition();
 	_aimCurrent = _aimStart;
 	_aimInProgress = false;
+	_refreshRelocatedThisTurn = false;
 	_terminalResultReported = false;
 	TransitionTo(GameState::Aiming);
 }
@@ -489,6 +500,7 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 	const float blastRadius = GetPegTypeDefinition(bomb.type).blastRadius;
 	const float blastRadiusSquared = blastRadius * blastRadius;
 	int removedPegs = 0;
+	bool removedRefreshPeg = false;
 	auto position = _targetBallList._targetBallList.GetHeadPosition();
 	while (position != nullptr)
 	{
@@ -497,6 +509,7 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 		if ((target.position - bomb.position).LengthSquared() <= blastRadiusSquared)
 		{
 			_targetBallList._targetBallList.RemoveAt(current);
+			removedRefreshPeg = removedRefreshPeg || target.type == PegType::Refresh;
 			AwardPeg(target);
 			++removedPegs;
 		}
@@ -511,6 +524,12 @@ void GameWorld::ApplyBombEffect(const TargetBall& bomb)
 		removedPegs,
 		0.0f
 	});
+
+	if (removedRefreshPeg)
+	{
+		const bool refreshCreated = EnsureRefreshPegAfterTurn();
+		_refreshRelocatedThisTurn = RelocateRefreshPegs() || refreshCreated;
+	}
 }
 
 void GameWorld::RestoreRemovedPegs(Vector2 triggerPosition)
@@ -549,42 +568,112 @@ void GameWorld::RestoreRemovedPegs(Vector2 triggerPosition)
 		restoredPegs,
 		0.0f
 	});
+	const bool refreshCreated = EnsureRefreshPegAfterTurn();
+	_refreshRelocatedThisTurn = RelocateRefreshPegs() || refreshCreated;
 }
 
 bool GameWorld::EnsureRefreshPegAfterTurn()
 {
-	TargetBall* replacement = nullptr;
+	std::size_t activeRefreshCount = 0;
+	std::vector<TargetBall*> preferredReplacements;
+	std::vector<TargetBall*> fallbackReplacements;
+	std::vector<TargetBall*> previousPreferredReplacements;
+	std::vector<TargetBall*> previousFallbackReplacements;
+	std::vector<std::size_t> activeSourceIndices;
 	auto position = _targetBallList._targetBallList.GetHeadPosition();
 	while (position != nullptr)
 	{
 		TargetBall& active = _targetBallList._targetBallList.GetNext(position);
+		activeSourceIndices.push_back(active.GetSourceIndex());
 		if (active.type == PegType::Refresh)
 		{
-			return false;
+			++activeRefreshCount;
+			continue;
 		}
-		if (replacement == nullptr
-			|| (replacement->type != PegType::Normal && active.type == PegType::Normal))
+
+		const bool wasPreviousRefresh = std::find(
+			_refreshSourceIndices.begin(),
+			_refreshSourceIndices.end(),
+			active.GetSourceIndex()) != _refreshSourceIndices.end();
+		std::vector<TargetBall*>& replacements = active.type == PegType::Normal
+			? (wasPreviousRefresh
+				? previousPreferredReplacements
+				: preferredReplacements)
+			: (wasPreviousRefresh
+				? previousFallbackReplacements
+				: fallbackReplacements);
+		replacements.push_back(&active);
+	}
+
+	if (activeRefreshCount >= _requiredRefreshPegCount)
+	{
+		return false;
+	}
+
+	const std::size_t refreshPegsNeeded = _requiredRefreshPegCount - activeRefreshCount;
+	std::size_t refreshPegsCreated = 0;
+	Vector2 refreshPosition = GameLayout::BallInitialPosition;
+	auto convertReplacements = [&](std::vector<TargetBall*>& replacements)
+	{
+		for (TargetBall* replacement : replacements)
 		{
-			replacement = &active;
+			if (refreshPegsCreated >= refreshPegsNeeded)
+			{
+				return;
+			}
+			replacement->type = PegType::Refresh;
+			if (refreshPegsCreated == 0)
+			{
+				refreshPosition = replacement->position;
+			}
+			++refreshPegsCreated;
+		}
+	};
+	convertReplacements(preferredReplacements);
+	convertReplacements(fallbackReplacements);
+	convertReplacements(previousPreferredReplacements);
+	convertReplacements(previousFallbackReplacements);
+
+	for (int pass = 0;
+		pass < 2 && refreshPegsCreated < refreshPegsNeeded;
+		++pass)
+	{
+		for (std::size_t index = 0;
+			index < _stage.pegLayout.pegs.size()
+				&& refreshPegsCreated < refreshPegsNeeded;
+			++index)
+		{
+			if (std::find(
+				activeSourceIndices.begin(),
+				activeSourceIndices.end(),
+				index) != activeSourceIndices.end())
+			{
+				continue;
+			}
+			const bool wasPreviousRefresh = std::find(
+				_refreshSourceIndices.begin(),
+				_refreshSourceIndices.end(),
+				index) != _refreshSourceIndices.end();
+			if ((pass == 0) == wasPreviousRefresh)
+			{
+				continue;
+			}
+
+			TargetBall restored;
+			restored.setting(_stage.pegLayout.pegs[index], index);
+			restored.UpdateMotion(_pegMotionElapsedSeconds);
+			restored.type = PegType::Refresh;
+			if (refreshPegsCreated == 0)
+			{
+				refreshPosition = restored.position;
+			}
+			_targetBallList.add(restored);
+			activeSourceIndices.push_back(index);
+			++refreshPegsCreated;
 		}
 	}
 
-	Vector2 refreshPosition = GameLayout::BallInitialPosition;
-	if (replacement != nullptr)
-	{
-		replacement->type = PegType::Refresh;
-		refreshPosition = replacement->position;
-	}
-	else if (!_stage.pegLayout.pegs.empty())
-	{
-		TargetBall restored;
-		restored.setting(_stage.pegLayout.pegs.front(), 0);
-		restored.UpdateMotion(_pegMotionElapsedSeconds);
-		restored.type = PegType::Refresh;
-		refreshPosition = restored.position;
-		_targetBallList.add(restored);
-	}
-	else
+	if (refreshPegsCreated == 0)
 	{
 		return false;
 	}
@@ -595,10 +684,83 @@ bool GameWorld::EnsureRefreshPegAfterTurn()
 		PegType::Refresh,
 		0,
 		_score.currentCombo,
-		1,
+		static_cast<int>(refreshPegsCreated),
+		0.0f
+	});
+	SynchronizeRefreshSourceIndices();
+	return true;
+}
+
+bool GameWorld::RelocateRefreshPegs()
+{
+	std::vector<TargetBall*> refreshPegs;
+	std::vector<TargetBall*> replacementPegs;
+	auto position = _targetBallList._targetBallList.GetHeadPosition();
+	while (position != nullptr)
+	{
+		TargetBall& active = _targetBallList._targetBallList.GetNext(position);
+		if (active.type == PegType::Refresh)
+		{
+			refreshPegs.push_back(&active);
+		}
+		else
+		{
+			replacementPegs.push_back(&active);
+		}
+	}
+
+	if (refreshPegs.empty() || replacementPegs.empty())
+	{
+		SynchronizeRefreshSourceIndices();
+		return false;
+	}
+
+	const std::size_t relocationCount = (std::min)(
+		refreshPegs.size(),
+		replacementPegs.size());
+	const std::size_t replacementOffset = (
+		static_cast<std::size_t>(GetBattleShuffleSeed())
+		+ static_cast<std::size_t>(_completedTurns)
+		+ _refreshRelocationSerial) % replacementPegs.size();
+	Vector2 feedbackPosition;
+	for (std::size_t index = 0; index < relocationCount; ++index)
+	{
+		TargetBall& refresh = *refreshPegs[index];
+		TargetBall& replacement = *replacementPegs[
+			(replacementOffset + index) % replacementPegs.size()];
+		std::swap(refresh.type, replacement.type);
+		if (index == 0)
+		{
+			feedbackPosition = replacement.position;
+		}
+	}
+
+	++_refreshRelocationSerial;
+	SynchronizeRefreshSourceIndices();
+	_events.push_back({
+		GameEventType::RefreshRelocated,
+		feedbackPosition,
+		PegType::Refresh,
+		0,
+		0,
+		static_cast<int>(relocationCount),
 		0.0f
 	});
 	return true;
+}
+
+void GameWorld::SynchronizeRefreshSourceIndices()
+{
+	_refreshSourceIndices.clear();
+	auto position = _targetBallList._targetBallList.GetHeadPosition();
+	while (position != nullptr)
+	{
+		const TargetBall& active = _targetBallList._targetBallList.GetNext(position);
+		if (active.type == PegType::Refresh)
+		{
+			_refreshSourceIndices.push_back(active.GetSourceIndex());
+		}
+	}
 }
 
 std::size_t GameWorld::GetLivingEnemyCount() const noexcept
@@ -832,6 +994,11 @@ void GameWorld::ResolveTurn()
 	_ball.Init();
 	_loadout.AdvanceOrb();
 	EnsureRefreshPegAfterTurn();
+	if (!_refreshRelocatedThisTurn)
+	{
+		RelocateRefreshPegs();
+	}
+	_refreshRelocatedThisTurn = false;
 
 	if (_player.GetHp() <= 0.0f)
 	{

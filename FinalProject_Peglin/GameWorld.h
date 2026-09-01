@@ -61,6 +61,7 @@ enum class GameEventType
 	BombTriggered,
 	RefreshTriggered,
 	RefreshGuaranteed,
+	RefreshRelocated,
 	PlayerAttack,
 	TurnResolved,
 	EnemyAdvanced,
@@ -208,6 +209,8 @@ private:
 	void ApplyBombEffect(const TargetBall& bomb);
 	void RestoreRemovedPegs(Vector2 triggerPosition);
 	bool EnsureRefreshPegAfterTurn();
+	bool RelocateRefreshPegs();
+	void SynchronizeRefreshSourceIndices();
 	void ExecuteEnemyAction(
 		std::size_t enemyIndex,
 		const EnemyActionDefinition& action);
@@ -237,6 +240,10 @@ private:
 	Vector2 _aimCurrent;
 	bool _aimInProgress = false;
 	float _pegMotionElapsedSeconds = 0.0f;
+	std::vector<std::size_t> _refreshSourceIndices;
+	std::size_t _requiredRefreshPegCount = 1;
+	std::size_t _refreshRelocationSerial = 0;
+	bool _refreshRelocatedThisTurn = false;
 	GameState _gameState = GameState::Aiming;
 	GameState _stateBeforePause = GameState::Aiming;
 	bool _terminalResultReported = false;

@@ -901,6 +901,18 @@ void CChildView::ConsumeGameEvents()
 			animation.color = RGB(0, 210, 120);
 			animation.lifetimeSeconds = 1.1f;
 			break;
+		case GameEventType::RefreshRelocated:
+			if (event.affectedPegs > 1)
+			{
+				animation.text.Format(_T("REFRESH MOVED x%d"), event.affectedPegs);
+			}
+			else
+			{
+				animation.text = _T("REFRESH MOVED");
+			}
+			animation.color = RGB(0, 225, 155);
+			animation.lifetimeSeconds = 1.0f;
+			break;
 		case GameEventType::PlayerAttack:
 		{
 			const CString deliveryText = event.attackDelivery == AttackDelivery::Melee
