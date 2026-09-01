@@ -28,6 +28,7 @@
 #include "Progression.h"
 #include "RewardPresentation.h"
 #include "RunProgression.h"
+#include "RunCheckpointStore.h"
 #include "SoftPegSound.h"
 #include "TerminalTransitionGate.h"
 #include "UiNavigation.h"
@@ -961,6 +962,104 @@ namespace
 		Check(run.HasClearedStage("stage-4") && !run.HasClearedStage("stage-2"),
 			"run history records the chosen branch without marking skipped stages");
 		Check(run.GetRewardChoices().empty(), "final victory does not offer a next-stage reward");
+	}
+
+	void TestRunCheckpointPersistence()
+	{
+		const RunStageLayers route{
+			{ "stage-a" },
+			{ "stage-b", "stage-c" },
+			{ std::string(RunShopStageId) },
+			{ "boss-stage" }
+		};
+		AdventureRun run;
+		Check(run.StartBranching(route), "checkpoint run accepts a stable route");
+		Check(run.CompleteCurrentStage(), "checkpoint run reaches reward selection");
+		Check(run.SelectReward(1).has_value(), "checkpoint run records a selected reward");
+		Check(run.SelectNextStage(1), "checkpoint run records an editable branch choice");
+
+		const AdventureRunSnapshot runSnapshot = run.CreateSnapshot();
+		AdventureRun restoredRun;
+		Check(restoredRun.RestoreSnapshot(runSnapshot), "run snapshot restores valid route progress");
+		Check(restoredRun.GetStatus() == RunStatus::StageChoice
+			&& restoredRun.GetGold() == 75
+			&& restoredRun.GetSelectedStageChoiceId() == "stage-c",
+			"run snapshot preserves status, wallet, and selected branch");
+		AdventureRunSnapshot invalidRun = runSnapshot;
+		invalidRun.currentStageId = "unknown-stage";
+		Check(!restoredRun.RestoreSnapshot(invalidRun), "run snapshot rejects a current stage outside its layer");
+		invalidRun = runSnapshot;
+		invalidRun.completedCombatStages = 9;
+		Check(!restoredRun.RestoreSnapshot(invalidRun), "run snapshot rejects inconsistent combat clear totals");
+
+		PlayerLoadout loadout;
+		Check(loadout.AddOrb("echo-orb"), "checkpoint loadout accepts a duplicate earned orb");
+		Check(loadout.AcquireRelic("combo-lantern"), "checkpoint loadout acquires a relic");
+		Check(loadout.SelectOrb("echo-orb"), "checkpoint loadout selects its preferred orb");
+		const PlayerLoadoutSnapshot loadoutSnapshot = loadout.CreatePersistentSnapshot();
+		PlayerLoadout restoredLoadout;
+		Check(restoredLoadout.RestorePersistentSnapshot(loadoutSnapshot),
+			"loadout snapshot restores owned orbs and relics");
+		Check(restoredLoadout.GetOwnedOrbs() == loadout.GetOwnedOrbs()
+			&& restoredLoadout.GetPreferredOrbId() == "echo-orb"
+			&& restoredLoadout.GetRelicStackCount("combo-lantern") == 1,
+			"loadout snapshot preserves deck order, preference, and relic stacks");
+		PlayerLoadoutSnapshot invalidLoadout = loadoutSnapshot;
+		invalidLoadout.ownedOrbIds.push_back("missing-orb");
+		Check(!restoredLoadout.RestorePersistentSnapshot(invalidLoadout),
+			"loadout snapshot rejects an unknown content id");
+
+		const std::filesystem::path testDirectory =
+			std::filesystem::temp_directory_path()
+			/ ("PeglinMFC_RunCheckpointTests_" + std::to_string(::GetCurrentProcessId()));
+		const std::filesystem::path checkpointPath = testDirectory / "run.v1.ini";
+		std::error_code cleanupError;
+		std::filesystem::remove_all(testDirectory, cleanupError);
+		std::filesystem::create_directories(testDirectory, cleanupError);
+		Check(!cleanupError, "run checkpoint test directory is available");
+
+		RunCheckpoint checkpoint;
+		checkpoint.run = runSnapshot;
+		checkpoint.loadout = loadoutSnapshot;
+		checkpoint.difficulty = GameDifficulty::Hard;
+		checkpoint.playerHealth = 63.5f;
+		RunCheckpointStore store(checkpointPath);
+		Check(store.Save(checkpoint), "run checkpoint saves atomically");
+		const RunCheckpointLoadResult loaded = store.Load();
+		Check(loaded.state == RunCheckpointLoadState::Loaded,
+			"saved run checkpoint loads as the current schema");
+		Check(loaded.checkpoint.run.currentStageId == "stage-a"
+			&& loaded.checkpoint.run.selectedStageChoiceIndex == std::optional<std::size_t>{ 1 }
+			&& loaded.checkpoint.difficulty == GameDifficulty::Hard
+			&& Near(loaded.checkpoint.playerHealth, 63.5f),
+			"run checkpoint preserves route, difficulty, and health");
+		Check(loaded.checkpoint.loadout.ownedOrbIds == loadoutSnapshot.ownedOrbIds
+			&& loaded.checkpoint.loadout.acquiredRelics == loadoutSnapshot.acquiredRelics,
+			"run checkpoint preserves deck and relic inventory");
+
+		RunCheckpoint newer = checkpoint;
+		newer.playerHealth = 22.0f;
+		Check(store.Save(newer), "second atomic checkpoint creates a validated backup");
+		{
+			std::ofstream corrupt(checkpointPath, std::ios::trunc);
+			corrupt << "corrupt checkpoint\n";
+		}
+		const RunCheckpointLoadResult recovered = store.LoadWithRecovery();
+		Check(recovered.state == RunCheckpointLoadState::Recovered,
+			"corrupt primary checkpoint recovers from its last valid backup");
+		Check(Near(recovered.checkpoint.playerHealth, 63.5f),
+			"checkpoint recovery restores the previous committed state");
+
+		{
+			std::ofstream incompatible(checkpointPath, std::ios::trunc);
+			incompatible << "peglin_run_version=99\n";
+		}
+		Check(store.LoadWithRecovery().state == RunCheckpointLoadState::Incompatible,
+			"newer checkpoint schemas are preserved instead of downgraded from backup");
+		Check(store.Reset(), "run checkpoint reset removes primary and recovery files");
+		Check(store.Load().state == RunCheckpointLoadState::Missing,
+			"reset checkpoint remains absent on the next load");
+		std::filesystem::remove_all(testDirectory, cleanupError);
 	}
 
 	void TestLayoutConfiguration()
@@ -3360,6 +3459,7 @@ int main(int argc, char* argv[])
 	TestContentReportGeneration();
 	TestGamepadNavigation();
 	TestAdventureRunProgression();
+	TestRunCheckpointPersistence();
 	TestLayoutConfiguration();
 	TestSeededPegLayout();
 	TestDataDrivenPegLayout();

@@ -286,6 +286,57 @@ bool PlayerLoadout::AdvanceOrb()
 	return true;
 }
 
+PlayerLoadoutSnapshot PlayerLoadout::CreatePersistentSnapshot() const
+{
+	return { _ownedOrbIds, _preferredOrbId, _acquiredRelics };
+}
+
+bool PlayerLoadout::RestorePersistentSnapshot(const PlayerLoadoutSnapshot& snapshot)
+{
+	if (snapshot.ownedOrbIds.empty()
+		|| snapshot.ownedOrbIds.size() > MaxOwnedOrbs
+		|| FindOrbDefinition(snapshot.preferredOrbId) == nullptr
+		|| std::find(
+			snapshot.ownedOrbIds.begin(),
+			snapshot.ownedOrbIds.end(),
+			snapshot.preferredOrbId) == snapshot.ownedOrbIds.end())
+	{
+		return false;
+	}
+	for (const std::string& orbId : snapshot.ownedOrbIds)
+	{
+		if (FindOrbDefinition(orbId) == nullptr)
+		{
+			return false;
+		}
+	}
+
+	for (const std::string& relicId : snapshot.acquiredRelics)
+	{
+		const RelicDefinition* definition = FindRelicDefinition(relicId);
+		if (definition == nullptr)
+		{
+			return false;
+		}
+		const std::size_t stackCount = static_cast<std::size_t>(std::count(
+			snapshot.acquiredRelics.begin(),
+			snapshot.acquiredRelics.end(),
+			relicId));
+		if (stackCount > definition->maxStacks
+			|| (definition->duplicatePolicy == RelicDuplicatePolicy::Unique
+				&& stackCount > 1))
+		{
+			return false;
+		}
+	}
+
+	_ownedOrbIds = snapshot.ownedOrbIds;
+	_preferredOrbId = snapshot.preferredOrbId;
+	_acquiredRelics = snapshot.acquiredRelics;
+	BeginBattle(0u);
+	return true;
+}
+
 std::vector<std::string> PlayerLoadout::BuildShuffledCycle()
 {
 	std::vector<std::string> cycle = _ownedOrbIds;

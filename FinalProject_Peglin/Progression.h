@@ -71,6 +71,13 @@ bool ValidateProgressionCatalog(const ProgressionCatalog& catalog) noexcept;
 bool InstallProgressionCatalog(const ProgressionCatalog& catalog);
 void ResetProgressionCatalog();
 
+struct PlayerLoadoutSnapshot
+{
+	std::vector<std::string> ownedOrbIds;
+	std::string preferredOrbId;
+	std::vector<std::string> acquiredRelics;
+};
+
 class PlayerLoadout
 {
 public:
@@ -85,12 +92,15 @@ public:
 	void Reset();
 	void BeginBattle(std::uint32_t shuffleSeed);
 	bool AdvanceOrb();
+	PlayerLoadoutSnapshot CreatePersistentSnapshot() const;
+	bool RestorePersistentSnapshot(const PlayerLoadoutSnapshot& snapshot);
 
 	const OrbDefinition& GetSelectedOrb() const noexcept;
 	const OrbDefinition& GetNextOrb() const noexcept;
 	std::string_view GetSelectedOrbId() const noexcept;
 	std::string_view GetNextOrbId() const noexcept;
 	const std::vector<std::string>& GetOwnedOrbs() const noexcept { return _ownedOrbIds; }
+	std::string_view GetPreferredOrbId() const noexcept { return _preferredOrbId; }
 	std::size_t GetDrawPileCount() const noexcept;
 	std::size_t GetDiscardPileCount() const noexcept { return _cycleIndex; }
 	std::size_t GetReloadCount() const noexcept { return _reloadCount; }

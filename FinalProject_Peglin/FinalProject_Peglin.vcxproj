@@ -219,6 +219,7 @@
 	<ClInclude Include="Progression.h" />
 	<ClInclude Include="RewardPresentation.h" />
 	<ClInclude Include="RunProgression.h" />
+	<ClInclude Include="RunCheckpointStore.h" />
 	<ClInclude Include="SoftPegSound.h" />
 	<ClInclude Include="TerminalTransitionGate.h" />
     <ClInclude Include="Physics.h" />
@@ -254,6 +255,7 @@
 	<ClCompile Include="Progression.cpp" />
 	<ClCompile Include="RewardPresentation.cpp" />
 	<ClCompile Include="RunProgression.cpp" />
+	<ClCompile Include="RunCheckpointStore.cpp" />
 	<ClCompile Include="SoftPegSound.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

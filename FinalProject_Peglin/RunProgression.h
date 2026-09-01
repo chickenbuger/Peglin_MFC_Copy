@@ -50,6 +50,18 @@ struct RunStageEntry
 
 using RunStageLayers = std::vector<std::vector<std::string>>;
 
+struct AdventureRunSnapshot
+{
+	RunStatus status = RunStatus::NotStarted;
+	RunStageLayers stageLayers;
+	std::size_t currentLayer = 0;
+	std::size_t completedCombatStages = 0;
+	int gold = 0;
+	std::string currentStageId;
+	std::vector<std::string> clearedStageIds;
+	std::optional<std::size_t> selectedStageChoiceIndex;
+};
+
 RunStageLayers BuildBranchingStageLayers(
 	const std::vector<RunStageEntry>& catalogStages);
 
@@ -65,6 +77,8 @@ public:
 	bool SelectNextStage(std::size_t index);
 	bool ConfirmSelectedStage();
 	bool SpendGold(int amount) noexcept;
+	AdventureRunSnapshot CreateSnapshot() const;
+	bool RestoreSnapshot(const AdventureRunSnapshot& snapshot);
 
 	RunStatus GetStatus() const noexcept { return _status; }
 	std::size_t GetStageCount() const noexcept { return _stageLayers.size(); }

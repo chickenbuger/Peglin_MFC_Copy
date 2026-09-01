@@ -158,6 +158,10 @@ public:
 	bool SelectOrb(std::string_view orbId) { return _loadout.SelectOrb(orbId); }
 	bool AddOrb(std::string_view orbId) { return _loadout.AddOrb(orbId); }
 	bool AcquireRelic(std::string_view relicId) { return _loadout.AcquireRelic(relicId); }
+	bool RestoreLoadout(const PlayerLoadoutSnapshot& snapshot)
+	{
+		return _loadout.RestorePersistentSnapshot(snapshot);
+	}
 	void ResetProgression();
 
 	bool BeginAim(Vector2 position);

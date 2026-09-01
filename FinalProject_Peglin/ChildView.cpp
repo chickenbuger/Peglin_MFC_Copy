@@ -393,7 +393,8 @@ namespace
 
 CChildView::CChildView()
 	: _settingsStore(GetDefaultGameSettingsPath()),
-	_recordStore(GetDefaultGameRecordPath())
+	_recordStore(GetDefaultGameRecordPath()),
+	_runCheckpointStore(GetDefaultRunCheckpointPath())
 {
 	_demoRequested = HasDemoCommandLineFlag(::GetCommandLineW());
 	const SettingsLoadResult settings = _settingsStore.LoadWithRecovery();
@@ -431,7 +432,31 @@ CChildView::CChildView()
 	{
 		ResetProgressionCatalog();
 	}
-	BeginNewRun();
+	const RunCheckpointLoadResult checkpoint = _runCheckpointStore.LoadWithRecovery();
+	const bool restoredCheckpoint = checkpoint.IsUsable()
+		&& RestoreRunCheckpoint(checkpoint.checkpoint);
+	if (restoredCheckpoint)
+	{
+		_runNotice = checkpoint.state == RunCheckpointLoadState::Recovered
+			? _T("손상된 런을 마지막 정상 백업에서 복구했습니다")
+			: _T("저장된 런을 이어서 진행합니다");
+	}
+	else
+	{
+		_checkpointWritesEnabled = checkpoint.state != RunCheckpointLoadState::Incompatible
+			&& !checkpoint.IsUsable();
+		BeginNewRun();
+		if (checkpoint.state == RunCheckpointLoadState::Incompatible
+			|| checkpoint.IsUsable())
+		{
+			_runNotice = _T("호환되지 않는 런 저장 파일을 보존했습니다 · 이번 실행의 자동 저장은 꺼집니다");
+		}
+		else if (checkpoint.state == RunCheckpointLoadState::Invalid
+			|| checkpoint.state == RunCheckpointLoadState::IoError)
+		{
+			_runNotice = _T("런 저장 파일을 복구할 수 없어 새 런으로 시작합니다");
+		}
+	}
 }
 
 CChildView::~CChildView()
@@ -503,6 +528,7 @@ void CChildView::gameclear()
 	RecordResult(true);
 	_runPlayerHealth = _game.GetPlayer().GetHp();
 	_run.CompleteCurrentStage();
+	SaveRunCheckpoint();
 	SetScreenMode(_run.GetStatus() == RunStatus::RewardSelection
 		? ScreenMode::Reward
 		: ScreenMode::Result);
@@ -2743,7 +2769,6 @@ bool CChildView::StartSelectedStage()
 	{
 		if (IsRunShopStage(_run.GetCurrentStageId()))
 		{
-			_shopPurchased.fill(false);
 			_runNotice = _T("상품은 각각 한 번만 구매할 수 있습니다");
 			SetScreenMode(ScreenMode::Shop);
 			SetFocus();
@@ -2766,6 +2791,7 @@ bool CChildView::StartSelectedStage()
 			return false;
 		}
 		_shopPurchased.fill(false);
+		SaveRunCheckpoint();
 		_runNotice = _T("상품은 각각 한 번만 구매할 수 있습니다");
 		SetScreenMode(ScreenMode::Shop);
 		SetFocus();
@@ -2776,7 +2802,12 @@ bool CChildView::StartSelectedStage()
 		_runNotice = _T("스테이지를 시작할 수 없습니다");
 		return false;
 	}
-	return _run.ConfirmSelectedStage();
+	if (!_run.ConfirmSelectedStage())
+	{
+		return false;
+	}
+	SaveRunCheckpoint();
+	return true;
 }
 
 void CChildView::BeginNewRun()
@@ -2811,6 +2842,84 @@ void CChildView::BeginNewRun()
 	_terminalTransition.Reset();
 	_orbTrail.clear();
 	SetScreenMode(ScreenMode::StageSelection);
+	SaveRunCheckpoint();
+}
+
+bool CChildView::SaveRunCheckpoint()
+{
+	if (!_checkpointWritesEnabled)
+	{
+		return false;
+	}
+	if (_run.GetStatus() == RunStatus::Complete)
+	{
+		_checkpointSaveFailed = !_runCheckpointStore.Reset();
+		return !_checkpointSaveFailed;
+	}
+	if (_run.GetStatus() != RunStatus::StageReady
+		&& _run.GetStatus() != RunStatus::RewardSelection
+		&& _run.GetStatus() != RunStatus::StageChoice)
+	{
+		return false;
+	}
+
+	RunCheckpoint checkpoint;
+	checkpoint.run = _run.CreateSnapshot();
+	checkpoint.loadout = _game.GetLoadout().CreatePersistentSnapshot();
+	checkpoint.difficulty = _runDifficulty;
+	checkpoint.playerHealth = _runPlayerHealth;
+	checkpoint.shopPurchased = _shopPurchased;
+	_checkpointSaveFailed = !_runCheckpointStore.Save(checkpoint);
+	if (_checkpointSaveFailed)
+	{
+		_runNotice = _T("런 진행 상황을 저장하지 못했습니다");
+	}
+	return !_checkpointSaveFailed;
+}
+
+bool CChildView::RestoreRunCheckpoint(const RunCheckpoint& checkpoint)
+{
+	if (checkpoint.run.status != RunStatus::StageReady
+		&& checkpoint.run.status != RunStatus::RewardSelection
+		&& checkpoint.run.status != RunStatus::StageChoice)
+	{
+		return false;
+	}
+	for (const std::vector<std::string>& layer : checkpoint.run.stageLayers)
+	{
+		for (const std::string& stageId : layer)
+		{
+			if (!IsRunShopStage(stageId)
+				&& FindContentStage(_contentCatalog.stages, stageId) == nullptr)
+			{
+				return false;
+			}
+		}
+	}
+
+	AdventureRun restoredRun;
+	PlayerLoadout restoredLoadout;
+	if (!restoredRun.RestoreSnapshot(checkpoint.run)
+		|| !restoredLoadout.RestorePersistentSnapshot(checkpoint.loadout)
+		|| !_game.RestoreLoadout(checkpoint.loadout))
+	{
+		return false;
+	}
+	_run = std::move(restoredRun);
+	_runDifficulty = checkpoint.difficulty;
+	_runPlayerHealth = checkpoint.playerHealth;
+	_shopPurchased = checkpoint.shopPurchased;
+	_acquiredReward.reset();
+	_rewardAcquisitionSeconds = 0.0f;
+	_resultSummary.reset();
+	_feedbackAnimations.clear();
+	_attackAnimations.clear();
+	_terminalTransition.Reset();
+	_orbTrail.clear();
+	SetScreenMode(_run.GetStatus() == RunStatus::RewardSelection
+		? ScreenMode::Reward
+		: ScreenMode::StageSelection);
+	return true;
 }
 
 bool CChildView::SelectRunReward(std::size_t index)
@@ -2862,6 +2971,7 @@ bool CChildView::SelectRunReward(std::size_t index)
 		Utf8Text(selected->displayName).GetString(),
 		Utf8Text(DescribeRewardEffect(*selected)).GetString());
 	SetScreenMode(ScreenMode::Reward);
+	SaveRunCheckpoint();
 	return true;
 }
 
@@ -2926,6 +3036,7 @@ bool CChildView::PurchaseShopOffer(std::size_t index)
 		_T("%s 구매 완료 · 남은 골드 %d G"),
 		Utf8Text(offer.reward.displayName).GetString(),
 		_run.GetGold());
+	SaveRunCheckpoint();
 	return true;
 }
 
@@ -2935,8 +3046,10 @@ bool CChildView::LeaveShop()
 	{
 		return false;
 	}
+	_shopPurchased.fill(false);
 	_runNotice = _T("상점을 나왔습니다 · 다음 경로를 선택하세요");
 	SetScreenMode(ScreenMode::StageSelection);
+	SaveRunCheckpoint();
 	return true;
 }
 
@@ -3298,6 +3411,7 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 			{
 				_runNotice = _T("다음 경로: Goblin Market · 시작 전 변경 가능");
 			}
+			SaveRunCheckpoint();
 		}
 		break;
 	case UiCommand::StartSelectedStage:
@@ -3319,6 +3433,7 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		if (action.index < orbs.size() && _game.SelectOrb(orbs[action.index].id))
 		{
 			_loadoutNotice = _T("선택 오브를 변경했습니다");
+			SaveRunCheckpoint();
 		}
 		break;
 	}
@@ -3327,15 +3442,22 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		const auto& relics = GetRelicDefinitions();
 		if (action.index < relics.size())
 		{
-			_loadoutNotice = _game.AcquireRelic(relics[action.index].id)
-				? _T("유물을 획득했습니다")
-				: _T("이미 획득 한도에 도달했습니다");
+			if (_game.AcquireRelic(relics[action.index].id))
+			{
+				_loadoutNotice = _T("유물을 획득했습니다");
+				SaveRunCheckpoint();
+			}
+			else
+			{
+				_loadoutNotice = _T("이미 획득 한도에 도달했습니다");
+			}
 		}
 		break;
 	}
 	case UiCommand::ResetProgression:
 		_game.ResetProgression();
 		_loadoutNotice = _T("오브와 유물을 기본 상태로 초기화했습니다");
+		SaveRunCheckpoint();
 		break;
 	case UiCommand::BackToStageSelection:
 		if (_screenMode == ScreenMode::Result)
@@ -3548,6 +3670,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			if (index < orbs.size() && _game.SelectOrb(orbs[index].id))
 			{
 				_loadoutNotice = _T("선택 오브를 변경했습니다");
+				SaveRunCheckpoint();
 			}
 		}
 		else if (nChar >= '4' && nChar <= '6')
@@ -3556,15 +3679,22 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			const auto& relics = GetRelicDefinitions();
 			if (index < relics.size())
 			{
-				_loadoutNotice = _game.AcquireRelic(relics[index].id)
-					? _T("유물을 획득했습니다")
-					: _T("이미 획득 한도에 도달했습니다");
+				if (_game.AcquireRelic(relics[index].id))
+				{
+					_loadoutNotice = _T("유물을 획득했습니다");
+					SaveRunCheckpoint();
+				}
+				else
+				{
+					_loadoutNotice = _T("이미 획득 한도에 도달했습니다");
+				}
 			}
 		}
 		else if (nChar == 'X')
 		{
 			_game.ResetProgression();
 			_loadoutNotice = _T("오브와 유물을 기본 상태로 초기화했습니다");
+			SaveRunCheckpoint();
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)
 		{

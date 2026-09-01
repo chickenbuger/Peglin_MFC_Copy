@@ -26,6 +26,7 @@
 #include "Localization.h"
 #include "PerformanceMonitor.h"
 #include "RunProgression.h"
+#include "RunCheckpointStore.h"
 #include "TerminalTransitionGate.h"
 #include "PeglinUiAnimation.h"
 #include "UiNavigation.h"
@@ -164,6 +165,8 @@ private:
 	bool StartStage(std::string_view stageId);
 	bool StartSelectedStage();
 	void BeginNewRun();
+	bool SaveRunCheckpoint();
+	bool RestoreRunCheckpoint(const RunCheckpoint& checkpoint);
 	bool SelectRunReward(std::size_t index);
 	bool PurchaseShopOffer(std::size_t index);
 	bool LeaveShop();
@@ -214,6 +217,7 @@ private:
 	bool _performanceHudVisible = false;
 	GameSettingsStore _settingsStore;
 	GameRecordStore _recordStore;
+	RunCheckpointStore _runCheckpointStore;
 	GameRecordBook _records;
 	ContentLoadResult _contentCatalog;
 	GameplayCatalogLoadResult _gameplayCatalog;
@@ -251,6 +255,8 @@ private:
 	std::array<bool, 3> _shopPurchased{};
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
+	bool _checkpointSaveFailed = false;
+	bool _checkpointWritesEnabled = true;
 	ResetConfirmation _resetConfirmation = ResetConfirmation::None;
 	float _resetConfirmationSeconds = 0.0f;
 	StatisticsDifficultyFilter _statisticsDifficulty = StatisticsDifficultyFilter::All;

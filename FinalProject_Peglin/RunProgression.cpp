@@ -9,12 +9,31 @@ namespace
 {
 	constexpr int STARTING_GOLD = 50;
 	constexpr int COMBAT_CLEAR_GOLD = 25;
+	constexpr int MAX_RUN_GOLD = 999999;
 
 	const std::array<RunShopOffer, 3> SHOP_OFFERS{
 		RunShopOffer{ { RunRewardKind::Orb, "iron-orb", "Iron Orb", 0.0f }, 45 },
 		RunShopOffer{ { RunRewardKind::Relic, "bark-guard", "Bark Guard", 0.0f }, 70 },
 		RunShopOffer{ { RunRewardKind::Heal, {}, "Heal 30 HP", 30.0f }, 30 }
 	};
+
+	bool IsSafeRunId(std::string_view id) noexcept
+	{
+		if (id.empty() || id.size() > 48)
+		{
+			return false;
+		}
+		for (const char character : id)
+		{
+			const bool lower = character >= 'a' && character <= 'z';
+			const bool digit = character >= '0' && character <= '9';
+			if (!lower && !digit && character != '-')
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 }
 
 bool IsRunShopStage(std::string_view stageId) noexcept
@@ -237,6 +256,143 @@ bool AdventureRun::SpendGold(int amount) noexcept
 		return false;
 	}
 	_gold -= amount;
+	return true;
+}
+
+AdventureRunSnapshot AdventureRun::CreateSnapshot() const
+{
+	AdventureRunSnapshot snapshot;
+	snapshot.status = _status;
+	snapshot.stageLayers = _stageLayers;
+	snapshot.currentLayer = _currentLayer;
+	snapshot.completedCombatStages = _completedCombatStages;
+	snapshot.gold = _gold;
+	snapshot.currentStageId = _currentStageId;
+	snapshot.clearedStageIds = _clearedStageIds;
+	snapshot.selectedStageChoiceIndex = _selectedStageChoiceIndex;
+	return snapshot;
+}
+
+bool AdventureRun::RestoreSnapshot(const AdventureRunSnapshot& snapshot)
+{
+	if (snapshot.status == RunStatus::NotStarted
+		|| snapshot.stageLayers.size() < 2
+		|| snapshot.stageLayers.size() > 32
+		|| snapshot.stageLayers.front().size() != 1
+		|| snapshot.stageLayers.back().size() != 1
+		|| snapshot.currentLayer >= snapshot.stageLayers.size()
+		|| snapshot.gold < 0
+		|| snapshot.gold > MAX_RUN_GOLD)
+	{
+		return false;
+	}
+
+	std::unordered_set<std::string> routeIds;
+	for (const std::vector<std::string>& layer : snapshot.stageLayers)
+	{
+		if (layer.empty() || layer.size() > 2)
+		{
+			return false;
+		}
+		for (const std::string& id : layer)
+		{
+			if (!IsSafeRunId(id) || !routeIds.insert(id).second)
+			{
+				return false;
+			}
+		}
+	}
+
+	const std::vector<std::string>& currentLayer =
+		snapshot.stageLayers[snapshot.currentLayer];
+	if (std::find(currentLayer.begin(), currentLayer.end(), snapshot.currentStageId)
+		== currentLayer.end())
+	{
+		return false;
+	}
+
+	std::size_t expectedCleared = snapshot.currentLayer;
+	if (snapshot.status == RunStatus::RewardSelection
+		|| snapshot.status == RunStatus::StageChoice)
+	{
+		expectedCleared = snapshot.currentLayer + 1;
+	}
+	else if (snapshot.status == RunStatus::Complete)
+	{
+		expectedCleared = snapshot.stageLayers.size();
+	}
+	else if (snapshot.status != RunStatus::StageReady
+		&& snapshot.status != RunStatus::Defeated)
+	{
+		return false;
+	}
+	if (snapshot.clearedStageIds.size() != expectedCleared)
+	{
+		return false;
+	}
+
+	std::size_t combatClears = 0;
+	for (std::size_t index = 0; index < snapshot.clearedStageIds.size(); ++index)
+	{
+		const std::string& clearedId = snapshot.clearedStageIds[index];
+		const std::vector<std::string>& layer = snapshot.stageLayers[index];
+		if (std::find(layer.begin(), layer.end(), clearedId) == layer.end())
+		{
+			return false;
+		}
+		if (!IsRunShopStage(clearedId))
+		{
+			++combatClears;
+		}
+	}
+	if (combatClears != snapshot.completedCombatStages)
+	{
+		return false;
+	}
+	if ((snapshot.status == RunStatus::RewardSelection
+			|| snapshot.status == RunStatus::StageChoice
+			|| snapshot.status == RunStatus::Complete)
+		&& snapshot.clearedStageIds.back() != snapshot.currentStageId)
+	{
+		return false;
+	}
+	if (snapshot.status == RunStatus::StageChoice)
+	{
+		if (snapshot.currentLayer + 1 >= snapshot.stageLayers.size())
+		{
+			return false;
+		}
+		const std::size_t choiceCount = snapshot.stageLayers[snapshot.currentLayer + 1].size();
+		if (snapshot.selectedStageChoiceIndex.has_value()
+			&& *snapshot.selectedStageChoiceIndex >= choiceCount)
+		{
+			return false;
+		}
+	}
+	else if (snapshot.selectedStageChoiceIndex.has_value())
+	{
+		return false;
+	}
+
+	_status = snapshot.status;
+	_stageLayers = snapshot.stageLayers;
+	_currentLayer = snapshot.currentLayer;
+	_completedCombatStages = snapshot.completedCombatStages;
+	_gold = snapshot.gold;
+	_currentStageId = snapshot.currentStageId;
+	_clearedStageIds = snapshot.clearedStageIds;
+	_stageChoices.clear();
+	_selectedStageChoiceIndex.reset();
+	_rewardChoices.clear();
+	if (_status == RunStatus::RewardSelection)
+	{
+		BuildRewardChoices();
+	}
+	else if (_status == RunStatus::StageChoice)
+	{
+		BuildStageChoices();
+		_selectedStageChoiceIndex = snapshot.selectedStageChoiceIndex;
+	}
 	return true;
 }
 
