@@ -80,6 +80,13 @@ private:
 		Result
 	};
 
+	enum class ResetConfirmation
+	{
+		None,
+		Settings,
+		Records
+	};
+
 	struct FeedbackAnimation
 	{
 		CString text;
@@ -152,6 +159,7 @@ private:
 	bool PurchaseShopOffer(std::size_t index);
 	bool LeaveShop();
 	void SaveOptions();
+	void RequestSelectiveReset(bool resetSettings);
 	void ApplyAudioOptions();
 	void UpdateScreenMusic();
 	void SetScreenMode(ScreenMode mode);
@@ -219,11 +227,14 @@ private:
 	CBitmap _stagePreviewCitadel;
 	CString _loadoutNotice;
 	CString _runNotice;
+	CString _optionsNotice;
 	std::optional<RunReward> _acquiredReward;
 	float _rewardAcquisitionSeconds = 0.0f;
 	std::array<bool, 3> _shopPurchased{};
 	bool _settingsSaveFailed = false;
 	bool _recordSaveFailed = false;
+	ResetConfirmation _resetConfirmation = ResetConfirmation::None;
+	float _resetConfirmationSeconds = 0.0f;
 	StatisticsDifficultyFilter _statisticsDifficulty = StatisticsDifficultyFilter::All;
 	StatisticsSortMode _statisticsSort = StatisticsSortMode::HighScore;
 	ScreenMode _screenMode = ScreenMode::StageSelection;

@@ -493,6 +493,14 @@ namespace
 				== UiCommand::CycleMusicVolume,
 			"mouse cycles the music volume");
 		Check(
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 505.0f }, 0).command
+				== UiCommand::ResetSettingsData,
+			"mouse reaches the selective settings reset");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 505.0f }, 0).command
+				== UiCommand::ResetRecordData,
+			"mouse reaches the selective record reset");
+		Check(
 			ResolveUiClick(UiScreenKind::Options, { 500.0f, 590.0f }, 0).command
 				== UiCommand::BackToStageSelection,
 			"mouse returns from the compact options grid");
@@ -554,8 +562,8 @@ namespace
 			"gamepad stage screen exposes routes, start, statistics, loadout, and options");
 		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 8U,
 			"gamepad can focus every loadout action");
-		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 7U,
-			"gamepad can focus every option and back");
+		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 9U,
+			"gamepad can focus every option, selective reset, and back");
 		Check(GetGamepadFocusCount(UiScreenKind::Statistics, 0) == 3U,
 			"gamepad can focus statistics filter, sort, and back");
 		Check(GetGamepadFocusCount(UiScreenKind::Reward, 0) == 3U,
@@ -577,6 +585,10 @@ namespace
 			== UiCommand::AcquireRelic, "gamepad reaches relic acquisition");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 3, 0).command
 			== UiCommand::CycleMusicVolume, "gamepad reaches independent music volume");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 6, 0).command
+			== UiCommand::ResetSettingsData, "gamepad reaches selective settings reset");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 7, 0).command
+			== UiCommand::ResetRecordData, "gamepad reaches selective record reset");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Reward, 2, 0).command
 			== UiCommand::SelectReward, "gamepad selects the third reward");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Shop, 3, 0).command
@@ -587,7 +599,7 @@ namespace
 			== UiCommand::LeaveShop, "gamepad B leaves the shop safely");
 		Check(!ResolveGamepadBackAction(UiScreenKind::Reward).IsHandled(),
 			"gamepad cannot skip a required reward");
-		Check(GetGamepadFocusRect(UiScreenKind::Options, 6, 0).IsValid(),
+		Check(GetGamepadFocusRect(UiScreenKind::Options, 8, 0).IsValid(),
 			"gamepad back focus has a visible rectangle");
 		Check(!GetGamepadFocusRect(UiScreenKind::Result, 9, 0).IsValid(),
 			"invalid gamepad focus has no rectangle");
@@ -1320,7 +1332,9 @@ namespace
 		const std::filesystem::path settingsPath = testDirectory / "nested" / "settings.v1.ini";
 		std::error_code cleanupError;
 		std::filesystem::remove(settingsPath, cleanupError);
+		std::filesystem::remove(settingsPath.wstring() + L".bak", cleanupError);
 		std::filesystem::remove(settingsPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(settingsPath.wstring() + L".recovery", cleanupError);
 		std::filesystem::remove(settingsPath.parent_path(), cleanupError);
 		std::filesystem::remove(testDirectory, cleanupError);
 
@@ -1372,6 +1386,35 @@ namespace
 		Check(replaced.options.showGameplayInfo, "replacement settings update gameplay information");
 		Check(replaced.options.pegColorMode == PegColorMode::Standard, "replacement settings update colors");
 		Check(replaced.options.language == UiLanguage::Korean, "replacement settings update language");
+		Check(std::filesystem::exists(store.GetBackupPath()),
+			"replacing valid settings creates a backup");
+		const SettingsLoadResult settingsBackup = GameSettingsStore(store.GetBackupPath()).Load();
+		Check(settingsBackup.state == SettingsLoadState::Loaded
+			&& settingsBackup.options.difficulty == GameDifficulty::Hard
+			&& settingsBackup.options.language == UiLanguage::English,
+			"settings backup preserves the previous valid generation");
+
+		{
+			std::ofstream damaged(settingsPath, std::ios::trunc);
+			damaged << "damaged settings";
+		}
+		const SettingsLoadResult recoveredSettings = store.LoadWithRecovery();
+		Check(recoveredSettings.state == SettingsLoadState::Recovered,
+			"damaged settings restore from a validated backup");
+		Check(recoveredSettings.options.difficulty == GameDifficulty::Hard
+			&& recoveredSettings.options.language == UiLanguage::English,
+			"settings recovery restores the previous generation values");
+		Check(store.Save(saved), "settings can save again after recovery");
+
+		{
+			std::ofstream damagedPrimary(settingsPath, std::ios::trunc);
+			damagedPrimary << "damaged primary";
+			std::ofstream damagedBackup(store.GetBackupPath(), std::ios::trunc);
+			damagedBackup << "damaged backup";
+		}
+		Check(store.LoadWithRecovery().state == SettingsLoadState::Invalid,
+			"settings recovery refuses an invalid backup");
+		Check(store.Save(saved), "valid settings can replace a damaged primary without overwriting the backup first");
 
 		{
 			std::ofstream invalid(settingsPath, std::ios::trunc);
@@ -1485,9 +1528,29 @@ namespace
 		Check(!blockedStore.Save(saved, &blockedError), "settings save fails safely for an unwritable path shape");
 		Check(!blockedError.empty(), "failed settings save reports an error");
 
+		const std::filesystem::path resetPath = testDirectory / "reset-settings.v1.ini";
+		GameSettingsStore resetStore(resetPath);
+		Check(resetStore.Save(saved) && resetStore.Save(GameOptions{}),
+			"settings reset fixture creates primary and backup generations");
+		{
+			std::ofstream temporary(resetPath.wstring() + L".tmp", std::ios::trunc);
+			temporary << "temporary";
+			std::ofstream recovery(resetPath.wstring() + L".recovery", std::ios::trunc);
+			recovery << "recovery";
+		}
+		Check(resetStore.Reset(&blockedError), "selective settings reset succeeds");
+		Check(blockedError.empty(), "successful settings reset clears its error");
+		Check(!std::filesystem::exists(resetPath)
+			&& !std::filesystem::exists(resetStore.GetBackupPath())
+			&& !std::filesystem::exists(resetPath.wstring() + L".tmp")
+			&& !std::filesystem::exists(resetPath.wstring() + L".recovery"),
+			"settings reset removes only every owned save generation");
+
 		std::filesystem::remove(blockedParent, cleanupError);
 		std::filesystem::remove(settingsPath, cleanupError);
+		std::filesystem::remove(settingsPath.wstring() + L".bak", cleanupError);
 		std::filesystem::remove(settingsPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(settingsPath.wstring() + L".recovery", cleanupError);
 		std::filesystem::remove(settingsPath.parent_path(), cleanupError);
 		std::filesystem::remove(testDirectory, cleanupError);
 	}
@@ -1566,7 +1629,9 @@ namespace
 		const std::filesystem::path recordPath = testDirectory / "nested" / "records.v1.ini";
 		std::error_code cleanupError;
 		std::filesystem::remove(recordPath, cleanupError);
+		std::filesystem::remove(recordPath.wstring() + L".bak", cleanupError);
 		std::filesystem::remove(recordPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(recordPath.wstring() + L".recovery", cleanupError);
 		std::filesystem::remove(recordPath.parent_path(), cleanupError);
 		std::filesystem::remove(testDirectory, cleanupError);
 
@@ -1593,6 +1658,35 @@ namespace
 		Check(updated.ApplyResult("stage-2", GameDifficulty::Normal, 1500, 11, false), "record book accepts a later improvement");
 		Check(store.Save(updated), "record save replaces an existing file");
 		Check(store.Load().records.Get("stage-2", GameDifficulty::Normal).highScore == 1500, "replacement record file contains new high score");
+		Check(std::filesystem::exists(store.GetBackupPath()),
+			"replacing valid records creates a backup");
+		const RecordLoadResult recordBackup = GameRecordStore(store.GetBackupPath()).Load();
+		Check(recordBackup.state == RecordLoadState::Loaded
+			&& recordBackup.records.Get("stage-2", GameDifficulty::Normal).highScore == 1200,
+			"record backup preserves the previous valid generation");
+
+		{
+			std::ofstream damaged(recordPath, std::ios::trunc);
+			damaged << "damaged records";
+		}
+		const RecordLoadResult recoveredRecords = store.LoadWithRecovery();
+		Check(recoveredRecords.state == RecordLoadState::Recovered,
+			"damaged records restore from a validated backup");
+		Check(recoveredRecords.records.Get("stage-2", GameDifficulty::Normal).highScore == 1200
+			&& recoveredRecords.records.GetPerformance(
+				"stage-1", GameDifficulty::Normal, "basic-orb").attemptCount == 2,
+			"record recovery restores stage and detailed orb statistics");
+		Check(store.Save(updated), "records can save again after recovery");
+
+		{
+			std::ofstream damagedPrimary(recordPath, std::ios::trunc);
+			damagedPrimary << "damaged primary";
+			std::ofstream damagedBackup(store.GetBackupPath(), std::ios::trunc);
+			damagedBackup << "damaged backup";
+		}
+		Check(store.LoadWithRecovery().state == RecordLoadState::Invalid,
+			"record recovery refuses an invalid backup");
+		Check(store.Save(updated), "valid records can replace a damaged primary without overwriting the backup first");
 
 		{
 			std::ofstream incompatible(recordPath, std::ios::trunc);
@@ -1657,9 +1751,29 @@ namespace
 		Check(!blockedStore.Save(records, &blockedError), "record save fails safely for an unwritable path shape");
 		Check(!blockedError.empty(), "failed record save reports an error");
 
+		const std::filesystem::path resetPath = testDirectory / "reset-records.v1.ini";
+		GameRecordStore resetStore(resetPath);
+		Check(resetStore.Save(records) && resetStore.Save(updated),
+			"record reset fixture creates primary and backup generations");
+		{
+			std::ofstream temporary(resetPath.wstring() + L".tmp", std::ios::trunc);
+			temporary << "temporary";
+			std::ofstream recovery(resetPath.wstring() + L".recovery", std::ios::trunc);
+			recovery << "recovery";
+		}
+		Check(resetStore.Reset(&blockedError), "selective record reset succeeds");
+		Check(blockedError.empty(), "successful record reset clears its error");
+		Check(!std::filesystem::exists(resetPath)
+			&& !std::filesystem::exists(resetStore.GetBackupPath())
+			&& !std::filesystem::exists(resetPath.wstring() + L".tmp")
+			&& !std::filesystem::exists(resetPath.wstring() + L".recovery"),
+			"record reset removes only every owned save generation");
+
 		std::filesystem::remove(blockedParent, cleanupError);
 		std::filesystem::remove(recordPath, cleanupError);
+		std::filesystem::remove(recordPath.wstring() + L".bak", cleanupError);
 		std::filesystem::remove(recordPath.wstring() + L".tmp", cleanupError);
+		std::filesystem::remove(recordPath.wstring() + L".recovery", cleanupError);
 		std::filesystem::remove(recordPath.parent_path(), cleanupError);
 		std::filesystem::remove(testDirectory, cleanupError);
 	}

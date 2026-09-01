@@ -16,9 +16,9 @@
 | 항목 | 값 |
 | --- | --- |
 | 현재 스프린트 | Sprint 7 진행 중 |
-| 현재 버전 | Version 7.18 |
+| 현재 버전 | Version 7.19 |
 | 스프린트 목표 | 분기형 런, 오디오·UI 전환·입력·통계·세이브 안정성 개선 |
-| 상태 | Sprint 7 P0 18/20 완료 — 스테이지·난이도·오브 상세 통계 완료 |
+| 상태 | Sprint 7 P0 19/20 완료 — 세이브 백업·손상 복구·선택형 초기화 완료 |
 
 ## 문서
 
@@ -99,6 +99,7 @@
 - [Version 7.16 — 화면 전환·보상·피해 UI 애니메이션](./Version_7.16.md)
 - [Version 7.17 — 게임패드 전체 런 입력 동등성](./Version_7.17.md)
 - [Version 7.18 — 스테이지·난이도·오브 상세 통계](./Version_7.18.md)
+- [Version 7.19 — 세이브 백업·손상 복구·선택형 초기화](./Version_7.19.md)
 - [Next Version Plan 0 — Sprint 0 완료 기록](./Next_Version_Plan_0.md)
 - [Next Version Plan 1 — Sprint 1 계획](./Next_Version_Plan_1.md)
 - [Next Version Plan 2 — Sprint 2 완료 기록](./Next_Version_Plan_2.md)

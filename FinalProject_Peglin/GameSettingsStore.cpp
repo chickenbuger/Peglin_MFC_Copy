@@ -323,6 +323,60 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 	}
 }
 
+std::filesystem::path GameSettingsStore::GetBackupPath() const
+{
+	std::filesystem::path backup = _filePath;
+	backup += L".bak";
+	return backup;
+}
+
+SettingsLoadResult GameSettingsStore::LoadWithRecovery() const noexcept
+{
+	SettingsLoadResult primary = Load();
+	if (primary.state != SettingsLoadState::Invalid
+		&& primary.state != SettingsLoadState::IoError)
+	{
+		return primary;
+	}
+	const std::filesystem::path backupPath = GetBackupPath();
+	GameSettingsStore backupStore(backupPath);
+	SettingsLoadResult backup = backupStore.Load();
+	if (backup.state != SettingsLoadState::Loaded
+		&& backup.state != SettingsLoadState::Migrated)
+	{
+		return primary;
+	}
+	try
+	{
+		std::filesystem::path recoveryPath = _filePath;
+		recoveryPath += L".recovery";
+		std::error_code copyError;
+		std::filesystem::copy_file(
+			backupPath,
+			recoveryPath,
+			std::filesystem::copy_options::overwrite_existing,
+			copyError);
+		if (copyError || !ReplaceFile(recoveryPath, _filePath))
+		{
+			std::error_code cleanupError;
+			std::filesystem::remove(recoveryPath, cleanupError);
+			return primary;
+		}
+		SettingsLoadResult recovered = Load();
+		if (recovered.state == SettingsLoadState::Loaded
+			|| recovered.state == SettingsLoadState::Migrated)
+		{
+			recovered.state = SettingsLoadState::Recovered;
+			recovered.message = "settings restored from backup";
+			return recovered;
+		}
+	}
+	catch (...)
+	{
+	}
+	return primary;
+}
+
 bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessage) const noexcept
 {
 	try
@@ -377,6 +431,36 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 		}
 		stream.close();
 
+		std::error_code existsError;
+		if (std::filesystem::exists(_filePath, existsError))
+		{
+			const SettingsLoadResult current = Load();
+			if (current.state == SettingsLoadState::Loaded
+				|| current.state == SettingsLoadState::Migrated)
+			{
+				std::error_code backupError;
+				std::filesystem::copy_file(
+					_filePath,
+					GetBackupPath(),
+					std::filesystem::copy_options::overwrite_existing,
+					backupError);
+				if (backupError)
+				{
+					std::error_code cleanupError;
+					std::filesystem::remove(temporaryPath, cleanupError);
+					if (errorMessage != nullptr) *errorMessage = backupError.message();
+					return false;
+				}
+			}
+		}
+		else if (existsError)
+		{
+			std::error_code cleanupError;
+			std::filesystem::remove(temporaryPath, cleanupError);
+			if (errorMessage != nullptr) *errorMessage = existsError.message();
+			return false;
+		}
+
 		if (!ReplaceFile(temporaryPath, _filePath))
 		{
 			std::error_code cleanupError;
@@ -400,6 +484,34 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 		{
 			*errorMessage = exception.what();
 		}
+		return false;
+	}
+}
+
+bool GameSettingsStore::Reset(std::string* errorMessage) const noexcept
+{
+	try
+	{
+		std::filesystem::path temporary = _filePath;
+		temporary += L".tmp";
+		std::filesystem::path recovery = _filePath;
+		recovery += L".recovery";
+		for (const std::filesystem::path& path : { _filePath, GetBackupPath(), temporary, recovery })
+		{
+			std::error_code error;
+			std::filesystem::remove(path, error);
+			if (error)
+			{
+				if (errorMessage != nullptr) *errorMessage = error.message();
+				return false;
+			}
+		}
+		if (errorMessage != nullptr) errorMessage->clear();
+		return true;
+	}
+	catch (const std::exception& exception)
+	{
+		if (errorMessage != nullptr) *errorMessage = exception.what();
 		return false;
 	}
 }

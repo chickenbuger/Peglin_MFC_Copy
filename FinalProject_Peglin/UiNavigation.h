@@ -33,6 +33,8 @@ enum class UiCommand
 	CycleMusicVolume,
 	TogglePegColorMode,
 	ToggleLanguage,
+	ResetSettingsData,
+	ResetRecordData,
 	CycleStatisticsDifficulty,
 	CycleStatisticsSort,
 	SelectReward,

@@ -68,6 +68,7 @@ private:
 enum class RecordLoadState
 {
 	Loaded,
+	Recovered,
 	Migrated,
 	Missing,
 	Invalid,
@@ -87,8 +88,11 @@ public:
 	explicit GameRecordStore(std::filesystem::path filePath);
 
 	RecordLoadResult Load() const noexcept;
+	RecordLoadResult LoadWithRecovery() const noexcept;
 	bool Save(const GameRecordBook& records, std::string* errorMessage = nullptr) const noexcept;
+	bool Reset(std::string* errorMessage = nullptr) const noexcept;
 	const std::filesystem::path& GetFilePath() const noexcept { return _filePath; }
+	std::filesystem::path GetBackupPath() const;
 
 private:
 	std::filesystem::path _filePath;

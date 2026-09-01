@@ -17,7 +17,7 @@ std::size_t GetGamepadFocusCount(UiScreenKind screen, std::size_t visibleStageCo
 	{
 	case UiScreenKind::StageSelection: return SafeStageCount(visibleStageCount) + 4U;
 	case UiScreenKind::Loadout: return 8U;
-	case UiScreenKind::Options: return 7U;
+	case UiScreenKind::Options: return 9U;
 	case UiScreenKind::Statistics: return 3U;
 	case UiScreenKind::Reward: return 3U;
 	case UiScreenKind::Shop: return 4U;
@@ -74,7 +74,9 @@ UiAction ResolveGamepadFocusedAction(
 		case 3U: return { UiCommand::CycleMusicVolume };
 		case 4U: return { UiCommand::TogglePegColorMode };
 		case 5U: return { UiCommand::ToggleLanguage };
-		case 6U: return { UiCommand::BackToStageSelection };
+		case 6U: return { UiCommand::ResetSettingsData };
+		case 7U: return { UiCommand::ResetRecordData };
+		case 8U: return { UiCommand::BackToStageSelection };
 		default: break;
 		}
 		break;
@@ -153,9 +155,10 @@ UiFocusRect GetGamepadFocusRect(
 	{
 		static constexpr UiFocusRect rects[]{
 			{195,145,485,235},{515,145,805,235},{195,255,485,345},
-			{515,255,805,345},{195,365,485,455},{515,365,805,455},{300,565,700,620}
+			{515,255,805,345},{195,365,485,455},{515,365,805,455},
+			{195,480,485,535},{515,480,805,535},{300,590,700,640}
 		};
-		if (focusIndex < 7U) return rects[focusIndex];
+		if (focusIndex < 9U) return rects[focusIndex];
 		break;
 	}
 	case UiScreenKind::Statistics:

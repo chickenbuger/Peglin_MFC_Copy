@@ -123,7 +123,15 @@ namespace
 		{
 			return { UiCommand::ToggleLanguage };
 		}
-		if (UiRect{ 300.0f, 565.0f, 700.0f, 620.0f }.Contains(position))
+		if (UiRect{ 195.0f, 480.0f, 485.0f, 535.0f }.Contains(position))
+		{
+			return { UiCommand::ResetSettingsData };
+		}
+		if (UiRect{ 515.0f, 480.0f, 805.0f, 535.0f }.Contains(position))
+		{
+			return { UiCommand::ResetRecordData };
+		}
+		if (UiRect{ 300.0f, 590.0f, 700.0f, 640.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}

@@ -345,17 +345,25 @@ CChildView::CChildView()
 	: _settingsStore(GetDefaultGameSettingsPath()),
 	_recordStore(GetDefaultGameRecordPath())
 {
-	const SettingsLoadResult settings = _settingsStore.Load();
+	const SettingsLoadResult settings = _settingsStore.LoadWithRecovery();
 	_options = settings.options;
 	if (settings.state == SettingsLoadState::Migrated)
 	{
 		_settingsSaveFailed = !_settingsStore.Save(_options);
 	}
-	const RecordLoadResult records = _recordStore.Load();
+	else if (settings.state == SettingsLoadState::Recovered)
+	{
+		_optionsNotice = _T("손상된 설정을 마지막 정상 백업에서 복구했습니다");
+	}
+	const RecordLoadResult records = _recordStore.LoadWithRecovery();
 	_records = records.records;
 	if (records.state == RecordLoadState::Migrated)
 	{
 		_recordSaveFailed = !_recordStore.Save(_records);
+	}
+	else if (records.state == RecordLoadState::Recovered)
+	{
+		_optionsNotice = _T("손상된 전투 기록을 마지막 정상 백업에서 복구했습니다");
 	}
 	ReloadLocalization();
 	_audioCatalog = LoadAudioCatalog(GetDefaultAudioCatalogPath());
@@ -899,6 +907,15 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 	PollGamepad();
 	_screenTransition.Update(deltaSeconds);
 	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);
+	if (_resetConfirmation != ResetConfirmation::None)
+	{
+		_resetConfirmationSeconds = (std::max)(0.0f, _resetConfirmationSeconds - deltaSeconds);
+		if (_resetConfirmationSeconds <= 0.0f)
+		{
+			_resetConfirmation = ResetConfirmation::None;
+			_optionsNotice = _T("초기화 확인 시간이 만료되었습니다");
+		}
+	}
 	if (_screenMode != ScreenMode::Playing)
 	{
 		UpdateFeedbackAnimations(deltaSeconds);
@@ -2030,7 +2047,7 @@ void CChildView::DrawOptions(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
 	DrawMenuTitle(deviceContext, Text("screen.options"));
-	const CRect optionPanel(165, 105, 835, 640);
+	const CRect optionPanel(165, 105, 835, 650);
 	UiRenderer::DrawPanel(deviceContext, optionPanel);
 	UiRenderer::DrawText(
 		deviceContext,
@@ -2086,16 +2103,28 @@ void CChildView::DrawOptions(CDC* deviceContext)
 			? "language.korean"
 			: "language.english"),
 		UiTheme::Orange);
+	UiRenderer::DrawKeyHint(
+		deviceContext,
+		CRect(195, 480, 485, 535),
+		_T("설정만 초기화 · X"));
+	UiRenderer::DrawKeyHint(
+		deviceContext,
+		CRect(515, 480, 805, 535),
+		_T("전투 기록 초기화 · R"));
 	const CString audioNotice = !_audioCatalog.IsUsable()
 		? CString(_T("오디오 파일을 불러오지 못해 무음으로 실행 중입니다"))
-		: (_settingsSaveFailed ? Text("notice.settings_save_failed") : Text("notice.auto_save"));
+		: (_settingsSaveFailed ? Text("notice.settings_save_failed")
+			: (_recordSaveFailed ? CString(_T("전투 기록을 저장하지 못했습니다"))
+				: (_optionsNotice.IsEmpty() ? Text("notice.auto_save") : _optionsNotice)));
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(230, 500, 770, 535),
+		CRect(190, 540, 810, 580),
 		audioNotice,
 		100,
-		(!_audioCatalog.IsUsable() || _settingsSaveFailed) ? UiTheme::Danger : UiTheme::Green);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 565, 700, 620), Text("hint.back"));
+		(!_audioCatalog.IsUsable() || _settingsSaveFailed || _recordSaveFailed)
+			? UiTheme::Danger
+			: UiTheme::Green);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 590, 700, 640), Text("hint.back"));
 }
 
 void CChildView::DrawStatisticsScreen(CDC* deviceContext)
@@ -2636,6 +2665,55 @@ void CChildView::SaveOptions()
 	_settingsSaveFailed = !_settingsStore.Save(_options);
 }
 
+void CChildView::RequestSelectiveReset(bool resetSettings)
+{
+	const ResetConfirmation requested = resetSettings
+		? ResetConfirmation::Settings
+		: ResetConfirmation::Records;
+	if (_resetConfirmation != requested || _resetConfirmationSeconds <= 0.0f)
+	{
+		_resetConfirmation = requested;
+		_resetConfirmationSeconds = 3.0f;
+		_optionsNotice = resetSettings
+			? _T("3초 안에 다시 누르면 설정만 초기화합니다")
+			: _T("3초 안에 다시 누르면 전투 기록만 초기화합니다");
+		return;
+	}
+
+	_resetConfirmation = ResetConfirmation::None;
+	_resetConfirmationSeconds = 0.0f;
+	std::string resetError;
+	if (resetSettings)
+	{
+		if (!_settingsStore.Reset(&resetError))
+		{
+			_settingsSaveFailed = true;
+			_optionsNotice = _T("설정 초기화 파일을 정리하지 못했습니다");
+			return;
+		}
+		_options = GameOptions{};
+		ApplyAudioOptions();
+		ReloadLocalization();
+		SaveOptions();
+		_optionsNotice = _settingsSaveFailed
+			? _T("설정은 초기화했지만 저장하지 못했습니다")
+			: _T("설정만 기본값으로 초기화했습니다");
+		return;
+	}
+
+	if (!_recordStore.Reset(&resetError))
+	{
+		_recordSaveFailed = true;
+		_optionsNotice = _T("전투 기록 초기화 파일을 정리하지 못했습니다");
+		return;
+	}
+	_records = GameRecordBook{};
+	_recordSaveFailed = !_recordStore.Save(_records);
+	_optionsNotice = _recordSaveFailed
+		? _T("전투 기록은 초기화했지만 저장하지 못했습니다")
+		: _T("전투 기록만 초기화했습니다");
+}
+
 void CChildView::ApplyAudioOptions()
 {
 	_audioPlayer.ApplyOptions(
@@ -2673,6 +2751,8 @@ void CChildView::SetScreenMode(ScreenMode mode)
 	}
 	_screenMode = mode;
 	_gamepadFocusIndex = 0;
+	_resetConfirmation = ResetConfirmation::None;
+	_resetConfirmationSeconds = 0.0f;
 	_screenTransition.Start(0.28f);
 	UpdateScreenMusic();
 }
@@ -2977,6 +3057,12 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		ReloadLocalization();
 		SaveOptions();
 		break;
+	case UiCommand::ResetSettingsData:
+		RequestSelectiveReset(true);
+		break;
+	case UiCommand::ResetRecordData:
+		RequestSelectiveReset(false);
+		break;
 	case UiCommand::CycleStatisticsDifficulty:
 		_statisticsDifficulty = NextStatisticsDifficultyFilter(_statisticsDifficulty);
 		break;
@@ -3174,6 +3260,14 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			_options.ToggleLanguage();
 			ReloadLocalization();
 			SaveOptions();
+		}
+		else if (nChar == 'X')
+		{
+			RequestSelectiveReset(true);
+		}
+		else if (nChar == 'R')
+		{
+			RequestSelectiveReset(false);
 		}
 		else if (nChar == 'B' || nChar == VK_ESCAPE)
 		{

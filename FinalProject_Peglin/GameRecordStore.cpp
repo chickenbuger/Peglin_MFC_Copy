@@ -419,6 +419,63 @@ RecordLoadResult GameRecordStore::Load() const noexcept
 	}
 }
 
+std::filesystem::path GameRecordStore::GetBackupPath() const
+{
+	std::filesystem::path backup = _filePath;
+	backup += L".bak";
+	return backup;
+}
+
+RecordLoadResult GameRecordStore::LoadWithRecovery() const noexcept
+{
+	RecordLoadResult primary = Load();
+	if (primary.state != RecordLoadState::Invalid
+		&& primary.state != RecordLoadState::IoError)
+	{
+		return primary;
+	}
+
+	const std::filesystem::path backupPath = GetBackupPath();
+	GameRecordStore backupStore(backupPath);
+	const RecordLoadResult backup = backupStore.Load();
+	if (backup.state != RecordLoadState::Loaded
+		&& backup.state != RecordLoadState::Migrated)
+	{
+		return primary;
+	}
+
+	try
+	{
+		std::filesystem::path recoveryPath = _filePath;
+		recoveryPath += L".recovery";
+		std::error_code copyError;
+		std::filesystem::copy_file(
+			backupPath,
+			recoveryPath,
+			std::filesystem::copy_options::overwrite_existing,
+			copyError);
+		if (copyError || !ReplaceFile(recoveryPath, _filePath))
+		{
+			std::error_code cleanupError;
+			std::filesystem::remove(recoveryPath, cleanupError);
+			return primary;
+		}
+
+		RecordLoadResult recovered = Load();
+		if (recovered.state == RecordLoadState::Loaded
+			|| recovered.state == RecordLoadState::Migrated)
+		{
+			recovered.state = RecordLoadState::Recovered;
+			recovered.message = "records restored from backup";
+			return recovered;
+		}
+	}
+	catch (...)
+	{
+	}
+	return primary;
+}
+
 bool GameRecordStore::Save(const GameRecordBook& records, std::string* errorMessage) const noexcept
 {
 	try
@@ -536,6 +593,36 @@ bool GameRecordStore::Save(const GameRecordBook& records, std::string* errorMess
 		}
 		stream.close();
 
+		std::error_code existsError;
+		if (std::filesystem::exists(_filePath, existsError))
+		{
+			const RecordLoadResult current = Load();
+			if (current.state == RecordLoadState::Loaded
+				|| current.state == RecordLoadState::Migrated)
+			{
+				std::error_code backupError;
+				std::filesystem::copy_file(
+					_filePath,
+					GetBackupPath(),
+					std::filesystem::copy_options::overwrite_existing,
+					backupError);
+				if (backupError)
+				{
+					std::error_code cleanupError;
+					std::filesystem::remove(temporaryPath, cleanupError);
+					if (errorMessage != nullptr) *errorMessage = backupError.message();
+					return false;
+				}
+			}
+		}
+		else if (existsError)
+		{
+			std::error_code cleanupError;
+			std::filesystem::remove(temporaryPath, cleanupError);
+			if (errorMessage != nullptr) *errorMessage = existsError.message();
+			return false;
+		}
+
 		if (!ReplaceFile(temporaryPath, _filePath))
 		{
 			std::error_code cleanupError;
@@ -559,6 +646,34 @@ bool GameRecordStore::Save(const GameRecordBook& records, std::string* errorMess
 		{
 			*errorMessage = exception.what();
 		}
+		return false;
+	}
+}
+
+bool GameRecordStore::Reset(std::string* errorMessage) const noexcept
+{
+	try
+	{
+		std::filesystem::path temporary = _filePath;
+		temporary += L".tmp";
+		std::filesystem::path recovery = _filePath;
+		recovery += L".recovery";
+		for (const std::filesystem::path& path : { _filePath, GetBackupPath(), temporary, recovery })
+		{
+			std::error_code error;
+			std::filesystem::remove(path, error);
+			if (error)
+			{
+				if (errorMessage != nullptr) *errorMessage = error.message();
+				return false;
+			}
+		}
+		if (errorMessage != nullptr) errorMessage->clear();
+		return true;
+	}
+	catch (const std::exception& exception)
+	{
+		if (errorMessage != nullptr) *errorMessage = exception.what();
 		return false;
 	}
 }
