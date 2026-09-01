@@ -99,39 +99,30 @@ namespace
 
 	UiAction ResolveOptionsClick(Vector2 position) noexcept
 	{
-		if (UiRect{ 195.0f, 145.0f, 485.0f, 235.0f }.Contains(position))
+		static constexpr UiRect tiles[]{
+			{185,145,390,225},{397,145,602,225},{609,145,815,225},
+			{185,235,390,315},{397,235,602,315},{609,235,815,315},
+			{185,325,390,405},{397,325,602,405},{609,325,815,405}
+		};
+		static constexpr UiCommand commands[]{
+			UiCommand::ToggleDifficulty, UiCommand::ToggleSound, UiCommand::CycleEffectsVolume,
+			UiCommand::CycleMusicVolume, UiCommand::TogglePegColorMode, UiCommand::ToggleLanguage,
+			UiCommand::CycleGamepadDeadzone, UiCommand::CycleGamepadSensitivity,
+			UiCommand::ToggleGamepadFireBinding
+		};
+		for (std::size_t index = 0; index < 9U; ++index)
 		{
-			return { UiCommand::ToggleDifficulty };
+			if (tiles[index].Contains(position)) return { commands[index] };
 		}
-		if (UiRect{ 515.0f, 145.0f, 805.0f, 235.0f }.Contains(position))
-		{
-			return { UiCommand::ToggleSound };
-		}
-		if (UiRect{ 195.0f, 255.0f, 485.0f, 345.0f }.Contains(position))
-		{
-			return { UiCommand::CycleEffectsVolume };
-		}
-		if (UiRect{ 515.0f, 255.0f, 805.0f, 345.0f }.Contains(position))
-		{
-			return { UiCommand::CycleMusicVolume };
-		}
-		if (UiRect{ 195.0f, 365.0f, 485.0f, 455.0f }.Contains(position))
-		{
-			return { UiCommand::TogglePegColorMode };
-		}
-		if (UiRect{ 515.0f, 365.0f, 805.0f, 455.0f }.Contains(position))
-		{
-			return { UiCommand::ToggleLanguage };
-		}
-		if (UiRect{ 195.0f, 480.0f, 485.0f, 535.0f }.Contains(position))
+		if (UiRect{ 195.0f, 430.0f, 485.0f, 478.0f }.Contains(position))
 		{
 			return { UiCommand::ResetSettingsData };
 		}
-		if (UiRect{ 515.0f, 480.0f, 805.0f, 535.0f }.Contains(position))
+		if (UiRect{ 515.0f, 430.0f, 805.0f, 478.0f }.Contains(position))
 		{
 			return { UiCommand::ResetRecordData };
 		}
-		if (UiRect{ 300.0f, 590.0f, 700.0f, 640.0f }.Contains(position))
+		if (UiRect{ 300.0f, 550.0f, 700.0f, 612.0f }.Contains(position))
 		{
 			return { UiCommand::BackToStageSelection };
 		}

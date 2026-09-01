@@ -23,6 +23,12 @@ enum class UiLanguage
 	English
 };
 
+enum class GamepadFireBinding
+{
+	SouthButton,
+	RightTrigger
+};
+
 struct GameOptions
 {
 	GameDifficulty difficulty = GameDifficulty::Normal;
@@ -32,6 +38,9 @@ struct GameOptions
 	bool showGameplayInfo = true;
 	PegColorMode pegColorMode = PegColorMode::Standard;
 	UiLanguage language = UiLanguage::Korean;
+	int gamepadDeadzonePercent = 25;
+	int gamepadSensitivityPercent = 100;
+	GamepadFireBinding gamepadFireBinding = GamepadFireBinding::SouthButton;
 
 	void CycleDifficulty() noexcept
 	{
@@ -75,6 +84,28 @@ struct GameOptions
 		language = language == UiLanguage::Korean
 			? UiLanguage::English
 			: UiLanguage::Korean;
+	}
+
+	void CycleGamepadDeadzone() noexcept
+	{
+		if (gamepadDeadzonePercent < 25) gamepadDeadzonePercent = 25;
+		else if (gamepadDeadzonePercent < 35) gamepadDeadzonePercent = 35;
+		else gamepadDeadzonePercent = 15;
+	}
+
+	void CycleGamepadSensitivity() noexcept
+	{
+		if (gamepadSensitivityPercent < 100) gamepadSensitivityPercent = 100;
+		else if (gamepadSensitivityPercent < 125) gamepadSensitivityPercent = 125;
+		else if (gamepadSensitivityPercent < 150) gamepadSensitivityPercent = 150;
+		else gamepadSensitivityPercent = 75;
+	}
+
+	void ToggleGamepadFireBinding() noexcept
+	{
+		gamepadFireBinding = gamepadFireBinding == GamepadFireBinding::SouthButton
+			? GamepadFireBinding::RightTrigger
+			: GamepadFireBinding::SouthButton;
 	}
 };
 

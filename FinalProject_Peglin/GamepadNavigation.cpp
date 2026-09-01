@@ -17,7 +17,7 @@ std::size_t GetGamepadFocusCount(UiScreenKind screen, std::size_t visibleStageCo
 	{
 	case UiScreenKind::StageSelection: return SafeStageCount(visibleStageCount) + 4U;
 	case UiScreenKind::Loadout: return 8U;
-	case UiScreenKind::Options: return 9U;
+	case UiScreenKind::Options: return 12U;
 	case UiScreenKind::Statistics: return 3U;
 	case UiScreenKind::Reward: return 3U;
 	case UiScreenKind::Shop: return 4U;
@@ -74,9 +74,12 @@ UiAction ResolveGamepadFocusedAction(
 		case 3U: return { UiCommand::CycleMusicVolume };
 		case 4U: return { UiCommand::TogglePegColorMode };
 		case 5U: return { UiCommand::ToggleLanguage };
-		case 6U: return { UiCommand::ResetSettingsData };
-		case 7U: return { UiCommand::ResetRecordData };
-		case 8U: return { UiCommand::BackToStageSelection };
+		case 6U: return { UiCommand::CycleGamepadDeadzone };
+		case 7U: return { UiCommand::CycleGamepadSensitivity };
+		case 8U: return { UiCommand::ToggleGamepadFireBinding };
+		case 9U: return { UiCommand::ResetSettingsData };
+		case 10U: return { UiCommand::ResetRecordData };
+		case 11U: return { UiCommand::BackToStageSelection };
 		default: break;
 		}
 		break;
@@ -154,11 +157,12 @@ UiFocusRect GetGamepadFocusRect(
 	case UiScreenKind::Options:
 	{
 		static constexpr UiFocusRect rects[]{
-			{195,145,485,235},{515,145,805,235},{195,255,485,345},
-			{515,255,805,345},{195,365,485,455},{515,365,805,455},
-			{195,480,485,535},{515,480,805,535},{300,590,700,640}
+			{185,145,390,225},{397,145,602,225},{609,145,815,225},
+			{185,235,390,315},{397,235,602,315},{609,235,815,315},
+			{185,325,390,405},{397,325,602,405},{609,325,815,405},
+			{195,430,485,478},{515,430,805,478},{300,550,700,612}
 		};
-		if (focusIndex < 9U) return rects[focusIndex];
+		if (focusIndex < 12U) return rects[focusIndex];
 		break;
 	}
 	case UiScreenKind::Statistics:
@@ -187,4 +191,39 @@ UiFocusRect GetGamepadFocusRect(
 		break;
 	}
 	return {};
+}
+
+Vector2 ApplyGamepadStickTuning(
+	Vector2 rawStick,
+	int deadzonePercent,
+	int sensitivityPercent) noexcept
+{
+	const float deadzone = std::clamp(
+		static_cast<float>(deadzonePercent) / 100.0f,
+		0.05f,
+		0.60f);
+	const float sensitivity = std::clamp(
+		static_cast<float>(sensitivityPercent) / 100.0f,
+		0.50f,
+		2.00f);
+	const float rawLength = (std::min)(rawStick.Length(), 1.0f);
+	if (rawLength <= deadzone)
+	{
+		return {};
+	}
+	const float normalizedMagnitude = std::clamp(
+		((rawLength - deadzone) / (1.0f - deadzone)) * sensitivity,
+		0.0f,
+		1.0f);
+	return rawStick.Normalized() * normalizedMagnitude;
+}
+
+bool ShouldFireGamepadShot(
+	GamepadFireBinding binding,
+	bool southButtonPressed,
+	bool rightTriggerPressed) noexcept
+{
+	return binding == GamepadFireBinding::SouthButton
+		? southButtonPressed
+		: rightTriggerPressed;
 }

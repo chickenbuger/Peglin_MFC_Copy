@@ -1,6 +1,8 @@
 #pragma once
 
 #include "UiNavigation.h"
+#include "GameOptions.h"
+#include "Vector2.h"
 
 #include <cstddef>
 
@@ -30,3 +32,12 @@ UiFocusRect GetGamepadFocusRect(
 	UiScreenKind screen,
 	std::size_t focusIndex,
 	std::size_t visibleStageCount) noexcept;
+
+Vector2 ApplyGamepadStickTuning(
+	Vector2 rawStick,
+	int deadzonePercent,
+	int sensitivityPercent) noexcept;
+bool ShouldFireGamepadShot(
+	GamepadFireBinding binding,
+	bool southButtonPressed,
+	bool rightTriggerPressed) noexcept;

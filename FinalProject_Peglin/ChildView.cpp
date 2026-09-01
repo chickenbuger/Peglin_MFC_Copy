@@ -2122,67 +2122,40 @@ void CChildView::DrawOptions(CDC* deviceContext)
 	DrawMenuTitle(deviceContext, Text("screen.options"));
 	const CRect optionPanel(165, 105, 835, 650);
 	UiRenderer::DrawPanel(deviceContext, optionPanel);
+	CString optionsGuide;
+	optionsGuide.Format(
+		_T("클릭하거나 단축키로 즉시 변경 · GAMEPAD %s"),
+		_gamepadConnected ? _T("연결됨") : _T("미연결"));
 	UiRenderer::DrawText(
 		deviceContext,
 		CRect(190, 122, 810, 150),
-		_T("클릭하거나 단축키로 즉시 변경할 수 있습니다"),
+		optionsGuide,
 		95,
 		UiTheme::MutedText);
-	DrawOptionTile(
-		deviceContext,
-		CRect(195, 145, 485, 235),
-		_T("[D]"),
-		Text("option.difficulty"),
-		DifficultyTextForUi(_options.difficulty),
-		UiTheme::Gold);
-	DrawOptionTile(
-		deviceContext,
-		CRect(515, 145, 805, 235),
-		_T("[M]"),
-		Text("option.sound"),
-		Text(_options.soundEnabled ? "value.on" : "value.off"),
-		_options.soundEnabled ? UiTheme::Green : UiTheme::Danger);
 	CString effectsVolume;
 	effectsVolume.Format(_T("%d%%"), _options.effectsVolume);
-	DrawOptionTile(
-		deviceContext,
-		CRect(195, 255, 485, 345),
-		_T("[E]"),
-		_T("효과음 볼륨"),
-		effectsVolume,
-		UiTheme::Orange);
 	CString musicVolume;
 	musicVolume.Format(_T("%d%%"), _options.musicVolume);
-	DrawOptionTile(
-		deviceContext,
-		CRect(515, 255, 805, 345),
-		_T("[V]"),
-		_T("배경음 볼륨"),
-		musicVolume,
-		UiTheme::Blue);
-	DrawOptionTile(
-		deviceContext,
-		CRect(195, 365, 485, 455),
-		_T("[C]"),
-		Text("option.peg_color"),
-		PegColorModeTextForUi(_options.pegColorMode),
-		UiTheme::Blue);
-	DrawOptionTile(
-		deviceContext,
-		CRect(515, 365, 805, 455),
-		_T("[L]"),
-		Text("option.language"),
-		Text(_options.language == UiLanguage::Korean
-			? "language.korean"
-			: "language.english"),
-		UiTheme::Orange);
+	CString deadzone;
+	deadzone.Format(_T("%d%%"), _options.gamepadDeadzonePercent);
+	CString sensitivity;
+	sensitivity.Format(_T("%d%%"), _options.gamepadSensitivityPercent);
+	const CString fireBinding = _options.gamepadFireBinding == GamepadFireBinding::SouthButton
+		? _T("A 버튼")
+		: _T("오른쪽 트리거");
+	DrawOptionTile(deviceContext, CRect(185, 145, 390, 225), _T("[D]"), Text("option.difficulty"), DifficultyTextForUi(_options.difficulty), UiTheme::Gold);
+	DrawOptionTile(deviceContext, CRect(397, 145, 602, 225), _T("[M]"), Text("option.sound"), Text(_options.soundEnabled ? "value.on" : "value.off"), _options.soundEnabled ? UiTheme::Green : UiTheme::Danger);
+	DrawOptionTile(deviceContext, CRect(609, 145, 815, 225), _T("[E]"), _T("효과음"), effectsVolume, UiTheme::Orange);
+	DrawOptionTile(deviceContext, CRect(185, 235, 390, 315), _T("[V]"), _T("배경음"), musicVolume, UiTheme::Blue);
+	DrawOptionTile(deviceContext, CRect(397, 235, 602, 315), _T("[C]"), Text("option.peg_color"), PegColorModeTextForUi(_options.pegColorMode), UiTheme::Blue);
+	DrawOptionTile(deviceContext, CRect(609, 235, 815, 315), _T("[L]"), Text("option.language"), Text(_options.language == UiLanguage::Korean ? "language.korean" : "language.english"), UiTheme::Orange);
+	DrawOptionTile(deviceContext, CRect(185, 325, 390, 405), _T("[Z]"), _T("패드 데드존"), deadzone, UiTheme::Green);
+	DrawOptionTile(deviceContext, CRect(397, 325, 602, 405), _T("[G]"), _T("패드 감도"), sensitivity, UiTheme::Gold);
+	DrawOptionTile(deviceContext, CRect(609, 325, 815, 405), _T("[F]"), _T("발사 버튼"), fireBinding, UiTheme::Orange);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(195, 430, 485, 478), _T("설정만 초기화 · X"));
 	UiRenderer::DrawKeyHint(
 		deviceContext,
-		CRect(195, 480, 485, 535),
-		_T("설정만 초기화 · X"));
-	UiRenderer::DrawKeyHint(
-		deviceContext,
-		CRect(515, 480, 805, 535),
+		CRect(515, 430, 805, 478),
 		_T("전투 기록 초기화 · R"));
 	const CString audioNotice = !_audioCatalog.IsUsable()
 		? CString(_T("오디오 파일을 불러오지 못해 무음으로 실행 중입니다"))
@@ -2191,13 +2164,13 @@ void CChildView::DrawOptions(CDC* deviceContext)
 				: (_optionsNotice.IsEmpty() ? Text("notice.auto_save") : _optionsNotice)));
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(190, 540, 810, 580),
+		CRect(190, 486, 810, 535),
 		audioNotice,
 		100,
 		(!_audioCatalog.IsUsable() || _settingsSaveFailed || _recordSaveFailed)
 			? UiTheme::Danger
 			: UiTheme::Green);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 590, 700, 640), Text("hint.back"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(300, 550, 700, 612), Text("hint.back"));
 }
 
 void CChildView::DrawStatisticsScreen(CDC* deviceContext)
@@ -3027,7 +3000,11 @@ void CChildView::PollGamepad()
 
 	const float stickX = static_cast<float>(state.Gamepad.sThumbLX) / 32767.0f;
 	const float stickY = -static_cast<float>(state.Gamepad.sThumbLY) / 32767.0f;
-	const Vector2 stick{ stickX, stickY };
+	const Vector2 rawStick{ stickX, stickY };
+	const Vector2 stick = ApplyGamepadStickTuning(
+		rawStick,
+		_options.gamepadDeadzonePercent,
+		_options.gamepadSensitivityPercent);
 	const float stickLength = stick.Length();
 
 	if (_screenMode == ScreenMode::Playing)
@@ -3041,7 +3018,7 @@ void CChildView::PollGamepad()
 			_game.ResetBallToAiming();
 			return;
 		}
-		if (_game.GetState() == GameState::Aiming && stickLength >= 0.35f)
+		if (_game.GetState() == GameState::Aiming && stickLength > 0.0f)
 		{
 			_gamepadAimDirection = stick.Normalized();
 			const Vector2 ballPosition = _game.GetBall().GetPosition();
@@ -3049,9 +3026,13 @@ void CChildView::PollGamepad()
 			{
 				_game.BeginAim(ballPosition);
 			}
-			const Vector2 dragPosition = ballPosition - _gamepadAimDirection * 160.0f;
+			const float dragDistance = 100.0f + stickLength * 100.0f;
+			const Vector2 dragPosition = ballPosition - _gamepadAimDirection * dragDistance;
 			_game.UpdateAim(dragPosition);
-			if ((pressed & XINPUT_GAMEPAD_A) != 0U || triggerPressed)
+			if (ShouldFireGamepadShot(
+				_options.gamepadFireBinding,
+				(pressed & XINPUT_GAMEPAD_A) != 0U,
+				triggerPressed))
 			{
 				_game.ReleaseShot(dragPosition);
 			}
@@ -3308,6 +3289,18 @@ void CChildView::ExecuteUiAction(const UiAction& action)
 		ReloadLocalization();
 		SaveOptions();
 		break;
+	case UiCommand::CycleGamepadDeadzone:
+		_options.CycleGamepadDeadzone();
+		SaveOptions();
+		break;
+	case UiCommand::CycleGamepadSensitivity:
+		_options.CycleGamepadSensitivity();
+		SaveOptions();
+		break;
+	case UiCommand::ToggleGamepadFireBinding:
+		_options.ToggleGamepadFireBinding();
+		SaveOptions();
+		break;
 	case UiCommand::ResetSettingsData:
 		RequestSelectiveReset(true);
 		break;
@@ -3538,6 +3531,21 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		{
 			_options.ToggleLanguage();
 			ReloadLocalization();
+			SaveOptions();
+		}
+		else if (nChar == 'Z')
+		{
+			_options.CycleGamepadDeadzone();
+			SaveOptions();
+		}
+		else if (nChar == 'G')
+		{
+			_options.CycleGamepadSensitivity();
+			SaveOptions();
+		}
+		else if (nChar == 'F')
+		{
+			_options.ToggleGamepadFireBinding();
 			SaveOptions();
 		}
 		else if (nChar == 'X')

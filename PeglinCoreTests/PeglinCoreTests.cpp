@@ -476,31 +476,43 @@ namespace
 				== UiCommand::ToggleDifficulty,
 			"mouse changes difficulty");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 650.0f, 190.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 190.0f }, 0).command
 				== UiCommand::ToggleSound,
 			"mouse toggles sound");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 410.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 275.0f }, 0).command
 				== UiCommand::TogglePegColorMode,
 			"mouse changes peg accessibility mode");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 650.0f, 410.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 275.0f }, 0).command
 				== UiCommand::ToggleLanguage,
 			"mouse changes the UI language");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 300.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 190.0f }, 0).command
 				== UiCommand::CycleEffectsVolume,
 			"mouse cycles the effects volume");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 650.0f, 300.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 275.0f }, 0).command
 				== UiCommand::CycleMusicVolume,
 			"mouse cycles the music volume");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 300.0f, 505.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 365.0f }, 0).command
+				== UiCommand::CycleGamepadDeadzone,
+			"mouse cycles gamepad deadzone");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 500.0f, 365.0f }, 0).command
+				== UiCommand::CycleGamepadSensitivity,
+			"mouse cycles gamepad sensitivity");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 700.0f, 365.0f }, 0).command
+				== UiCommand::ToggleGamepadFireBinding,
+			"mouse changes the gamepad fire button");
+		Check(
+			ResolveUiClick(UiScreenKind::Options, { 300.0f, 450.0f }, 0).command
 				== UiCommand::ResetSettingsData,
 			"mouse reaches the selective settings reset");
 		Check(
-			ResolveUiClick(UiScreenKind::Options, { 650.0f, 505.0f }, 0).command
+			ResolveUiClick(UiScreenKind::Options, { 650.0f, 450.0f }, 0).command
 				== UiCommand::ResetRecordData,
 			"mouse reaches the selective record reset");
 		Check(
@@ -508,7 +520,7 @@ namespace
 				== UiCommand::BackToStageSelection,
 			"mouse returns from the compact options grid");
 		Check(
-			!ResolveUiClick(UiScreenKind::Options, { 500.0f, 480.0f }, 0).IsHandled(),
+			!ResolveUiClick(UiScreenKind::Options, { 500.0f, 510.0f }, 0).IsHandled(),
 			"options grid leaves its status area non-interactive");
 		Check(
 			ResolveUiClick(UiScreenKind::Result, { 350.0f, 665.0f }, 0).command
@@ -661,7 +673,7 @@ namespace
 			"gamepad stage screen exposes routes, start, statistics, loadout, and options");
 		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 8U,
 			"gamepad can focus every loadout action");
-		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 9U,
+		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 12U,
 			"gamepad can focus every option, selective reset, and back");
 		Check(GetGamepadFocusCount(UiScreenKind::Statistics, 0) == 3U,
 			"gamepad can focus statistics filter, sort, and back");
@@ -685,8 +697,14 @@ namespace
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 3, 0).command
 			== UiCommand::CycleMusicVolume, "gamepad reaches independent music volume");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 6, 0).command
-			== UiCommand::ResetSettingsData, "gamepad reaches selective settings reset");
+			== UiCommand::CycleGamepadDeadzone, "gamepad reaches deadzone tuning");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 7, 0).command
+			== UiCommand::CycleGamepadSensitivity, "gamepad reaches sensitivity tuning");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 8, 0).command
+			== UiCommand::ToggleGamepadFireBinding, "gamepad reaches fire button binding");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 9, 0).command
+			== UiCommand::ResetSettingsData, "gamepad reaches selective settings reset");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 10, 0).command
 			== UiCommand::ResetRecordData, "gamepad reaches selective record reset");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Reward, 2, 0).command
 			== UiCommand::SelectReward, "gamepad selects the third reward");
@@ -698,8 +716,21 @@ namespace
 			== UiCommand::LeaveShop, "gamepad B leaves the shop safely");
 		Check(!ResolveGamepadBackAction(UiScreenKind::Reward).IsHandled(),
 			"gamepad cannot skip a required reward");
-		Check(GetGamepadFocusRect(UiScreenKind::Options, 8, 0).IsValid(),
+		Check(GetGamepadFocusRect(UiScreenKind::Options, 11, 0).IsValid(),
 			"gamepad back focus has a visible rectangle");
+		Check(ApplyGamepadStickTuning({ 0.10f, 0.0f }, 25, 100).Length() == 0.0f,
+			"gamepad radial deadzone suppresses stick drift");
+		const Vector2 tunedStick = ApplyGamepadStickTuning({ 0.50f, 0.0f }, 25, 100);
+		Check(tunedStick.x > 0.30f && tunedStick.x < 0.35f,
+			"gamepad stick rescales smoothly after the deadzone");
+		Check(ApplyGamepadStickTuning({ 0.50f, 0.0f }, 25, 150).x > tunedStick.x,
+			"gamepad sensitivity increases usable aim magnitude");
+		Check(ShouldFireGamepadShot(GamepadFireBinding::SouthButton, true, false)
+			&& !ShouldFireGamepadShot(GamepadFireBinding::SouthButton, false, true),
+			"south-button fire binding ignores the trigger");
+		Check(ShouldFireGamepadShot(GamepadFireBinding::RightTrigger, false, true)
+			&& !ShouldFireGamepadShot(GamepadFireBinding::RightTrigger, true, false),
+			"trigger fire binding ignores the south button");
 		Check(!GetGamepadFocusRect(UiScreenKind::Result, 9, 0).IsValid(),
 			"invalid gamepad focus has no rectangle");
 	}
@@ -1369,6 +1400,10 @@ namespace
 		Check(options.showGameplayInfo, "options default to visible gameplay information");
 		Check(options.pegColorMode == PegColorMode::Standard, "options default to standard peg colors");
 		Check(options.language == UiLanguage::Korean, "options default to Korean UI text");
+		Check(options.gamepadDeadzonePercent == 25, "options default to a twenty-five percent gamepad deadzone");
+		Check(options.gamepadSensitivityPercent == 100, "options default to one hundred percent gamepad sensitivity");
+		Check(options.gamepadFireBinding == GamepadFireBinding::SouthButton,
+			"options default to the south face button for firing");
 		options.CycleDifficulty();
 		Check(options.difficulty == GameDifficulty::Hard, "difficulty cycles from normal to hard");
 		options.CycleDifficulty();
@@ -1399,6 +1434,15 @@ namespace
 		Check(options.language == UiLanguage::English, "language toggles from Korean to English");
 		options.ToggleLanguage();
 		Check(options.language == UiLanguage::Korean, "language toggles back to Korean");
+		options.CycleGamepadDeadzone();
+		Check(options.gamepadDeadzonePercent == 35, "gamepad deadzone cycles to thirty-five percent");
+		options.CycleGamepadDeadzone();
+		Check(options.gamepadDeadzonePercent == 15, "gamepad deadzone wraps to fifteen percent");
+		options.CycleGamepadSensitivity();
+		Check(options.gamepadSensitivityPercent == 125, "gamepad sensitivity cycles to one hundred twenty-five percent");
+		options.ToggleGamepadFireBinding();
+		Check(options.gamepadFireBinding == GamepadFireBinding::RightTrigger,
+			"gamepad fire binding toggles to the right trigger");
 
 		const StageDefinition base = CreateDefaultStageDefinition();
 		const StageDefinition easy = ApplyDifficulty(base, GameDifficulty::Easy);
@@ -1445,6 +1489,11 @@ namespace
 		Check(missing.options.showGameplayInfo, "missing settings recover visible gameplay information");
 		Check(missing.options.pegColorMode == PegColorMode::Standard, "missing settings recover standard colors");
 		Check(missing.options.language == UiLanguage::Korean, "missing settings recover Korean language");
+		Check(missing.options.gamepadDeadzonePercent == 25
+			&& missing.options.gamepadSensitivityPercent == 100,
+			"missing settings recover default gamepad tuning");
+		Check(missing.options.gamepadFireBinding == GamepadFireBinding::SouthButton,
+			"missing settings recover the default fire binding");
 
 		GameOptions saved;
 		saved.difficulty = GameDifficulty::Hard;
@@ -1454,6 +1503,9 @@ namespace
 		saved.showGameplayInfo = false;
 		saved.pegColorMode = PegColorMode::HighContrast;
 		saved.language = UiLanguage::English;
+		saved.gamepadDeadzonePercent = 35;
+		saved.gamepadSensitivityPercent = 150;
+		saved.gamepadFireBinding = GamepadFireBinding::RightTrigger;
 		std::string saveError;
 		Check(store.Save(saved, &saveError), "settings save creates missing parent directories");
 		Check(saveError.empty(), "successful settings save clears its error");
@@ -1468,6 +1520,10 @@ namespace
 		Check(!loaded.options.showGameplayInfo, "settings preserve hidden gameplay information");
 		Check(loaded.options.pegColorMode == PegColorMode::HighContrast, "settings preserve high contrast mode");
 		Check(loaded.options.language == UiLanguage::English, "settings preserve selected language");
+		Check(loaded.options.gamepadDeadzonePercent == 35, "settings preserve gamepad deadzone");
+		Check(loaded.options.gamepadSensitivityPercent == 150, "settings preserve gamepad sensitivity");
+		Check(loaded.options.gamepadFireBinding == GamepadFireBinding::RightTrigger,
+			"settings preserve gamepad fire binding");
 
 		saved.difficulty = GameDifficulty::Easy;
 		saved.soundEnabled = true;
@@ -1476,6 +1532,9 @@ namespace
 		saved.showGameplayInfo = true;
 		saved.pegColorMode = PegColorMode::Standard;
 		saved.language = UiLanguage::Korean;
+		saved.gamepadDeadzonePercent = 15;
+		saved.gamepadSensitivityPercent = 75;
+		saved.gamepadFireBinding = GamepadFireBinding::SouthButton;
 		Check(store.Save(saved), "settings save atomically replaces an existing file");
 		const SettingsLoadResult replaced = store.Load();
 		Check(replaced.options.difficulty == GameDifficulty::Easy, "replacement settings update difficulty");
@@ -1485,6 +1544,11 @@ namespace
 		Check(replaced.options.showGameplayInfo, "replacement settings update gameplay information");
 		Check(replaced.options.pegColorMode == PegColorMode::Standard, "replacement settings update colors");
 		Check(replaced.options.language == UiLanguage::Korean, "replacement settings update language");
+		Check(replaced.options.gamepadDeadzonePercent == 15
+			&& replaced.options.gamepadSensitivityPercent == 75,
+			"replacement settings update gamepad tuning");
+		Check(replaced.options.gamepadFireBinding == GamepadFireBinding::SouthButton,
+			"replacement settings update fire binding");
 		Check(std::filesystem::exists(store.GetBackupPath()),
 			"replacing valid settings creates a backup");
 		const SettingsLoadResult settingsBackup = GameSettingsStore(store.GetBackupPath()).Load();
@@ -1514,6 +1578,26 @@ namespace
 		Check(store.LoadWithRecovery().state == SettingsLoadState::Invalid,
 			"settings recovery refuses an invalid backup");
 		Check(store.Save(saved), "valid settings can replace a damaged primary without overwriting the backup first");
+
+		{
+			std::ofstream versionTwo(settingsPath, std::ios::trunc);
+			versionTwo
+				<< "peglin_settings_version=2\n"
+				<< "difficulty=normal\n"
+				<< "sound_enabled=1\n"
+				<< "effects_volume=50\n"
+				<< "music_volume=25\n"
+				<< "show_gameplay_info=1\n"
+				<< "peg_color_mode=standard\n"
+				<< "language=ko-KR\n";
+		}
+		const SettingsLoadResult versionTwo = store.Load();
+		Check(versionTwo.state == SettingsLoadState::Migrated,
+			"version two settings migrate to gamepad-aware defaults");
+		Check(versionTwo.options.gamepadDeadzonePercent == 25
+			&& versionTwo.options.gamepadSensitivityPercent == 100
+			&& versionTwo.options.gamepadFireBinding == GamepadFireBinding::SouthButton,
+			"version two migration supplies safe gamepad defaults");
 
 		{
 			std::ofstream invalid(settingsPath, std::ios::trunc);
@@ -1591,7 +1675,7 @@ namespace
 		Check(migrated.options.difficulty == GameDifficulty::Hard, "legacy numeric difficulty migrates");
 		Check(!migrated.options.soundEnabled, "legacy boolean sound migrates");
 		Check(migrated.options.pegColorMode == PegColorMode::HighContrast, "legacy numeric color mode migrates");
-		Check(store.Save(migrated.options), "migrated settings rewrite as version two");
+		Check(store.Save(migrated.options), "migrated settings rewrite as version three");
 		Check(store.Load().state == SettingsLoadState::Loaded, "rewritten settings load as current version");
 
 		{

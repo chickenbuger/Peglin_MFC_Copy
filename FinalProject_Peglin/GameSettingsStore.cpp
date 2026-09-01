@@ -10,7 +10,7 @@
 namespace
 {
 	constexpr std::string_view SETTINGS_VERSION_KEY = "peglin_settings_version";
-	constexpr std::string_view SETTINGS_VERSION = "2";
+	constexpr std::string_view SETTINGS_VERSION = "3";
 
 	std::string DifficultyValue(GameDifficulty difficulty)
 	{
@@ -34,6 +34,11 @@ namespace
 	std::string LanguageValue(UiLanguage language)
 	{
 		return language == UiLanguage::English ? "en-US" : "ko-KR";
+	}
+
+	std::string GamepadFireValue(GamepadFireBinding binding)
+	{
+		return binding == GamepadFireBinding::RightTrigger ? "right_trigger" : "south_button";
 	}
 
 	bool ParseDifficulty(std::string_view value, GameDifficulty& difficulty) noexcept
@@ -85,6 +90,35 @@ namespace
 		}
 		volume = parsed;
 		return true;
+	}
+
+	bool ParseIntegerRange(std::string_view value, int minimum, int maximum, int& parsedValue) noexcept
+	{
+		if (value.empty()) return false;
+		int parsed = 0;
+		const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+		if (result.ec != std::errc{} || result.ptr != value.data() + value.size()
+			|| parsed < minimum || parsed > maximum)
+		{
+			return false;
+		}
+		parsedValue = parsed;
+		return true;
+	}
+
+	bool ParseGamepadFire(std::string_view value, GamepadFireBinding& binding) noexcept
+	{
+		if (value == "south_button")
+		{
+			binding = GamepadFireBinding::SouthButton;
+			return true;
+		}
+		if (value == "right_trigger")
+		{
+			binding = GamepadFireBinding::RightTrigger;
+			return true;
+		}
+		return false;
 	}
 
 	bool ParsePegColor(std::string_view value, PegColorMode& colorMode) noexcept
@@ -250,6 +284,9 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 		const auto gameplayInfo = values.find("show_gameplay_info");
 		const auto color = values.find("peg_color_mode");
 		const auto language = values.find("language");
+		const auto gamepadDeadzone = values.find("gamepad_deadzone_percent");
+		const auto gamepadSensitivity = values.find("gamepad_sensitivity_percent");
+		const auto gamepadFire = values.find("gamepad_fire_binding");
 		if (version == values.end()
 			|| difficulty == values.end()
 			|| sound == values.end()
@@ -273,7 +310,13 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 					&& !ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
 				|| !ParsePegColor(color->second, result.options.pegColorMode)
 				|| (language != values.end()
-					&& !ParseLanguage(language->second, result.options.language)))
+					&& !ParseLanguage(language->second, result.options.language))
+				|| gamepadDeadzone == values.end()
+				|| !ParseIntegerRange(gamepadDeadzone->second, 5, 60, result.options.gamepadDeadzonePercent)
+				|| gamepadSensitivity == values.end()
+				|| !ParseIntegerRange(gamepadSensitivity->second, 50, 200, result.options.gamepadSensitivityPercent)
+				|| gamepadFire == values.end()
+				|| !ParseGamepadFire(gamepadFire->second, result.options.gamepadFireBinding))
 			{
 				result.options = GameOptions{};
 				result.state = SettingsLoadState::Invalid;
@@ -282,6 +325,24 @@ SettingsLoadResult GameSettingsStore::Load() const noexcept
 			}
 			result.state = SettingsLoadState::Loaded;
 			result.message.clear();
+			return result;
+		}
+
+		if (version->second == "2"
+			&& ParseDifficulty(difficulty->second, result.options.difficulty)
+			&& ParseSound(sound->second, result.options.soundEnabled)
+			&& effectsVolume != values.end()
+			&& musicVolume != values.end()
+			&& ParseVolume(effectsVolume->second, result.options.effectsVolume)
+			&& ParseVolume(musicVolume->second, result.options.musicVolume)
+			&& (gameplayInfo == values.end()
+				|| ParseSound(gameplayInfo->second, result.options.showGameplayInfo))
+			&& ParsePegColor(color->second, result.options.pegColorMode)
+			&& (language == values.end()
+				|| ParseLanguage(language->second, result.options.language)))
+		{
+			result.state = SettingsLoadState::Migrated;
+			result.message = "settings migrated from version 2";
 			return result;
 		}
 
@@ -416,7 +477,10 @@ bool GameSettingsStore::Save(const GameOptions& options, std::string* errorMessa
 			<< "music_volume=" << std::clamp(options.musicVolume, 0, 100) << '\n'
 			<< "show_gameplay_info=" << (options.showGameplayInfo ? '1' : '0') << '\n'
 			<< "peg_color_mode=" << PegColorValue(options.pegColorMode) << '\n'
-			<< "language=" << LanguageValue(options.language) << '\n';
+			<< "language=" << LanguageValue(options.language) << '\n'
+			<< "gamepad_deadzone_percent=" << std::clamp(options.gamepadDeadzonePercent, 5, 60) << '\n'
+			<< "gamepad_sensitivity_percent=" << std::clamp(options.gamepadSensitivityPercent, 50, 200) << '\n'
+			<< "gamepad_fire_binding=" << GamepadFireValue(options.gamepadFireBinding) << '\n';
 		stream.flush();
 		if (!stream)
 		{
