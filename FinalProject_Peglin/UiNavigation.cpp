@@ -26,24 +26,24 @@ namespace
 		const std::size_t safeStageCount = (std::min)(std::size_t{ 2 }, visibleStageCount);
 		for (std::size_t index = 0; index < safeStageCount; ++index)
 		{
-			const float top = safeStageCount == 1
-				? 245.0f
-				: 165.0f + static_cast<float>(index) * 200.0f;
-			if (UiRect{ 248.0f, top, 752.0f, top + 155.0f }.Contains(position))
+			const float left = safeStageCount == 1
+				? 437.0f
+				: (index == 0 ? 252.0f : 620.0f);
+			if (UiRect{ left, 215.0f, left + 343.0f, 590.0f }.Contains(position))
 			{
 				return { UiCommand::SelectStage, index };
 			}
 		}
 
-		if (UiRect{ 300.0f, 640.0f, 680.0f, 690.0f }.Contains(position))
+		if (UiRect{ 350.0f, 635.0f, 865.0f, 695.0f }.Contains(position))
 		{
 			return { UiCommand::StartSelectedStage };
 		}
-		if (UiRect{ 48.0f, 550.0f, 202.0f, 600.0f }.Contains(position))
+		if (UiRect{ 43.0f, 575.0f, 206.0f, 625.0f }.Contains(position))
 		{
 			return { UiCommand::OpenLoadout };
 		}
-		if (UiRect{ 798.0f, 550.0f, 948.0f, 600.0f }.Contains(position))
+		if (UiRect{ 43.0f, 638.0f, 206.0f, 688.0f }.Contains(position))
 		{
 			return { UiCommand::OpenOptions };
 		}

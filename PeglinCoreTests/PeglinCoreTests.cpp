@@ -360,19 +360,19 @@ namespace
 	{
 		UiAction action = ResolveUiClick(
 			UiScreenKind::StageSelection,
-			{ 500.0f, 440.0f },
+			{ 790.0f, 400.0f },
 			2);
 		Check(action.command == UiCommand::SelectStage && action.index == 1, "mouse selects the second route card");
 		Check(
-			ResolveUiClick(UiScreenKind::StageSelection, { 500.0f, 660.0f }, 3).command
+			ResolveUiClick(UiScreenKind::StageSelection, { 600.0f, 665.0f }, 3).command
 				== UiCommand::StartSelectedStage,
 			"mouse starts the selected stage");
 		Check(
-			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 575.0f }, 3).command
+			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 600.0f }, 3).command
 				== UiCommand::OpenLoadout,
 			"mouse opens loadout management");
 		Check(
-			ResolveUiClick(UiScreenKind::StageSelection, { 850.0f, 575.0f }, 3).command
+			ResolveUiClick(UiScreenKind::StageSelection, { 100.0f, 665.0f }, 3).command
 				== UiCommand::OpenOptions,
 			"mouse opens options");
 

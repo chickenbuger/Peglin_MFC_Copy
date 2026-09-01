@@ -691,6 +691,11 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_relicThornCharmIcon.LoadBitmap(IDB_RELIC_THORN_CHARM_V1);
 	_relicBarkGuardIcon.LoadBitmap(IDB_RELIC_BARK_GUARD_V1);
 	_shopMerchantSprite.LoadBitmap(IDB_SHOP_MERCHANT_V1);
+	_stagePreviewForest.LoadBitmap(IDB_STAGE_PREVIEW_FOREST_V1);
+	_stagePreviewCrystal.LoadBitmap(IDB_STAGE_PREVIEW_CRYSTAL_V1);
+	_stagePreviewFungal.LoadBitmap(IDB_STAGE_PREVIEW_FUNGAL_V1);
+	_stagePreviewEmber.LoadBitmap(IDB_STAGE_PREVIEW_EMBER_V1);
+	_stagePreviewCitadel.LoadBitmap(IDB_STAGE_PREVIEW_CITADEL_V1);
 
 	CWnd* mainWindow = AfxGetMainWnd();
 	CMenu* mainMenu = mainWindow != nullptr ? mainWindow->GetMenu() : nullptr;
@@ -767,7 +772,12 @@ void CChildView::OnDestroy()
 		&_relicComboLanternIcon,
 		&_relicThornCharmIcon,
 		&_relicBarkGuardIcon,
-		&_shopMerchantSprite })
+		&_shopMerchantSprite,
+		&_stagePreviewForest,
+		&_stagePreviewCrystal,
+		&_stagePreviewFungal,
+		&_stagePreviewEmber,
+		&_stagePreviewCitadel })
 	{
 		if (itemIcon->GetSafeHandle() != nullptr)
 		{
@@ -1345,34 +1355,36 @@ void CChildView::DrawEnemyHealthBar(
 void CChildView::DrawStageSelection(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
-	UiRenderer::DrawText(deviceContext, CRect(180, 35, 800, 110), Text("screen.stage_selection"), 300, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(230, 20, 970, 78), Text("screen.stage_selection"), 265, UiTheme::Gold);
 
-	UiRenderer::DrawPanel(deviceContext, CRect(28, 150, 222, 625));
-	UiRenderer::DrawText(deviceContext, CRect(42, 165, 208, 210), _T("RUN STATUS"), 155, UiTheme::Gold);
+	const CRect statusPanel(24, 105, 225, 700);
+	UiRenderer::DrawPanel(deviceContext, statusPanel);
+	UiRenderer::DrawText(deviceContext, CRect(40, 122, 209, 164), _T("ADVENTURE"), 150, UiTheme::Gold);
 	CString runProgress;
 	runProgress.Format(
-		_T("노드 %zu / %zu\n체력 %d · 골드 %d"),
+		_T("경로 %zu / %zu\n체력 %d\n골드 %d"),
 		(std::min)(_run.GetClearedStageCount() + 1, _run.GetStageCount()),
 		_run.GetStageCount(),
 		static_cast<int>(std::lround(_runPlayerHealth > 0.0f ? _runPlayerHealth : _game.GetPlayer().GetHp())),
 		_run.GetGold());
-	UiRenderer::DrawText(deviceContext, CRect(42, 215, 208, 275), runProgress, 105, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawText(deviceContext, CRect(42, 285, 208, 315), _T("현재 오브"), 105, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(42, 178, 207, 255), runProgress, 105, UiTheme::Green, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+	UiRenderer::DrawText(deviceContext, CRect(42, 278, 207, 308), _T("현재 오브"), 100, UiTheme::MutedText);
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(42, 315, 208, 355),
+		CRect(42, 310, 207, 350),
 		Utf8Text(_game.GetLoadout().GetSelectedOrb().displayName),
-		145,
+		130,
 		UiTheme::Text);
-	UiRenderer::DrawText(deviceContext, CRect(42, 365, 208, 395), _T("보유 유물"), 105, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(42, 372, 207, 402), _T("보유 유물"), 100, UiTheme::MutedText);
 	UiRenderer::DrawText(
 		deviceContext,
-		CRect(45, 400, 205, 525),
+		CRect(43, 405, 206, 555),
 		RelicSummary(_game.GetLoadout()),
-		110,
+		95,
 		UiTheme::Green,
 		DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(48, 550, 202, 600), Text("hint.loadout"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 575, 206, 625), Text("hint.loadout"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(43, 638, 206, 688), Text("hint.options"));
 
 	std::vector<std::string> visibleStageIds;
 	if (_run.GetStatus() == RunStatus::StageChoice)
@@ -1386,28 +1398,57 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	const std::size_t visibleStageCount = (std::min)(std::size_t{ 2 }, visibleStageIds.size());
 	const std::optional<std::size_t> selectedChoiceIndex =
 		_run.GetSelectedStageChoiceIndex();
-	const std::size_t routeStep = (std::min)(
-		_run.GetClearedStageCount() + 1,
-		_run.GetStageCount());
-	CString routeText;
-	routeText.Format(
-		_run.GetStatus() == RunStatus::StageChoice
-			? _T("다음 경로 선택 · %zu / %zu")
-			: (IsRunShopStage(_run.GetCurrentStageId())
-				? _T("상점 준비 · %zu / %zu")
-				: _T("전투 준비 · %zu / %zu")),
-		routeStep,
-		_run.GetStageCount());
-	UiRenderer::DrawProgressBar(
-		deviceContext,
-		CRect(285, 125, 715, 148),
-		_run.GetStageCount() == 0
-			? 0.0f
-			: static_cast<float>(_run.GetClearedStageCount())
-				/ static_cast<float>(_run.GetStageCount()),
-		routeText,
-		UiTheme::Gold,
-		UiTheme::Border);
+	const std::size_t stageCount = _run.GetStageCount();
+	const std::size_t clearedStageCount = _run.GetClearedStageCount();
+	const CRect routePanel(252, 92, 965, 192);
+	UiRenderer::DrawPanel(deviceContext, routePanel, false, UiTheme::Gold);
+	UiRenderer::DrawText(deviceContext, CRect(270, 101, 947, 124), _T("RUN ROUTE"), 90, UiTheme::MutedText);
+	if (stageCount > 0)
+	{
+		constexpr int ROUTE_LEFT = 287;
+		constexpr int ROUTE_RIGHT = 930;
+		constexpr int ROUTE_Y = 149;
+		const int savedDc = deviceContext->SaveDC();
+		CPen routePen(PS_SOLID, 4, UiTheme::Border);
+		deviceContext->SelectObject(&routePen);
+		deviceContext->MoveTo(ROUTE_LEFT, ROUTE_Y);
+		deviceContext->LineTo(ROUTE_RIGHT, ROUTE_Y);
+		for (std::size_t index = 0; index < stageCount; ++index)
+		{
+			const float fraction = stageCount == 1
+				? 0.5f
+				: static_cast<float>(index) / static_cast<float>(stageCount - 1);
+			const int centerX = ROUTE_LEFT + static_cast<int>(std::lround(
+				static_cast<float>(ROUTE_RIGHT - ROUTE_LEFT) * fraction));
+			const bool completed = index < clearedStageCount;
+			const bool current = index == clearedStageCount;
+			const COLORREF nodeColor = completed
+				? UiTheme::Green
+				: (current ? UiTheme::Gold : UiTheme::Border);
+			const int nodeDc = deviceContext->SaveDC();
+			CPen nodePen(PS_SOLID, current ? 4 : 2, nodeColor);
+			CBrush nodeBrush(completed ? UiTheme::Green : UiTheme::PanelMuted);
+			deviceContext->SelectObject(&nodePen);
+			deviceContext->SelectObject(&nodeBrush);
+			const int radius = current ? 13 : 10;
+			deviceContext->Ellipse(
+				centerX - radius,
+				ROUTE_Y - radius,
+				centerX + radius,
+				ROUTE_Y + radius);
+			deviceContext->RestoreDC(nodeDc);
+
+			CString nodeText;
+			nodeText.Format(_T("%zu"), index + 1);
+			UiRenderer::DrawText(
+				deviceContext,
+				CRect(centerX - 18, ROUTE_Y + 17, centerX + 18, ROUTE_Y + 37),
+				nodeText,
+				70,
+				nodeColor);
+		}
+		deviceContext->RestoreDC(savedDc);
+	}
 
 	for (std::size_t index = 0; index < visibleStageCount; ++index)
 	{
@@ -1419,10 +1460,10 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 		{
 			continue;
 		}
-		const int top = visibleStageCount == 1
-			? 245
-			: 165 + static_cast<int>(index) * 200;
-		const CRect card(248, top, 752, top + 155);
+		const int left = visibleStageCount == 1
+			? 437
+			: (index == 0 ? 252 : 620);
+		const CRect card(left, 215, left + 343, 590);
 		const bool selected = _run.GetStatus() == RunStatus::StageReady
 			|| (_run.GetStatus() == RunStatus::StageChoice
 				&& selectedChoiceIndex.has_value()
@@ -1431,59 +1472,69 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 			? UiTheme::Green
 			: (source->isBoss ? UiTheme::Orange : UiTheme::Gold);
 		UiRenderer::DrawPanel(deviceContext, card, selected, stageColor);
-		CString title;
+		const CRect imageBounds(card.left + 12, card.top + 12, card.right - 12, card.top + 252);
 		if (shopStage)
 		{
-			title.Format(_T("[%zu] Goblin Market · SHOP"), index + 1);
+			deviceContext->FillSolidRect(imageBounds, RGB(14, 28, 27));
+			UiRenderer::DrawTransparentBitmap(
+				deviceContext,
+				&_shopMerchantSprite,
+				CRect(imageBounds.left + 70, imageBounds.top + 10, imageBounds.right - 70, imageBounds.bottom - 10));
 		}
 		else
 		{
-			title.Format(
-				_T("[%zu] %s%s"),
-				index + 1,
-				Utf8Text(source->displayName).GetString(),
-				source->isBoss ? _T(" · BOSS") : _T(""));
+			UiRenderer::DrawBackdrop(deviceContext, GetStagePreview(visibleStageIds[index]), imageBounds);
 		}
+		const int imageState = deviceContext->SaveDC();
+		CPen imageBorder(PS_SOLID, selected ? 3 : 1, selected ? stageColor : UiTheme::Border);
+		deviceContext->SelectObject(&imageBorder);
+		deviceContext->SelectStockObject(NULL_BRUSH);
+		deviceContext->Rectangle(imageBounds);
+		deviceContext->RestoreDC(imageState);
+
+		CString title;
+		title.Format(
+			_T("[%zu] %s"),
+			index + 1,
+			shopStage ? _T("Goblin Market") : Utf8Text(source->displayName).GetString());
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(card.left + 15, card.top + 18, card.right - 15, card.bottom - 18),
+			CRect(card.left + 14, card.top + 263, card.right - 14, card.top + 310),
 			title,
-			185,
-			selected ? stageColor : UiTheme::Text);
+			155,
+			UiTheme::Text);
+		const CString typeText = shopStage
+			? CString(_T("SHOP"))
+			: (source->isBoss ? CString(_T("BOSS")) : CString(_T("BATTLE")));
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(card.left + 14, card.top + 310, card.right - 14, card.top + 342),
+			typeText,
+			95,
+			stageColor);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(card.left + 14, card.top + 343, card.right - 14, card.bottom - 8),
+			selected ? CString(_T("선택됨")) : CString(_T("클릭하여 선택")),
+			90,
+			selected ? stageColor : UiTheme::MutedText);
 	}
-
-	UiRenderer::DrawPanel(deviceContext, CRect(778, 150, 968, 625));
-	UiRenderer::DrawText(deviceContext, CRect(792, 165, 954, 210), Text("label.run_rules"), 155, UiTheme::Gold);
-	CString difficulty;
-	difficulty.Format(
-		_T("%s\n%s"),
-		Text("option.difficulty").GetString(),
-		DifficultyTextForUi(_options.difficulty).GetString());
-	UiRenderer::DrawText(deviceContext, CRect(792, 235, 954, 310), difficulty, 125, UiTheme::Text, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	CString sound;
-	sound.Format(
-		_T("%s %s"),
-		Text("option.sound").GetString(),
-		Text(_options.soundEnabled ? "value.on" : "value.off").GetString());
-	UiRenderer::DrawText(deviceContext, CRect(792, 330, 954, 370), sound, 115, UiTheme::MutedText);
-	UiRenderer::DrawText(deviceContext, CRect(792, 380, 954, 445), PegColorModeTextForUi(_options.pegColorMode), 110, UiTheme::MutedText, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
-	UiRenderer::DrawKeyHint(deviceContext, CRect(798, 550, 948, 600), Text("hint.options"));
 
 	UiRenderer::DrawKeyHint(
 		deviceContext,
-		CRect(300, 640, 680, 690),
+		CRect(350, 635, 865, 695),
 		_run.GetStatus() != RunStatus::StageChoice
 			? Text("hint.start")
 			: (selectedChoiceIndex.has_value()
-				? CString(_T("선택 변경 가능 · ENTER 또는 클릭으로 시작"))
-				: CString(_T("카드 클릭 · 1/2로 다음 경로 선택"))));
+				? CString(_T("선택 변경 가능 · ENTER 또는 클릭으로 출발"))
+				: CString(_T("두 경로 중 하나를 선택하세요"))));
 	if (!_contentCatalog.UsedExternalContent() || !_gameplayCatalog.UsedExternalContent())
 	{
-		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 95, UiTheme::Orange);
+		UiRenderer::DrawText(deviceContext, CRect(250, 600, 965, 628), _T("외부 콘텐츠 오류 · 검증된 내장 카탈로그 사용 중"), 90, UiTheme::Orange);
 	}
 	else if (!_localization.UsedExternalContent() || _localization.fallbackKeyCount > 0)
 	{
-		UiRenderer::DrawText(deviceContext, CRect(220, 610, 760, 638), Text("notice.external_fallback"), 95, UiTheme::Orange);
+		UiRenderer::DrawText(deviceContext, CRect(250, 600, 965, 628), Text("notice.external_fallback"), 90, UiTheme::Orange);
 	}
 }
 
@@ -1883,6 +1934,28 @@ CBitmap* CChildView::GetRelicIcon(std::string_view imageKey) noexcept
 		return _relicBarkGuardIcon.GetSafeHandle() != nullptr ? &_relicBarkGuardIcon : nullptr;
 	}
 	return nullptr;
+}
+
+CBitmap* CChildView::GetStagePreview(std::string_view stageId) noexcept
+{
+	CBitmap* preview = &_stagePreviewForest;
+	if (stageId == "stage-2" || stageId == "stage-6")
+	{
+		preview = &_stagePreviewCrystal;
+	}
+	else if (stageId == "stage-5" || stageId == "stage-8")
+	{
+		preview = &_stagePreviewFungal;
+	}
+	else if (stageId == "stage-7")
+	{
+		preview = &_stagePreviewEmber;
+	}
+	else if (stageId == "stage-3")
+	{
+		preview = &_stagePreviewCitadel;
+	}
+	return preview->GetSafeHandle() != nullptr ? preview : nullptr;
 }
 
 void CChildView::DrawOrbIcon(

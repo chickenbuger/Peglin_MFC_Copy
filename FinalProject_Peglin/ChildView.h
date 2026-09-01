@@ -133,6 +133,7 @@ private:
 	CBitmap* GetEnemySprite(EnemyVisualKind visual) noexcept;
 	CBitmap* GetOrbIcon(std::string_view imageKey) noexcept;
 	CBitmap* GetRelicIcon(std::string_view imageKey) noexcept;
+	CBitmap* GetStagePreview(std::string_view stageId) noexcept;
 	void PlayEventSound(GameEventType eventType, PegType pegType);
 	bool StartStage(std::string_view stageId);
 	bool StartSelectedStage();
@@ -185,6 +186,11 @@ private:
 	CBitmap _relicThornCharmIcon;
 	CBitmap _relicBarkGuardIcon;
 	CBitmap _shopMerchantSprite;
+	CBitmap _stagePreviewForest;
+	CBitmap _stagePreviewCrystal;
+	CBitmap _stagePreviewFungal;
+	CBitmap _stagePreviewEmber;
+	CBitmap _stagePreviewCitadel;
 	CString _loadoutNotice;
 	CString _runNotice;
 	std::optional<RunReward> _acquiredReward;

@@ -146,6 +146,51 @@
       "resourceId": "IDB_SHOP_MERCHANT_V1"
     },
     {
+      "source": "FinalProject_Peglin/res/stage-preview-forest-v1-source.png",
+      "output": "FinalProject_Peglin/res/stage-preview-forest-v1.bmp",
+      "width": 320,
+      "height": 240,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_STAGE_PREVIEW_FOREST_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/stage-preview-crystal-v1-source.png",
+      "output": "FinalProject_Peglin/res/stage-preview-crystal-v1.bmp",
+      "width": 320,
+      "height": 240,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_STAGE_PREVIEW_CRYSTAL_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/stage-preview-fungal-v1-source.png",
+      "output": "FinalProject_Peglin/res/stage-preview-fungal-v1.bmp",
+      "width": 320,
+      "height": 240,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_STAGE_PREVIEW_FUNGAL_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/stage-preview-ember-v1-source.png",
+      "output": "FinalProject_Peglin/res/stage-preview-ember-v1.bmp",
+      "width": 320,
+      "height": 240,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_STAGE_PREVIEW_EMBER_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/stage-preview-citadel-v1-source.png",
+      "output": "FinalProject_Peglin/res/stage-preview-citadel-v1.bmp",
+      "width": 320,
+      "height": 240,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_STAGE_PREVIEW_CITADEL_V1"
+    },
+    {
       "source": null,
       "output": "FinalProject_Peglin/res/ui-adventure-frame-v1.bmp",
       "width": 1000,
