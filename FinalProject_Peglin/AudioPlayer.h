@@ -5,12 +5,14 @@
 
 #include <string>
 #include <string_view>
-#include <vector>
+#include <memory>
+
+struct AudioPlayerBackend;
 
 class AudioPlayer
 {
 public:
-	AudioPlayer() = default;
+	AudioPlayer();
 	~AudioPlayer();
 
 	AudioPlayer(const AudioPlayer&) = delete;
@@ -24,20 +26,24 @@ public:
 	void StopAll() noexcept;
 	bool IsCatalogReady() const noexcept { return !_catalog.cues.empty(); }
 	std::string_view GetCurrentMusicCue() const noexcept { return _currentMusicCue; }
+	std::size_t GetActiveEffectVoiceCount() const noexcept;
 
 private:
 	bool BeginMusic(const AudioCueDefinition& cue, float initialLevel);
 	void ApplyMusicVolume(float level) noexcept;
 	void StopMusicImmediate() noexcept;
+	bool EnsureBackend() noexcept;
+	void ReclaimFinishedEffectVoices() noexcept;
 
 	AudioCatalog _catalog;
-	std::vector<std::uint8_t> _activeEffectWave;
+	std::unique_ptr<AudioPlayerBackend> _backend;
 	std::string _currentMusicCue;
 	std::string _pendingMusicCue;
 	AudioEffectGate _effectGate;
 	AudioFadeEnvelope _musicFade;
+	AudioDuckingEnvelope _ducking;
 	bool _enabled = true;
 	int _effectsVolume = 70;
 	int _musicVolume = 45;
-	int _lastAppliedMusicVolume = -1;
+	float _lastAppliedMusicGain = -1.0f;
 };

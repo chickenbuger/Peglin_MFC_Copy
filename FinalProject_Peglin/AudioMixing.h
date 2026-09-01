@@ -102,3 +102,81 @@ private:
 	float _current = 1.0f;
 	float _target = 1.0f;
 };
+
+enum class AudioEffectCategory
+{
+	Interface,
+	Peg,
+	Combat,
+	Terminal
+};
+
+inline AudioEffectCategory ClassifyAudioEffect(std::string_view cueId) noexcept
+{
+	if (cueId == "victory" || cueId == "defeat")
+	{
+		return AudioEffectCategory::Terminal;
+	}
+	if (cueId == "bomb" || cueId == "refresh" || cueId == "damage")
+	{
+		return AudioEffectCategory::Combat;
+	}
+	if (cueId == "peg_hit")
+	{
+		return AudioEffectCategory::Peg;
+	}
+	return AudioEffectCategory::Interface;
+}
+
+class AudioDuckingEnvelope
+{
+public:
+	void Trigger(AudioEffectCategory category) noexcept
+	{
+		switch (category)
+		{
+		case AudioEffectCategory::Terminal:
+			_holdSeconds = (std::max)(_holdSeconds, 0.70f);
+			_targetGain = (std::min)(_targetGain, 0.35f);
+			break;
+		case AudioEffectCategory::Combat:
+			_holdSeconds = (std::max)(_holdSeconds, 0.24f);
+			_targetGain = (std::min)(_targetGain, 0.58f);
+			break;
+		case AudioEffectCategory::Interface:
+		case AudioEffectCategory::Peg:
+			break;
+		}
+	}
+
+	float Update(float deltaSeconds) noexcept
+	{
+		const float safeDelta = (std::max)(0.0f, deltaSeconds);
+		if (_holdSeconds > 0.0f)
+		{
+			_holdSeconds = (std::max)(0.0f, _holdSeconds - safeDelta);
+			_gain = (std::max)(_targetGain, _gain - safeDelta / 0.06f);
+		}
+		else
+		{
+			_targetGain = 1.0f;
+			_gain = (std::min)(1.0f, _gain + safeDelta / 0.32f);
+		}
+		return _gain;
+	}
+
+	void Reset() noexcept
+	{
+		_gain = 1.0f;
+		_targetGain = 1.0f;
+		_holdSeconds = 0.0f;
+	}
+
+	float GetGain() const noexcept { return _gain; }
+	bool IsActive() const noexcept { return _gain < 0.999f || _holdSeconds > 0.0f; }
+
+private:
+	float _gain = 1.0f;
+	float _targetGain = 1.0f;
+	float _holdSeconds = 0.0f;
+};

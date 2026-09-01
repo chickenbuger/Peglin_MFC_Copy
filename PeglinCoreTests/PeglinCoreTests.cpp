@@ -179,6 +179,36 @@ namespace
 		Check(!gate.TryAccept("ui_confirm"), "audio gate limits ordinary effect bursts");
 		Check(gate.TryAccept("victory"), "audio gate always admits a priority cue");
 		gate.Update(0.11f);
+
+		Check(ClassifyAudioEffect("ui_confirm") == AudioEffectCategory::Interface,
+			"UI confirmation uses the non-ducking interface category");
+		Check(ClassifyAudioEffect("peg_hit") == AudioEffectCategory::Peg,
+			"ordinary peg hits use the non-ducking peg category");
+		Check(ClassifyAudioEffect("damage") == AudioEffectCategory::Combat,
+			"damage uses the combat ducking category");
+		Check(ClassifyAudioEffect("victory") == AudioEffectCategory::Terminal,
+			"victory uses the strongest terminal ducking category");
+		AudioDuckingEnvelope ducking;
+		ducking.Trigger(AudioEffectCategory::Peg);
+		Check(Near(ducking.Update(0.1f), 1.0f) && !ducking.IsActive(),
+			"ordinary peg hits leave music at full gain");
+		ducking.Trigger(AudioEffectCategory::Combat);
+		Check(Near(ducking.Update(0.06f), 0.58f) && ducking.IsActive(),
+			"combat effects quickly duck music to the combat floor");
+		ducking.Update(0.18f);
+		Check(Near(ducking.GetGain(), 0.58f),
+			"combat ducking holds through the priority effect window");
+		ducking.Update(0.32f);
+		Check(Near(ducking.GetGain(), 1.0f) && !ducking.IsActive(),
+			"combat ducking releases smoothly back to full music");
+		ducking.Reset();
+		ducking.Trigger(AudioEffectCategory::Terminal);
+		Check(Near(ducking.Update(0.06f), 0.35f),
+			"terminal effects apply the strongest music ducking floor");
+		ducking.Update(0.64f);
+		ducking.Update(0.32f);
+		Check(Near(ducking.GetGain(), 1.0f),
+			"terminal ducking also returns to full gain after its hold");
 		Check(gate.TryAccept("ui_confirm"), "audio burst budget resets after its window");
 
 		AudioFadeEnvelope fade;
