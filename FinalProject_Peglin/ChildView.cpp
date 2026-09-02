@@ -2250,7 +2250,7 @@ void CChildView::DrawOptions(CDC* deviceContext)
 	CString optionsGuide;
 	optionsGuide.Format(
 		_T("클릭하거나 단축키로 즉시 변경 · GAMEPAD %s"),
-		_gamepadConnected ? _T("연결됨 · 진동 준비") : _T("미연결 · 진동 대기"));
+		_gamepadConnected ? _T("연결됨 · 진동 준비") : _T("미연결"));
 	UiRenderer::DrawText(
 		deviceContext,
 		CRect(190, 96, 810, 122),
