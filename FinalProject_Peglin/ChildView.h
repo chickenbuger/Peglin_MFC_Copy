@@ -16,6 +16,7 @@
 #include "AudioPlayer.h"
 #include "CombatLog.h"
 #include "ContentCatalog.h"
+#include "ContentReload.h"
 #include "DemoRun.h"
 #include "GameRecordStore.h"
 #include "GameSettingsStore.h"
@@ -149,6 +150,7 @@ private:
 		bool enemyGroup,
 		bool activeTarget);
 	void DrawStageSelection(CDC* deviceContext);
+	void DrawContentPreview(CDC* deviceContext);
 	void DrawLoadoutScreen(CDC* deviceContext);
 	void DrawOptions(CDC* deviceContext);
 	void DrawStatisticsScreen(CDC* deviceContext);
@@ -160,6 +162,7 @@ private:
 	void DrawOrbIcon(CDC* deviceContext, const CRect& bounds, const OrbDefinition& orb);
 	void DrawRelicIcon(CDC* deviceContext, const CRect& bounds, const RelicDefinition& relic);
 	bool HandleMenuClick(CPoint point);
+	bool HandleContentPreviewClick(CPoint point);
 	bool TryMapClientPoint(CPoint clientPoint, CPoint& logicalPoint, bool clampToViewport) const;
 	void ExecuteUiAction(const UiAction& action);
 	CBitmap* GetEnemySprite(EnemyVisualKind visual) noexcept;
@@ -189,6 +192,8 @@ private:
 	std::size_t VisibleStageCount() const noexcept;
 	void RecordResult(bool cleared);
 	void ReloadLocalization();
+	bool ReloadContentPreview();
+	void SetContentPreview(bool enabled);
 	CString Text(std::string_view key) const;
 	CString DifficultyTextForUi(GameDifficulty difficulty) const;
 	CString PegColorModeTextForUi(PegColorMode colorMode) const;
@@ -232,6 +237,12 @@ private:
 	GameRecordBook _records;
 	ContentLoadResult _contentCatalog;
 	GameplayCatalogLoadResult _gameplayCatalog;
+	DifficultyCurveAnalysis _contentDifficulty;
+	bool _contentPreviewActive = false;
+	bool _contentPreviewRequested = false;
+	std::size_t _contentPreviewIndex = 0;
+	float _contentPreviewTimeSeconds = 0.0f;
+	CString _contentPreviewNotice;
 	LocalizationLoadResult _localization;
 	AdventureRun _run;
 	GameDifficulty _runDifficulty = GameDifficulty::Normal;

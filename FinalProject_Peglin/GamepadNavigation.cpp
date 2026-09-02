@@ -16,7 +16,7 @@ std::size_t GetGamepadFocusCount(UiScreenKind screen, std::size_t visibleStageCo
 	switch (screen)
 	{
 	case UiScreenKind::StageSelection: return SafeStageCount(visibleStageCount) + 4U;
-	case UiScreenKind::Loadout: return 8U;
+	case UiScreenKind::Loadout: return 12U;
 	case UiScreenKind::Options: return 15U;
 	case UiScreenKind::Statistics: return 3U;
 	case UiScreenKind::Reward: return 3U;
@@ -60,10 +60,10 @@ UiAction ResolveGamepadFocusedAction(
 		if (focusIndex == stageCount + 3U) return { UiCommand::OpenOptions };
 		break;
 	case UiScreenKind::Loadout:
-		if (focusIndex < 3U) return { UiCommand::SelectOrb, focusIndex };
-		if (focusIndex < 6U) return { UiCommand::AcquireRelic, focusIndex - 3U };
-		if (focusIndex == 6U) return { UiCommand::ResetProgression };
-		if (focusIndex == 7U) return { UiCommand::BackToStageSelection };
+		if (focusIndex < 5U) return { UiCommand::SelectOrb, focusIndex };
+		if (focusIndex < 10U) return { UiCommand::AcquireRelic, focusIndex - 5U };
+		if (focusIndex == 10U) return { UiCommand::ResetProgression };
+		if (focusIndex == 11U) return { UiCommand::BackToStageSelection };
 		break;
 	case UiScreenKind::Options:
 		switch (focusIndex)
@@ -144,18 +144,18 @@ UiFocusRect GetGamepadFocusRect(
 		if (focusIndex == stageCount + 3U) return { 43.0f, 652.0f, 206.0f, 690.0f };
 		break;
 	case UiScreenKind::Loadout:
-		if (focusIndex < 3U)
+		if (focusIndex < 5U)
 		{
-			const float left = 55.0f + static_cast<float>(focusIndex) * 305.0f;
-			return { left, 148.0f, left + 280.0f, 320.0f };
+			const float left = 55.0f + static_cast<float>(focusIndex) * 180.0f;
+			return { left, 148.0f, left + 170.0f, 320.0f };
 		}
-		if (focusIndex < 6U)
+		if (focusIndex < 10U)
 		{
-			const float left = 55.0f + static_cast<float>(focusIndex - 3U) * 305.0f;
-			return { left, 360.0f, left + 280.0f, 545.0f };
+			const float left = 55.0f + static_cast<float>(focusIndex - 5U) * 180.0f;
+			return { left, 360.0f, left + 170.0f, 545.0f };
 		}
-		if (focusIndex == 6U) return { 55.0f, 630.0f, 300.0f, 688.0f };
-		if (focusIndex == 7U) return { 700.0f, 630.0f, 945.0f, 688.0f };
+		if (focusIndex == 10U) return { 55.0f, 630.0f, 300.0f, 688.0f };
+		if (focusIndex == 11U) return { 700.0f, 630.0f, 945.0f, 688.0f };
 		break;
 	case UiScreenKind::Options:
 	{

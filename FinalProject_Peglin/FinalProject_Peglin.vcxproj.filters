@@ -50,6 +50,9 @@
 	<ClInclude Include="ContentReport.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
+	<ClInclude Include="ContentReload.h">
+	  <Filter>헤더 파일</Filter>
+	</ClInclude>
 	<ClInclude Include="DifficultyCurve.h">
 	  <Filter>헤더 파일</Filter>
 	</ClInclude>
@@ -152,6 +155,9 @@
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
 	<ClCompile Include="ContentReport.cpp">
+	  <Filter>소스 파일</Filter>
+	</ClCompile>
+	<ClCompile Include="ContentReload.cpp">
 	  <Filter>소스 파일</Filter>
 	</ClCompile>
 	<ClCompile Include="DifficultyCurve.cpp">

@@ -90,6 +90,16 @@ Version 8.6부터 같은 스테이지와 조준 순서를 반복하는 촬영용
 & '.\tools\Start-DemoCapture.ps1' -Configuration Release -Platform x64
 ```
 
+## 콘텐츠 제작 미리보기
+
+Version 9.7부터 스테이지 선택 화면의 `F8` 또는 `--content-preview` 실행 인수로 인게임 콘텐츠 미리보기를 연다. 실행 인수 방식은 시작과 동시에 외부 스테이지·게임플레이 카탈로그를 검증하고 핫 리로드 결과를 창 제목에 표시하므로 제작 환경 스모크 테스트에도 사용할 수 있다.
+
+```powershell
+& '.\x64\Debug\FinalProject_Peglin.exe' --content-preview
+```
+
+미리보기 안에서는 `←`/`→`로 스테이지를 바꾸고 `R`로 핫 리로드하며 `F8` 또는 `Esc`로 닫는다. 현재 런과 보유 오브·유물에 필요한 안정 ID가 빠진 변경은 원자적으로 거부된다.
+
 ## 성능·GDI 장시간 회귀
 
 Version 8.7부터 Release 데모 프로세스의 GDI, USER, 핸들, Working Set과 Private 메모리를 주기적으로 기록한다. 기본 120초 계측 결과는 `DEV_LOG/Performance_Report_8.7.md`에 저장된다.
@@ -100,7 +110,7 @@ Version 8.7부터 Release 데모 프로세스의 GDI, USER, 핸들, Working Set�
 
 ## 현재 검증 상태
 
-2026-09-02 Version 8.8 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 1,132개·총 4,528개 자동 검증과 분기형 전체 런, 5종 몬스터, 9개 적 안정 ID, Refresh Peg 보장·재배치, 오브·유물, 이동 페그, 상점, 칸 거리·사거리, 파일 오디오와 효과음 밀도 제한·BGM 페이드, 게임패드 설정·마이그레이션, 결정적 데모 런, 성능 HUD·2분 자원 회귀, 상세 통계, 세이브 복구, DPI·창 크기, 전투 로그와 콘텐츠 리포트를 검증했다. 자산 파이프라인은 22개 리소스와 21개 PNG→24-bit BMP 변환을 검증한다.
+2026-09-02 Version 9.7 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 1,244개·총 4,976개 자동 검증과 진행 중 런 체크포인트, 사용자 입력 바인딩, XAudio2 다중 효과음, 자동화된 XInput 연결·진동 상태, 10개 스테이지·7종 몬스터 시각 타입·12개 적 안정 ID, 5개 오브·5개 유물, Refresh Peg 보장·재배치, 이동 페그, 상점, 난이도 곡선, 원자적 콘텐츠 핫 리로드를 검증했다. `--content-preview` 실제 실행과 35초 GDI/USER 객체 안정성도 통과했다. 자산 파이프라인은 28개 리소스와 27개 PNG→24-bit BMP 변환을 검증한다.
 
 Version 7.4 Release x64 ZIP은 `dist/PeglinMFC-7.4-win-x64.zip`에 생성되며 크기는 7,054,453 bytes, SHA-256은 `62D7B57F5D7DD058785EE8717488EFA7FBE3636102C41F3F73247A878DB811FF`다.
 

@@ -409,6 +409,7 @@ CChildView::CChildView()
 	_runCheckpointStore(GetDefaultRunCheckpointPath())
 {
 	_demoRequested = HasDemoCommandLineFlag(::GetCommandLineW());
+	_contentPreviewRequested = HasContentPreviewCommandLineFlag(::GetCommandLineW());
 	const SettingsLoadResult settings = _settingsStore.LoadWithRecovery();
 	_options = settings.options;
 	if (settings.state == SettingsLoadState::Migrated)
@@ -444,6 +445,7 @@ CChildView::CChildView()
 	{
 		ResetProgressionCatalog();
 	}
+	_contentDifficulty = AnalyzeDifficultyCurve(_contentCatalog.stages);
 	const RunCheckpointLoadResult checkpoint = _runCheckpointStore.LoadWithRecovery();
 	const bool restoredCheckpoint = checkpoint.IsUsable()
 		&& RestoreRunCheckpoint(checkpoint.checkpoint);
@@ -636,6 +638,12 @@ void CChildView::OnPaint()
 		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDc, 0, 0, SRCCOPY);
 		memDc.SelectObject(previousBitmap);
 	};
+	if (_contentPreviewActive)
+	{
+		DrawContentPreview(&memDc);
+		PresentFrame();
+		return;
+	}
 
 	if (_screenMode == ScreenMode::StageSelection)
 	{
@@ -920,6 +928,11 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	{
 		SetDemoMode(true);
 	}
+	else if (_contentPreviewRequested)
+	{
+		SetContentPreview(true);
+		ReloadContentPreview();
+	}
 
 	return 0;
 }
@@ -1043,6 +1056,10 @@ void CChildView::UpdateGameStep(float deltaSeconds)
 	_audioPlayer.Update(deltaSeconds);
 	PollGamepad(deltaSeconds);
 	UpdateDemoRun(deltaSeconds);
+	if (_contentPreviewActive)
+	{
+		_contentPreviewTimeSeconds += deltaSeconds;
+	}
 	_screenTransition.Update(deltaSeconds);
 	_damageFlashSeconds = (std::max)(0.0f, _damageFlashSeconds - deltaSeconds);
 	if (_resetConfirmation != ResetConfirmation::None)
@@ -1508,7 +1525,7 @@ void CChildView::DrawUiAnimations(CDC* deviceContext, const CRect& clientBounds)
 
 void CChildView::DrawGamepadFocus(CDC* deviceContext)
 {
-	if (!_gamepadConnected || _screenMode == ScreenMode::Playing)
+	if (!_gamepadConnected || _screenMode == ScreenMode::Playing || _contentPreviewActive)
 	{
 		return;
 	}
@@ -1976,6 +1993,327 @@ void CChildView::DrawStageSelection(CDC* deviceContext)
 	}
 }
 
+void CChildView::SetContentPreview(bool enabled)
+{
+	_contentPreviewRequested = false;
+	if (enabled && _contentCatalog.stages.empty())
+	{
+		_contentPreviewNotice = _T("미리 볼 스테이지가 없습니다");
+		return;
+	}
+	_contentPreviewActive = enabled;
+	_contentPreviewTimeSeconds = 0.0f;
+	if (enabled)
+	{
+		_contentPreviewIndex = (std::min)(
+			_contentPreviewIndex,
+			_contentCatalog.stages.size() - 1);
+		_contentDifficulty = AnalyzeDifficultyCurve(_contentCatalog.stages);
+		_contentPreviewNotice = _T("R 키로 외부 콘텐츠를 안전하게 다시 읽습니다");
+	}
+	else
+	{
+		_contentPreviewNotice.Empty();
+	}
+	CWnd* mainWindow = AfxGetMainWnd();
+	if (mainWindow != nullptr)
+	{
+		mainWindow->SetWindowText(enabled
+			? _T("FinalProject_Peglin · Content Preview")
+			: _T("FinalProject_Peglin"));
+	}
+	Invalidate(FALSE);
+}
+
+bool CChildView::ReloadContentPreview()
+{
+	std::vector<std::string> requiredStageIds;
+	const AdventureRunSnapshot runSnapshot = _run.CreateSnapshot();
+	for (const std::vector<std::string>& layer : runSnapshot.stageLayers)
+	{
+		for (const std::string& stageId : layer)
+		{
+			if (!IsRunShopStage(stageId)) requiredStageIds.push_back(stageId);
+		}
+	}
+	const PlayerLoadoutSnapshot loadoutSnapshot =
+		_game.GetLoadout().CreatePersistentSnapshot();
+	const std::string selectedStageId = _contentCatalog.stages.empty()
+		? std::string{}
+		: _contentCatalog.stages[_contentPreviewIndex].id;
+
+	ContentReloadResult candidate = PrepareContentReload(
+		GetDefaultContentCatalogPath(),
+		GetDefaultGameplayCatalogPath(),
+		requiredStageIds,
+		loadoutSnapshot);
+	if (!candidate.IsReady())
+	{
+		switch (candidate.error)
+		{
+		case ContentReloadError::StageCatalog:
+			_contentPreviewNotice.Format(
+				_T("RELOAD FAIL · stages.v1.ini line %zu"),
+				candidate.errorLine);
+			break;
+		case ContentReloadError::GameplayCatalog:
+			_contentPreviewNotice.Format(
+				_T("RELOAD FAIL · gameplay.v1.ini line %zu"),
+				candidate.errorLine);
+			break;
+		case ContentReloadError::GameplayResolution:
+			_contentPreviewNotice = _T("RELOAD FAIL · 적 효과를 스테이지에 적용할 수 없습니다");
+			break;
+		case ContentReloadError::DifficultyCurve:
+			_contentPreviewNotice.Format(
+				_T("RELOAD FAIL · 난이도 곡선 위반 %zu개"),
+				candidate.difficulty.issues.size());
+			break;
+		case ContentReloadError::MissingRunStage:
+			_contentPreviewNotice.Format(
+				_T("RELOAD FAIL · 현재 런 스테이지 누락: %s"),
+				Utf8Text(candidate.incompatibleId).GetString());
+			break;
+		case ContentReloadError::MissingOrb:
+			_contentPreviewNotice.Format(
+				_T("RELOAD FAIL · 보유 오브 누락: %s"),
+				Utf8Text(candidate.incompatibleId).GetString());
+			break;
+		case ContentReloadError::MissingRelic:
+			_contentPreviewNotice.Format(
+				_T("RELOAD FAIL · 보유 유물 누락: %s"),
+				Utf8Text(candidate.incompatibleId).GetString());
+			break;
+		case ContentReloadError::None:
+			break;
+		}
+		CWnd* mainWindow = AfxGetMainWnd();
+		if (mainWindow != nullptr)
+		{
+			mainWindow->SetWindowText(_T("FinalProject_Peglin · Content Preview · Reload FAIL"));
+		}
+		return false;
+	}
+
+	if (!ActivateGameplayCatalog(candidate.gameplay, candidate.content.stages)
+		|| !_game.RestoreLoadout(loadoutSnapshot))
+	{
+		_contentPreviewNotice = _T("RELOAD FAIL · 활성 카탈로그를 교체하지 못했습니다");
+		CWnd* mainWindow = AfxGetMainWnd();
+		if (mainWindow != nullptr)
+		{
+			mainWindow->SetWindowText(_T("FinalProject_Peglin · Content Preview · Reload FAIL"));
+		}
+		return false;
+	}
+	_contentCatalog = std::move(candidate.content);
+	_gameplayCatalog = std::move(candidate.gameplay);
+	_contentDifficulty = std::move(candidate.difficulty);
+	const auto selected = std::find_if(
+		_contentCatalog.stages.begin(),
+		_contentCatalog.stages.end(),
+		[&selectedStageId](const StageDefinition& stage)
+		{
+			return stage.id == selectedStageId;
+		});
+	_contentPreviewIndex = selected == _contentCatalog.stages.end()
+		? 0U
+		: static_cast<std::size_t>(std::distance(_contentCatalog.stages.begin(), selected));
+	_contentPreviewTimeSeconds = 0.0f;
+	_contentPreviewNotice.Format(
+		_T("RELOAD OK · %zu stages · %zu orbs · %zu relics · 새 경로는 NEW RUN부터"),
+		_contentCatalog.stages.size(),
+		GetOrbDefinitions().size(),
+		GetRelicDefinitions().size());
+	CWnd* mainWindow = AfxGetMainWnd();
+	if (mainWindow != nullptr)
+	{
+		mainWindow->SetWindowText(_T("FinalProject_Peglin · Content Preview · Reload OK"));
+	}
+	return true;
+}
+
+void CChildView::DrawContentPreview(CDC* deviceContext)
+{
+	DrawMenuBackdrop(deviceContext);
+	DrawMenuTitle(deviceContext, _T("CONTENT PREVIEW"), UiTheme::Blue);
+	if (_contentCatalog.stages.empty())
+	{
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(150, 300, 850, 380),
+			_T("검증된 스테이지가 없습니다"),
+			150,
+			UiTheme::Danger);
+		return;
+	}
+
+	const StageDefinition& stage = _contentCatalog.stages[_contentPreviewIndex];
+	CString stageTitle;
+	stageTitle.Format(
+		_T("%zu / %zu  ·  %s  ·  %s"),
+		_contentPreviewIndex + 1,
+		_contentCatalog.stages.size(),
+		Utf8Text(stage.displayName).GetString(),
+		Utf8Text(stage.id).GetString());
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(80, 83, 920, 120),
+		stageTitle,
+		135,
+		stage.isBoss ? UiTheme::Orange : UiTheme::Gold);
+
+	const CRect board(45, 135, 700, 665);
+	UiRenderer::DrawPanel(deviceContext, board, true, UiTheme::Border);
+	UiRenderer::DrawBackdrop(
+		deviceContext,
+		GetStagePreview(stage.id),
+		CRect(board.left + 8, board.top + 8, board.right - 8, board.bottom - 8));
+	const int boardState = deviceContext->SaveDC();
+	CBrush shade(RGB(9, 14, 22));
+	BLENDFUNCTION blend{ AC_SRC_OVER, 0, 190, 0 };
+	CDC shadeDc;
+	shadeDc.CreateCompatibleDC(deviceContext);
+	CBitmap shadeBitmap;
+	shadeBitmap.CreateCompatibleBitmap(deviceContext, board.Width() - 16, board.Height() - 16);
+	CBitmap* previousShade = shadeDc.SelectObject(&shadeBitmap);
+	shadeDc.FillRect(CRect(0, 0, board.Width() - 16, board.Height() - 16), &shade);
+	deviceContext->AlphaBlend(
+		board.left + 8,
+		board.top + 8,
+		board.Width() - 16,
+		board.Height() - 16,
+		&shadeDc,
+		0,
+		0,
+		board.Width() - 16,
+		board.Height() - 16,
+		blend);
+	shadeDc.SelectObject(previousShade);
+	deviceContext->RestoreDC(boardState);
+
+	const CRect pegArea(board.left + 24, board.top + 22, board.right - 24, board.bottom - 22);
+	const float sourceWidth = GameLayout::PegFieldRight - GameLayout::PegFieldLeft;
+	const float sourceHeight = GameLayout::PegFieldBottom - GameLayout::PegFieldTop;
+	auto MapPeg = [&pegArea, sourceWidth, sourceHeight](Vector2 position)
+	{
+		return CPoint(
+			pegArea.left + static_cast<int>(std::lround(
+				(position.x - GameLayout::PegFieldLeft) / sourceWidth * pegArea.Width())),
+			pegArea.top + static_cast<int>(std::lround(
+				(position.y - GameLayout::PegFieldTop) / sourceHeight * pegArea.Height())));
+	};
+	for (const PegDefinition& peg : stage.pegLayout.pegs)
+	{
+		Vector2 position = peg.position;
+		if (peg.motion.IsMoving())
+		{
+			const float offset = std::sin(
+				peg.motion.phase + peg.motion.angularSpeed * _contentPreviewTimeSeconds)
+				* peg.motion.amplitude;
+			Vector2 low = peg.position;
+			Vector2 high = peg.position;
+			if (peg.motion.kind == PegMotionKind::Horizontal)
+			{
+				low.x -= peg.motion.amplitude;
+				high.x += peg.motion.amplitude;
+				position.x += offset;
+			}
+			else
+			{
+				low.y -= peg.motion.amplitude;
+				high.y += peg.motion.amplitude;
+				position.y += offset;
+			}
+			const int pathState = deviceContext->SaveDC();
+			CPen pathPen(PS_DOT, 1, UiTheme::Blue);
+			deviceContext->SelectObject(&pathPen);
+			deviceContext->MoveTo(MapPeg(low));
+			deviceContext->LineTo(MapPeg(high));
+			deviceContext->RestoreDC(pathState);
+		}
+
+		PegVisualStyle visual = GetPegTypeDefinition(peg.type).visual;
+		const CPoint center = MapPeg(position);
+		const int pegState = deviceContext->SaveDC();
+		CBrush pegBrush(RGB(visual.red, visual.green, visual.blue));
+		CPen pegPen(PS_SOLID, peg.motion.IsMoving() ? 2 : 1,
+			peg.motion.IsMoving() ? UiTheme::Blue : UiTheme::Text);
+		deviceContext->SelectObject(&pegBrush);
+		deviceContext->SelectObject(&pegPen);
+		deviceContext->Ellipse(center.x - 6, center.y - 6, center.x + 6, center.y + 6);
+		deviceContext->RestoreDC(pegState);
+	}
+
+	const CRect infoPanel(720, 135, 960, 665);
+	UiRenderer::DrawPanel(deviceContext, infoPanel, true, UiTheme::Blue);
+	std::size_t movingCount = 0;
+	std::size_t refreshCount = 0;
+	for (const PegDefinition& peg : stage.pegLayout.pegs)
+	{
+		if (peg.motion.IsMoving()) ++movingCount;
+		if (peg.type == PegType::Refresh) ++refreshCount;
+	}
+	float difficultyScore = 0.0f;
+	const auto rating = std::find_if(
+		_contentDifficulty.ratings.begin(),
+		_contentDifficulty.ratings.end(),
+		[&stage](const StageDifficultyRating& value) { return value.stageId == stage.id; });
+	if (rating != _contentDifficulty.ratings.end()) difficultyScore = rating->score;
+	CString stats;
+	stats.Format(
+		_T("%s\nPEGS %zu · MOVING %zu\nREFRESH %zu\nPLAYER DMG %.1f\nDIFFICULTY %.2f · %s"),
+		stage.isBoss ? _T("BOSS") : _T("BATTLE"),
+		stage.pegLayout.pegs.size(),
+		movingCount,
+		refreshCount,
+		stage.rules.playerDamage,
+		difficultyScore,
+		_contentDifficulty.passed ? _T("PASS") : _T("FAIL"));
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(735, 150, 945, 275),
+		stats,
+		88,
+		_contentDifficulty.passed ? UiTheme::Green : UiTheme::Danger,
+		DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+
+	UiRenderer::DrawText(deviceContext, CRect(735, 280, 945, 305), _T("ENCOUNTER"), 90, UiTheme::MutedText);
+	for (std::size_t index = 0; index < stage.enemies.size(); ++index)
+	{
+		const EnemyDefinition& enemy = stage.enemies[index];
+		const int top = 310 + static_cast<int>(index) * 82;
+		UiRenderer::DrawTransparentBitmap(
+			deviceContext,
+			GetEnemySprite(enemy.visual),
+			CRect(735, top, 797, top + 62));
+		CString enemyText;
+		enemyText.Format(
+			_T("%s\nHP %.0f · RNG %d"),
+			Utf8Text(enemy.displayName).GetString(),
+			enemy.health,
+			enemy.attackRangeCells);
+		UiRenderer::DrawText(
+			deviceContext,
+			CRect(805, top, 945, top + 68),
+			enemyText,
+			70,
+			UiTheme::Text,
+			DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+	}
+
+	UiRenderer::DrawText(
+		deviceContext,
+		CRect(65, 674, 935, 710),
+		_contentPreviewNotice,
+		82,
+		_contentPreviewNotice.Find(_T("FAIL")) >= 0 ? UiTheme::Danger : UiTheme::Green);
+	UiRenderer::DrawKeyHint(deviceContext, CRect(55, 720, 240, 770), _T("이전 · ←"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(250, 720, 435, 770), _T("다음 · →"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(445, 720, 660, 770), _T("HOT RELOAD · R"));
+	UiRenderer::DrawKeyHint(deviceContext, CRect(670, 720, 945, 770), _T("닫기 · F8 / ESC"));
+}
+
 void CChildView::DrawRewardScreen(CDC* deviceContext)
 {
 	DrawMenuBackdrop(deviceContext);
@@ -2198,49 +2536,52 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 
 	const auto& orbs = GetOrbDefinitions();
 	const auto& ownedOrbs = _game.GetLoadout().GetOwnedOrbs();
-	for (std::size_t index = 0; index < orbs.size(); ++index)
+	const std::size_t visibleOrbCount = (std::min)(std::size_t{ 5 }, orbs.size());
+	for (std::size_t index = 0; index < visibleOrbCount; ++index)
 	{
 		const OrbDefinition& orb = orbs[index];
-		const int left = 55 + static_cast<int>(index) * 305;
-		const CRect card(left, 148, left + 280, 320);
+		const int left = 55 + static_cast<int>(index) * 180;
+		const CRect card(left, 148, left + 170, 320);
 		const bool selected = _game.GetLoadout().GetSelectedOrbId() == orb.id;
 		const std::size_t ownedCount = static_cast<std::size_t>(std::count_if(
 			ownedOrbs.begin(),
 			ownedOrbs.end(),
 			[&orb](const std::string& id) { return id == orb.id; }));
 		UiRenderer::DrawPanel(deviceContext, card, selected, UiTheme::Gold);
-		DrawOrbIcon(deviceContext, CRect(left + 14, 162, left + 70, 218), orb);
+		DrawOrbIcon(deviceContext, CRect(left + 9, 160, left + 59, 210), orb);
 		CString title;
 		title.Format(_T("[%zu] %s · x%zu"), index + 1, Utf8Text(orb.displayName).GetString(), ownedCount);
-		UiRenderer::DrawText(deviceContext, CRect(left + 76, 160, left + 268, 220), title, 110, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		UiRenderer::DrawText(deviceContext, CRect(left + 64, 158, left + 162, 218), title, 80, selected ? UiTheme::Gold : UiTheme::Text, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 12, 226, left + 268, 312),
+			CRect(left + 8, 222, left + 162, 312),
 			Utf8Text(DescribeOrbEffect(orb)),
-			78,
+			62,
 			UiTheme::MutedText,
 			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
 
 	const auto& relics = GetRelicDefinitions();
 	UiRenderer::DrawText(deviceContext, CRect(55, 333, 945, 358), _T("RELICS"), 95, UiTheme::Green, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
-	for (std::size_t index = 0; index < relics.size(); ++index)
+	const std::size_t visibleRelicCount = (std::min)(std::size_t{ 5 }, relics.size());
+	for (std::size_t index = 0; index < visibleRelicCount; ++index)
 	{
 		const RelicDefinition& relic = relics[index];
-		const int left = 55 + static_cast<int>(index) * 305;
-		const CRect card(left, 360, left + 280, 545);
+		const int left = 55 + static_cast<int>(index) * 180;
+		const CRect card(left, 360, left + 170, 545);
 		const std::size_t stacks = _game.GetLoadout().GetRelicStackCount(relic.id);
 		const bool atLimit = stacks >= relic.maxStacks;
 		UiRenderer::DrawPanel(deviceContext, card, atLimit, UiTheme::Green);
 		CString title;
-		title.Format(_T("[%zu] %s · %zu/%zu"), index + 4, Utf8Text(relic.displayName).GetString(), stacks, relic.maxStacks);
-		DrawRelicIcon(deviceContext, CRect(left + 14, 374, left + 70, 430), relic);
-		UiRenderer::DrawText(deviceContext, CRect(left + 76, 372, left + 268, 432), title, 105, atLimit ? UiTheme::Green : UiTheme::Text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		const TCHAR shortcut = index == 4 ? _T('0') : static_cast<TCHAR>(_T('6') + index);
+		title.Format(_T("[%c] %s · %zu/%zu"), shortcut, Utf8Text(relic.displayName).GetString(), stacks, relic.maxStacks);
+		DrawRelicIcon(deviceContext, CRect(left + 9, 372, left + 59, 422), relic);
+		UiRenderer::DrawText(deviceContext, CRect(left + 64, 370, left + 162, 430), title, 76, atLimit ? UiTheme::Green : UiTheme::Text, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
 		UiRenderer::DrawText(
 			deviceContext,
-			CRect(left + 12, 438, left + 268, 535),
+			CRect(left + 8, 434, left + 162, 535),
 			Utf8Text(DescribeRelicEffect(relic)),
-			72,
+			60,
 			UiTheme::MutedText,
 			DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 	}
@@ -2255,7 +2596,7 @@ void CChildView::DrawLoadoutScreen(CDC* deviceContext)
 	UiRenderer::DrawText(deviceContext, CRect(140, 557, 860, 590), total, 105, UiTheme::Green);
 	UiRenderer::DrawText(deviceContext, CRect(140, 592, 860, 620), _loadoutNotice, 95, UiTheme::Orange);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(55, 630, 300, 688), _T("초기화 · X"));
-	UiRenderer::DrawText(deviceContext, CRect(305, 632, 695, 686), _T("카드 클릭 또는 1-6 키"), 95, UiTheme::MutedText);
+	UiRenderer::DrawText(deviceContext, CRect(305, 632, 695, 686), _T("오브 1-5 · 유물 6-9/0"), 95, UiTheme::MutedText);
 	UiRenderer::DrawKeyHint(deviceContext, CRect(700, 630, 945, 688), _T("돌아가기 · ESC"));
 }
 
@@ -3315,6 +3656,31 @@ void CChildView::PollGamepad(float deltaSeconds)
 		}
 		return;
 	}
+	if (_contentPreviewActive)
+	{
+		const bool previousPreview = (buttons & (XINPUT_GAMEPAD_DPAD_LEFT | XINPUT_GAMEPAD_DPAD_UP)) != 0U
+			|| stickX <= -0.55f || stickY <= -0.55f;
+		const bool nextPreview = (buttons & (XINPUT_GAMEPAD_DPAD_RIGHT | XINPUT_GAMEPAD_DPAD_DOWN)) != 0U
+			|| stickX >= 0.55f || stickY >= 0.55f;
+		const bool navigationHeld = previousPreview || nextPreview;
+		if (navigationHeld && !_gamepadStickLatched && !_contentCatalog.stages.empty())
+		{
+			if (previousPreview)
+			{
+				_contentPreviewIndex = (_contentPreviewIndex + _contentCatalog.stages.size() - 1)
+					% _contentCatalog.stages.size();
+			}
+			else
+			{
+				_contentPreviewIndex = (_contentPreviewIndex + 1) % _contentCatalog.stages.size();
+			}
+			_contentPreviewNotice.Empty();
+		}
+		_gamepadStickLatched = navigationHeld;
+		if ((pressed & XINPUT_GAMEPAD_A) != 0U) ReloadContentPreview();
+		if ((pressed & XINPUT_GAMEPAD_B) != 0U) SetContentPreview(false);
+		return;
+	}
 
 	const bool previous = (buttons & (XINPUT_GAMEPAD_DPAD_LEFT | XINPUT_GAMEPAD_DPAD_UP)) != 0U
 		|| stickX <= -0.55f || stickY <= -0.55f;
@@ -3467,6 +3833,16 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 		CWnd::OnLButtonDown(nFlags, point);
 		return;
 	}
+	if (_contentPreviewActive)
+	{
+		if (HandleContentPreviewClick(logicalPoint))
+		{
+			SetFocus();
+			Invalidate(FALSE);
+		}
+		CWnd::OnLButtonDown(nFlags, point);
+		return;
+	}
 	if (_screenMode != ScreenMode::Playing)
 	{
 		if (HandleMenuClick(logicalPoint))
@@ -3482,6 +3858,35 @@ void CChildView::OnLButtonDown(UINT nFlags, CPoint point)
 		BeginAimFromPointer(point);
 	}
 	CWnd::OnLButtonDown(nFlags, point);
+}
+
+bool CChildView::HandleContentPreviewClick(CPoint point)
+{
+	if (!_contentPreviewActive || _contentCatalog.stages.empty()) return false;
+	if (CRect(55, 720, 240, 770).PtInRect(point))
+	{
+		_contentPreviewIndex = (_contentPreviewIndex + _contentCatalog.stages.size() - 1)
+			% _contentCatalog.stages.size();
+		_contentPreviewNotice.Empty();
+		return true;
+	}
+	if (CRect(250, 720, 435, 770).PtInRect(point))
+	{
+		_contentPreviewIndex = (_contentPreviewIndex + 1) % _contentCatalog.stages.size();
+		_contentPreviewNotice.Empty();
+		return true;
+	}
+	if (CRect(445, 720, 660, 770).PtInRect(point))
+	{
+		ReloadContentPreview();
+		return true;
+	}
+	if (CRect(670, 720, 945, 770).PtInRect(point))
+	{
+		SetContentPreview(false);
+		return true;
+	}
+	return false;
 }
 
 void CChildView::OnRButtonDown(UINT nFlags, CPoint point)
@@ -3825,6 +4230,40 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 		return;
 	}
+	if (nChar == VK_F8)
+	{
+		if (_contentPreviewActive || _screenMode == ScreenMode::StageSelection)
+		{
+			SetContentPreview(!_contentPreviewActive);
+		}
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
+	if (_contentPreviewActive)
+	{
+		if (nChar == VK_LEFT && !_contentCatalog.stages.empty())
+		{
+			_contentPreviewIndex = (_contentPreviewIndex + _contentCatalog.stages.size() - 1)
+				% _contentCatalog.stages.size();
+			_contentPreviewNotice.Empty();
+		}
+		else if (nChar == VK_RIGHT && !_contentCatalog.stages.empty())
+		{
+			_contentPreviewIndex = (_contentPreviewIndex + 1) % _contentCatalog.stages.size();
+			_contentPreviewNotice.Empty();
+		}
+		else if (nChar == 'R')
+		{
+			ReloadContentPreview();
+		}
+		else if (nChar == VK_ESCAPE)
+		{
+			SetContentPreview(false);
+		}
+		Invalidate(FALSE);
+		CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
+		return;
+	}
 	if (nChar == VK_F9)
 	{
 		SetDemoMode(!_demoRun.IsEnabled());
@@ -3872,7 +4311,7 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 
 	if (_screenMode == ScreenMode::Loadout)
 	{
-		if (nChar >= '1' && nChar <= '3')
+		if (nChar >= '1' && nChar <= '5')
 		{
 			const std::size_t index = static_cast<std::size_t>(nChar - '1');
 			const auto& orbs = GetOrbDefinitions();
@@ -3882,9 +4321,11 @@ void CChildView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 				SaveRunCheckpoint();
 			}
 		}
-		else if (nChar >= '4' && nChar <= '6')
+		else if ((nChar >= '6' && nChar <= '9') || nChar == '0')
 		{
-			const std::size_t index = static_cast<std::size_t>(nChar - '4');
+			const std::size_t index = nChar == '0'
+				? std::size_t{ 4 }
+				: static_cast<std::size_t>(nChar - '6');
 			const auto& relics = GetRelicDefinitions();
 			if (index < relics.size())
 			{

@@ -17,6 +17,7 @@
 #include "ContentCatalog.h"
 #include "CombatLog.h"
 #include "ContentReport.h"
+#include "ContentReload.h"
 #include "DifficultyCurve.h"
 #include "DemoRun.h"
 #include "GameLayout.h"
@@ -583,8 +584,11 @@ namespace
 
 		action = ResolveUiClick(UiScreenKind::Loadout, { 400.0f, 250.0f }, 0);
 		Check(action.command == UiCommand::SelectOrb && action.index == 1, "mouse selects an orb card");
-		action = ResolveUiClick(UiScreenKind::Loadout, { 705.0f, 450.0f }, 0);
+		action = ResolveUiClick(UiScreenKind::Loadout, { 500.0f, 450.0f }, 0);
 		Check(action.command == UiCommand::AcquireRelic && action.index == 2, "mouse acquires a relic card");
+		action = ResolveUiClick(UiScreenKind::Loadout, { 850.0f, 450.0f }, 0);
+		Check(action.command == UiCommand::AcquireRelic && action.index == 4,
+			"mouse reaches the fifth relic card");
 		Check(
 			ResolveUiClick(UiScreenKind::Loadout, { 150.0f, 665.0f }, 0).command
 				== UiCommand::ResetProgression,
@@ -836,11 +840,79 @@ namespace
 		ResetProgressionCatalog();
 	}
 
+	void TestContentReloadPreparation()
+	{
+		Check(HasContentPreviewCommandLineFlag(L"game.exe --content-preview"),
+			"content preview command-line flag is recognized");
+		Check(!HasContentPreviewCommandLineFlag(L"game.exe --content-preview-extra"),
+			"content preview command-line parser rejects partial matches");
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		const std::filesystem::path stagePath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "stages.v1.ini";
+		const std::filesystem::path gameplayPath = repositoryRoot
+			/ "FinalProject_Peglin" / "content" / "gameplay.v1.ini";
+		PlayerLoadout loadout;
+		const PlayerLoadoutSnapshot snapshot = loadout.CreatePersistentSnapshot();
+		ContentReloadResult ready = PrepareContentReload(
+			stagePath,
+			gameplayPath,
+			{ "stage-1", "stage-10", "stage-3" },
+			snapshot);
+		Check(ready.IsReady() && ready.difficulty.passed,
+			"hot reload prepares validated stage, gameplay, and difficulty data");
+		Check(ready.content.stages.size() == 10
+			&& ready.gameplay.catalog.progression.orbs.size() == 5,
+			"hot reload candidate contains the complete expanded catalogs");
+
+		const std::size_t activeOrbCount = GetOrbDefinitions().size();
+		const ContentReloadResult missingFile = PrepareContentReload(
+			repositoryRoot / "missing-stages.ini",
+			gameplayPath,
+			{},
+			snapshot);
+		Check(missingFile.error == ContentReloadError::StageCatalog,
+			"hot reload rejects a missing stage catalog before activation");
+		Check(GetOrbDefinitions().size() == activeOrbCount,
+			"failed hot reload leaves the active progression catalog untouched");
+
+		const ContentReloadResult missingRunStage = PrepareContentReload(
+			stagePath,
+			gameplayPath,
+			{ "removed-stage" },
+			snapshot);
+		Check(missingRunStage.error == ContentReloadError::MissingRunStage
+			&& missingRunStage.incompatibleId == "removed-stage",
+			"hot reload protects stage ids referenced by the current run");
+
+		PlayerLoadoutSnapshot missingOrb = snapshot;
+		missingOrb.ownedOrbIds.push_back("removed-orb");
+		const ContentReloadResult incompatibleLoadout = PrepareContentReload(
+			stagePath,
+			gameplayPath,
+			{},
+			missingOrb);
+		Check(incompatibleLoadout.error == ContentReloadError::MissingOrb
+			&& incompatibleLoadout.incompatibleId == "removed-orb",
+			"hot reload protects every orb in the current deck");
+
+		GameplayCatalogLoadResult broken = ready.gameplay;
+		broken.catalog.enemies.erase(broken.catalog.enemies.begin());
+		std::vector<StageDefinition> activeStages = ready.content.stages;
+		const float originalMultiplier = activeStages.front().enemies.front().damageTakenMultiplier;
+		Check(!ActivateGameplayCatalog(broken, activeStages),
+			"catalog activation rejects an unresolved enemy binding");
+		Check(Near(activeStages.front().enemies.front().damageTakenMultiplier, originalMultiplier)
+			&& GetOrbDefinitions().size() == activeOrbCount,
+			"failed activation is transactional for stages and active progression");
+		ResetProgressionCatalog();
+	}
+
 	void TestGamepadNavigation()
 	{
 		Check(GetGamepadFocusCount(UiScreenKind::StageSelection, 2) == 6U,
 			"gamepad stage screen exposes routes, start, statistics, loadout, and options");
-		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 8U,
+		Check(GetGamepadFocusCount(UiScreenKind::Loadout, 0) == 12U,
 			"gamepad can focus every loadout action");
 		Check(GetGamepadFocusCount(UiScreenKind::Options, 0) == 15U,
 			"gamepad can focus every binding, option, selective reset, and back");
@@ -862,7 +934,11 @@ namespace
 		Check(ResolveGamepadFocusedAction(UiScreenKind::StageSelection, 3, 2).command
 			== UiCommand::OpenStatistics, "gamepad opens detailed statistics");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Loadout, 4, 0).command
-			== UiCommand::AcquireRelic, "gamepad reaches relic acquisition");
+			== UiCommand::SelectOrb, "gamepad reaches the fifth orb");
+		Check(ResolveGamepadFocusedAction(UiScreenKind::Loadout, 9, 0).command
+			== UiCommand::AcquireRelic, "gamepad reaches the fifth relic");
+		Check(GetGamepadFocusRect(UiScreenKind::Loadout, 9, 0).IsValid(),
+			"fifth relic has a visible gamepad focus rectangle");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 3, 0).command
 			== UiCommand::CycleMusicVolume, "gamepad reaches independent music volume");
 		Check(ResolveGamepadFocusedAction(UiScreenKind::Options, 6, 0).command
@@ -3713,6 +3789,7 @@ int main(int argc, char* argv[])
 	TestCombatLogRetention();
 	TestContentReportGeneration();
 	TestDifficultyCurveAnalysis();
+	TestContentReloadPreparation();
 	TestGamepadNavigation();
 	TestAdventureRunProgression();
 	TestRunCheckpointPersistence();

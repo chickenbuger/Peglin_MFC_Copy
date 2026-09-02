@@ -66,3 +66,6 @@ GameplayCatalogLoadResult LoadGameplayCatalog(
 bool ActivateGameplayCatalog(
 	const GameplayCatalogLoadResult& result,
 	std::vector<StageDefinition>& stages);
+bool ResolveGameplayCatalogStages(
+	const GameplayCatalogLoadResult& result,
+	std::vector<StageDefinition>& stages);

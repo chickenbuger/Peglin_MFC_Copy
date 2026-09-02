@@ -686,15 +686,10 @@ GameplayCatalogLoadResult LoadGameplayCatalog(
 	return ParseGameplayCatalog(content, stages);
 }
 
-bool ActivateGameplayCatalog(
+bool ResolveGameplayCatalogStages(
 	const GameplayCatalogLoadResult& result,
 	std::vector<StageDefinition>& stages)
 {
-	if (!InstallProgressionCatalog(result.catalog.progression))
-	{
-		ResetProgressionCatalog();
-		return false;
-	}
 	if (!result.UsedExternalContent())
 	{
 		return true;
@@ -713,16 +708,28 @@ bool ActivateGameplayCatalog(
 				});
 			if (found == result.catalog.enemies.end())
 			{
-				ResetProgressionCatalog();
 				return false;
 			}
 			enemy.damageTakenMultiplier = found->damageTakenMultiplier;
 		}
 		if (!ValidateStageDefinition(stage).IsValid())
 		{
-			ResetProgressionCatalog();
 			return false;
 		}
 	}
+	return true;
+}
+
+bool ActivateGameplayCatalog(
+	const GameplayCatalogLoadResult& result,
+	std::vector<StageDefinition>& stages)
+{
+	std::vector<StageDefinition> resolvedStages = stages;
+	if (!ResolveGameplayCatalogStages(result, resolvedStages)
+		|| !InstallProgressionCatalog(result.catalog.progression))
+	{
+		return false;
+	}
+	stages = std::move(resolvedStages);
 	return true;
 }

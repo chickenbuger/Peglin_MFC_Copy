@@ -53,6 +53,7 @@
     <ClCompile Include="PeglinCoreTests.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\ContentCatalog.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\ContentReport.cpp" />
+	<ClCompile Include="..\FinalProject_Peglin\ContentReload.cpp" />
 	<ClCompile Include="..\FinalProject_Peglin\DifficultyCurve.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\Enemy.cpp" />
     <ClCompile Include="..\FinalProject_Peglin\GameWorld.cpp" />

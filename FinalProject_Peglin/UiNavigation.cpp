@@ -73,14 +73,14 @@ namespace
 
 	UiAction ResolveLoadoutClick(Vector2 position) noexcept
 	{
-		for (std::size_t index = 0; index < 3; ++index)
+		for (std::size_t index = 0; index < 5; ++index)
 		{
-			const float left = 55.0f + static_cast<float>(index) * 305.0f;
-			if (UiRect{ left, 148.0f, left + 280.0f, 320.0f }.Contains(position))
+			const float left = 55.0f + static_cast<float>(index) * 180.0f;
+			if (UiRect{ left, 148.0f, left + 170.0f, 320.0f }.Contains(position))
 			{
 				return { UiCommand::SelectOrb, index };
 			}
-			if (UiRect{ left, 360.0f, left + 280.0f, 545.0f }.Contains(position))
+			if (UiRect{ left, 360.0f, left + 170.0f, 545.0f }.Contains(position))
 			{
 				return { UiCommand::AcquireRelic, index };
 			}
