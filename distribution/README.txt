@@ -10,6 +10,11 @@ Peglin MFC Copy — Windows x64 Release
 ----
 FinalProject_Peglin.exe를 실행합니다.
 
+콘텐츠 제작 미리보기
+--------------------
+FinalProject_Peglin.exe --content-preview 로 실행하면 전체 스테이지의 페그·이동
+궤적·적 배치를 확인하고 R 키로 외부 콘텐츠를 안전하게 다시 읽을 수 있습니다.
+
 사전 검사
 ---------
 PowerShell에서 다음 명령으로 필수 파일, x64 PE와 SHA-256 무결성을 확인할 수 있습니다.
@@ -38,6 +43,7 @@ PowerShell에서 다음 명령으로 필수 파일, x64 PE와 SHA-256 무결성�
 -------------
 - 설정: %LOCALAPPDATA%\PeglinMFC\settings.v1.ini
 - 기록: %LOCALAPPDATA%\PeglinMFC\records.v1.ini
+- 진행 중인 런: %LOCALAPPDATA%\PeglinMFC\run.v1.ini
 패키지를 제거해도 사용자 데이터는 자동 삭제하지 않습니다.
 
 런타임 정책

@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 9 진행 중 |
-| 현재 버전 | Version 9.7 |
+| 현재 스프린트 | Sprint 9 완료 |
+| 현재 버전 | Version 9.8 |
 | 스프린트 목표 | 런 중단 복구, 입력·오디오 하드웨어 완성도와 콘텐츠 규모를 제품 수준으로 확장 |
-| 상태 | Sprint 9 P0 6/7 완료 · 추가 유지보수 1개 완료 |
+| 상태 | Sprint 9 P0 7/7 완료 · 추가 유지보수 1개 완료 · 최종 배포 통과 |
 
 ## 문서
 
@@ -116,6 +116,9 @@
 - [Version 9.5 — Windows 전용 플랫폼 경로 정리](./Version_9.5.md)
 - [Version 9.6 — 콘텐츠 확장과 난이도 곡선 자동 분석](./Version_9.6.md)
 - [Version 9.7 — 인게임 콘텐츠 미리보기와 원자적 핫 리로드](./Version_9.7.md)
+- [Version 9.8 — Sprint 9 결합 회귀·저장 호환성·최종 배포](./Version_9.8.md)
+- [Content Report 9.8 — Sprint 9 최종 외부 콘텐츠 검증](./Content_Report_9.8.md)
+- [Performance Report 9.8 — Sprint 9 Release x64 자원 표본](./Performance_Report_9.8.md)
 - [Content Report 9.6 — 확장 콘텐츠와 난이도 곡선 검증](./Content_Report_9.6.md)
 - [Performance Report 8.7 — Release x64 자원 표본](./Performance_Report_8.7.md)
 - [Content Report 8.8 — Sprint 8 최종 외부 콘텐츠 검증](./Content_Report_8.8.md)
@@ -129,7 +132,8 @@
 - [Next Version Plan 6 — Sprint 6 계획](./Next_Version_Plan_6.md)
 - [Next Version Plan 7 — Sprint 7 완료 기록](./Next_Version_Plan_7.md)
 - [Next Version Plan 8 — Sprint 8 완료 기록](./Next_Version_Plan_8.md)
-- [Next Version Plan 9 — Sprint 9 후보 계획](./Next_Version_Plan_9.md)
+- [Next Version Plan 9 — Sprint 9 완료 기록](./Next_Version_Plan_9.md)
+- [Next Version Plan 10 — Sprint 10 후보 계획](./Next_Version_Plan_10.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차

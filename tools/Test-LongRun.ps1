@@ -72,8 +72,9 @@ $userGrowth = [int]$last.User - [int]$first.User
 $handleGrowth = [int]$last.Handles - [int]$first.Handles
 $passed = $gdiGrowth -le 5 -and $userGrowth -le 5 -and $handleGrowth -le 10
 
+$reportTitle = [System.IO.Path]::GetFileNameWithoutExtension($ReportPath).Replace('_', ' ')
 $lines = [System.Collections.Generic.List[string]]::new()
-$lines.Add('# Performance Report 8.7')
+$lines.Add("# $reportTitle")
 $lines.Add('')
 $lines.Add("- Configuration: $Configuration $Platform")
 $lines.Add("- Requested duration: $DurationSeconds seconds")
