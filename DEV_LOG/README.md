@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 9 완료 |
-| 현재 버전 | Version 9.8 |
-| 스프린트 목표 | 런 중단 복구, 입력·오디오 하드웨어 완성도와 콘텐츠 규모를 제품 수준으로 확장 |
-| 상태 | Sprint 9 P0 7/7 완료 · 추가 유지보수 1개 완료 · 최종 배포 통과 |
+| 현재 스프린트 | Sprint 10 진행 중 |
+| 현재 버전 | Version 10.1 |
+| 스프린트 목표 | 포트폴리오 플레이 감각, 배포 진단, 결정적 재현과 콘텐츠 제작 품질 확장 |
+| 상태 | Sprint 10 P0 1/7 완료 |
 
 ## 문서
 
@@ -117,6 +117,7 @@
 - [Version 9.6 — 콘텐츠 확장과 난이도 곡선 자동 분석](./Version_9.6.md)
 - [Version 9.7 — 인게임 콘텐츠 미리보기와 원자적 핫 리로드](./Version_9.7.md)
 - [Version 9.8 — Sprint 9 결합 회귀·저장 호환성·최종 배포](./Version_9.8.md)
+- [Version 10.1 — 공식 플레이 흐름 참고 전투 UI·영상 프레젠테이션 개선](./Version_10.1.md)
 - [Content Report 9.8 — Sprint 9 최종 외부 콘텐츠 검증](./Content_Report_9.8.md)
 - [Performance Report 9.8 — Sprint 9 Release x64 자원 표본](./Performance_Report_9.8.md)
 - [Content Report 9.6 — 확장 콘텐츠와 난이도 곡선 검증](./Content_Report_9.6.md)

@@ -104,6 +104,7 @@ private:
 		float ageSeconds = 0.0f;
 		float lifetimeSeconds = 0.9f;
 		bool toast = false;
+		bool impactRing = false;
 	};
 
 	struct OrbTrailPoint
@@ -121,6 +122,7 @@ private:
 		COLORREF color = RGB(255, 194, 62);
 		float ageSeconds = 0.0f;
 		float lifetimeSeconds = 0.65f;
+		bool hostile = false;
 	};
 
 	void ReleaseMouseInput(bool cancelDrag);
@@ -136,6 +138,7 @@ private:
 	void DrawUiAnimations(CDC* deviceContext, const CRect& clientBounds);
 	void DrawGamepadFocus(CDC* deviceContext);
 	void DrawAttackAnimations(CDC* deviceContext);
+	void DrawCombatPresentation(CDC* deviceContext);
 	void DrawOrbTrail(CDC* deviceContext);
 	void DrawAimPreview(CDC* deviceContext);
 	void DrawCombatLog(CDC* deviceContext);

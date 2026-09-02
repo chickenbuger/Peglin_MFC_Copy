@@ -9,7 +9,7 @@
 namespace
 {
 	constexpr PegTypeDefinition NORMAL_PEG{
-		PegType::Normal, { 255, 0, 0 }, 1.0f, 1, 0.0f, false };
+		PegType::Normal, { 174, 170, 158 }, 1.0f, 1, 0.0f, false };
 	constexpr PegTypeDefinition CRITICAL_PEG{
 		PegType::Critical, { 255, 215, 0 }, 2.0f, 2, 0.0f, false };
 	constexpr PegTypeDefinition BOMB_PEG{

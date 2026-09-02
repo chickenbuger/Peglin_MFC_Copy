@@ -192,6 +192,7 @@ public:
 	GameState GetState() const noexcept { return _gameState; }
 	const GameFeedback& GetFeedback() const noexcept { return _feedback; }
 	const GameScore& GetScore() const noexcept { return _score; }
+	float GetPendingDamage() const noexcept { return _pendingDamage; }
 	const PlayerLoadout& GetLoadout() const noexcept { return _loadout; }
 	ProgressionModifiers GetProgressionModifiers() const noexcept
 	{

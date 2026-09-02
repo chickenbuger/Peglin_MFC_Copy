@@ -10,6 +10,7 @@ void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 
 	if (IsMoving())
 	{
+		const int motionDc = pDC->SaveDC();
 		CPen motionPen(PS_SOLID, 2, RGB(118, 205, 255));
 		pDC->SelectObject(&motionPen);
 		if (_motion.kind == PegMotionKind::Horizontal)
@@ -26,6 +27,7 @@ void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 			pDC->MoveTo(centerX, centerY + 14);
 			pDC->LineTo(centerX, centerY + 19);
 		}
+		pDC->RestoreDC(motionDc);
 	}
 
 	PegVisualStyle visual = GetPegTypeDefinition(type).visual;
@@ -39,21 +41,54 @@ void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 		case PegType::Refresh: visual = { 0, 255, 180 }; break;
 		}
 	}
-	CBrush brush(RGB(visual.red, visual.green, visual.blue));
-	pDC->SelectObject(&brush);
-	pDC->SelectObject(GetStockObject(NULL_PEN));
-	pDC->Ellipse(
+	const CRect outerBounds(
+		static_cast<int>(std::lround(position.x - size - 2.0f)),
+		static_cast<int>(std::lround(position.y - size - 2.0f)),
+		static_cast<int>(std::lround(position.x + size + 2.0f)),
+		static_cast<int>(std::lround(position.y + size + 2.0f)));
+	CRect coreBounds(
 		static_cast<int>(std::lround(position.x - size)),
 		static_cast<int>(std::lround(position.y - size)),
 		static_cast<int>(std::lround(position.x + size)),
 		static_cast<int>(std::lround(position.y + size)));
-
-	if (colorMode == PegColorMode::HighContrast)
 	{
+		const int shapeDc = pDC->SaveDC();
+		CPen outlinePen(PS_SOLID, 2, RGB(18, 20, 22));
+		CBrush rimBrush(RGB(116, 108, 94));
+		pDC->SelectObject(&outlinePen);
+		pDC->SelectObject(&rimBrush);
+		pDC->Ellipse(outerBounds);
+
+		coreBounds.DeflateRect(2, 2);
+		CPen corePen(PS_SOLID, 1, RGB(225, 215, 185));
+		CBrush coreBrush(RGB(visual.red, visual.green, visual.blue));
+		pDC->SelectObject(&corePen);
+		pDC->SelectObject(&coreBrush);
+		pDC->Ellipse(coreBounds);
+
+		CBrush highlightBrush(RGB(248, 239, 205));
+		pDC->SelectObject(&highlightBrush);
+		pDC->SelectStockObject(NULL_PEN);
+		const int glintRadius = (std::max)(2, static_cast<int>(std::lround(size * 0.22f)));
+		pDC->Ellipse(
+			centerX - glintRadius - 3,
+			centerY - glintRadius - 3,
+			centerX + glintRadius - 3,
+			centerY + glintRadius - 3);
+		pDC->RestoreDC(shapeDc);
+	}
+
+	if (colorMode == PegColorMode::HighContrast || type != PegType::Normal)
+	{
+		const int markerDc = pDC->SaveDC();
 		const int markerRadius = static_cast<int>(std::lround(size * 0.55f));
-		const COLORREF markerColor = type == PegType::Bomb
-			? RGB(0, 0, 0)
-			: RGB(255, 255, 255);
+		COLORREF markerColor = RGB(255, 250, 225);
+		if (type == PegType::Bomb)
+		{
+			markerColor = colorMode == PegColorMode::HighContrast
+				? RGB(0, 0, 0)
+				: RGB(255, 150, 52);
+		}
 		CPen markerPen(PS_SOLID, 2, markerColor);
 		pDC->SelectObject(&markerPen);
 		pDC->SelectObject(GetStockObject(NULL_BRUSH));
@@ -76,13 +111,13 @@ void TargetBall::draw(CDC* pDC, PegColorMode colorMode)
 			pDC->LineTo(centerX - markerRadius, centerY + markerRadius);
 			break;
 		case PegType::Refresh:
-			pDC->Ellipse(
-				centerX - markerRadius,
-				centerY - markerRadius,
-				centerX + markerRadius,
-				centerY + markerRadius);
+			pDC->MoveTo(centerX - markerRadius, centerY);
+			pDC->LineTo(centerX + markerRadius, centerY);
+			pDC->MoveTo(centerX, centerY - markerRadius);
+			pDC->LineTo(centerX, centerY + markerRadius);
 			break;
 		}
+		pDC->RestoreDC(markerDc);
 	}
 
 	pDC->RestoreDC(savedDc);

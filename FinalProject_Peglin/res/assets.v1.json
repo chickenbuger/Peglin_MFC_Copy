@@ -20,6 +20,15 @@
       "resourceId": "IDB_GAMEPLAY_CAVE_V3"
     },
     {
+      "source": "FinalProject_Peglin/res/gameplay-cave-v4-source.png",
+      "output": "FinalProject_Peglin/res/gameplay-cave-v4.bmp",
+      "width": 1000,
+      "height": 800,
+      "transparent": false,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_GAMEPLAY_CAVE_V4"
+    },
+    {
       "source": "FinalProject_Peglin/res/player-hero-v2-source.png",
       "output": "FinalProject_Peglin/res/player-hero-v2.bmp",
       "width": 104,

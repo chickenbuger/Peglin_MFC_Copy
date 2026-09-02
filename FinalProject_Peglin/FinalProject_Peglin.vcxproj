@@ -233,6 +233,7 @@
     <ClInclude Include="TargetBall.h" />
 	<ClInclude Include="UiRenderer.h" />
 	<ClInclude Include="UiNavigation.h" />
+	<ClInclude Include="UiPresentation.h" />
 	<ClInclude Include="UiViewport.h" />
 	<ClInclude Include="PeglinUiAnimation.h" />
     <ClInclude Include="targetver.h" />

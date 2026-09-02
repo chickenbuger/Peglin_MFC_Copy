@@ -35,6 +35,7 @@
 #include "SoftPegSound.h"
 #include "TerminalTransitionGate.h"
 #include "UiNavigation.h"
+#include "UiPresentation.h"
 #include "PeglinUiAnimation.h"
 #include "UiViewport.h"
 
@@ -412,6 +413,8 @@ namespace
 		Check(world.GetFeedback().currentShotPegHits == 1, "peg feedback counts current shot hits");
 		Check(world.GetScore().currentCombo == 1, "first peg starts combo at one");
 		Check(world.GetScore().currentShot == 100, "first peg awards base combo score");
+		Check(Near(world.GetPendingDamage(), 1.0f),
+			"combat presentation exposes pending damage during orb flight");
 		Check(Near(world.GetBall().GetVelocity().x, -1.0f), "peg normal speed uses restitution");
 		Check(Near(world.GetBall().GetVelocity().y, 3.0f), "peg tangent speed is preserved");
 		const float separation = (world.GetBall().GetPosition() - pegPosition).Length();
@@ -429,6 +432,8 @@ namespace
 		Check(world.GetScore().total == 100, "turn adds shot score to total");
 		Check(world.GetScore().currentCombo == 0, "turn resets current combo");
 		Check(world.GetScore().currentShot == 0, "turn resets current shot score");
+		Check(Near(world.GetPendingDamage(), 0.0f),
+			"resolved turn clears combat presentation pending damage");
 		Check(world.GetState() == GameState::Aiming, "ordinary turn returns to Aiming");
 	}
 
@@ -708,6 +713,30 @@ namespace
 		timeline.Reset();
 		Check(!timeline.IsActive() && Near(timeline.Progress(), 0.0f),
 			"UI animation reset restores idle state");
+	}
+
+	void TestCombatPresentationPhases()
+	{
+		Check(
+			ResolveCombatPresentationPhase(GameState::Aiming, false, false)
+				== CombatPresentationPhase::Aim,
+			"combat presentation starts in the aim phase");
+		Check(
+			ResolveCombatPresentationPhase(GameState::BallInFlight, false, false)
+				== CombatPresentationPhase::Pegboard,
+			"combat presentation tracks orb flight as the pegboard phase");
+		Check(
+			ResolveCombatPresentationPhase(GameState::ResolvingTurn, false, false)
+				== CombatPresentationPhase::Attack,
+			"combat presentation tracks turn resolution as the attack phase");
+		Check(
+			ResolveCombatPresentationPhase(GameState::Aiming, true, false)
+				== CombatPresentationPhase::Attack,
+			"player attack animation keeps the attack phase visible");
+		Check(
+			ResolveCombatPresentationPhase(GameState::ResolvingTurn, true, true)
+				== CombatPresentationPhase::Enemy,
+			"enemy action animation takes precedence during the enemy phase");
 	}
 
 	void TestUiViewportScaling()
@@ -1456,7 +1485,8 @@ namespace
 		Check(Near(critical.damage, 2.0f) && critical.scoreMultiplier == 2, "critical peg doubles damage and score");
 		Check(Near(bomb.blastRadius, 100.0f), "bomb peg defines a data-driven blast radius");
 		Check(refresh.refreshesRemovedPegs, "refresh peg defines board restoration effect");
-		Check(normal.visual.red == 255 && normal.visual.green == 0, "normal peg visual style remains red");
+		Check(normal.visual.red == 174 && normal.visual.green == 170,
+			"normal peg visual style uses a neutral metallic palette");
 		Check(critical.visual.red == 255 && critical.visual.green == 215, "critical peg visual style is distinct");
 
 		const PegLayoutDefinition layout = CreateDefaultPegLayout();
@@ -3785,6 +3815,7 @@ int main(int argc, char* argv[])
 	TestStateAndRestitutionRules();
 	TestMouseUiNavigation();
 	TestUiAnimationTimeline();
+	TestCombatPresentationPhases();
 	TestUiViewportScaling();
 	TestCombatLogRetention();
 	TestContentReportGeneration();

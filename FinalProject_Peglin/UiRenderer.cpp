@@ -4,6 +4,24 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+	COLORREF BlendColor(COLORREF from, COLORREF to, float amount) noexcept
+	{
+		const float blend = std::clamp(amount, 0.0f, 1.0f);
+		const auto channel = [blend](BYTE start, BYTE finish)
+		{
+			return static_cast<BYTE>(std::lround(
+				static_cast<float>(start)
+				+ (static_cast<float>(finish) - static_cast<float>(start)) * blend));
+		};
+		return RGB(
+			channel(GetRValue(from), GetRValue(to)),
+			channel(GetGValue(from), GetGValue(to)),
+			channel(GetBValue(from), GetBValue(to)));
+	}
+}
+
 void UiRenderer::DrawBackdrop(CDC* deviceContext, CBitmap* bitmap, const CRect& bounds)
 {
 	deviceContext->FillSolidRect(bounds, UiTheme::Canvas);
@@ -96,11 +114,34 @@ void UiRenderer::DrawPanel(
 	COLORREF accent)
 {
 	const int savedDc = deviceContext->SaveDC();
-	CPen borderPen(PS_SOLID, selected ? 3 : 1, selected ? accent : UiTheme::Border);
+	const COLORREF borderColor = selected ? accent : UiTheme::Border;
+	CPen borderPen(PS_SOLID, selected ? 3 : 2, borderColor);
 	CBrush panelBrush(selected ? UiTheme::PanelMuted : UiTheme::Panel);
 	deviceContext->SelectObject(&borderPen);
 	deviceContext->SelectObject(&panelBrush);
-	deviceContext->RoundRect(bounds, CPoint(16, 16));
+	deviceContext->RoundRect(bounds, CPoint(8, 8));
+
+	CRect inset(bounds);
+	inset.DeflateRect(4, 4);
+	CPen insetPen(PS_SOLID, 1, BlendColor(borderColor, UiTheme::Panel, 0.45f));
+	deviceContext->SelectObject(&insetPen);
+	deviceContext->SelectStockObject(NULL_BRUSH);
+	deviceContext->RoundRect(inset, CPoint(5, 5));
+
+	const COLORREF bevelLight = BlendColor(borderColor, RGB(255, 255, 255), 0.24f);
+	const COLORREF bevelShadow = RGB(6, 10, 17);
+	CPen lightPen(PS_SOLID, 1, bevelLight);
+	deviceContext->SelectObject(&lightPen);
+	deviceContext->MoveTo(bounds.left + 7, bounds.top + 4);
+	deviceContext->LineTo(bounds.right - 7, bounds.top + 4);
+	deviceContext->MoveTo(bounds.left + 4, bounds.top + 7);
+	deviceContext->LineTo(bounds.left + 4, bounds.bottom - 7);
+	CPen shadowPen(PS_SOLID, 2, bevelShadow);
+	deviceContext->SelectObject(&shadowPen);
+	deviceContext->MoveTo(bounds.left + 7, bounds.bottom - 4);
+	deviceContext->LineTo(bounds.right - 7, bounds.bottom - 4);
+	deviceContext->MoveTo(bounds.right - 4, bounds.top + 7);
+	deviceContext->LineTo(bounds.right - 4, bounds.bottom - 7);
 	deviceContext->RestoreDC(savedDc);
 }
 
@@ -151,6 +192,21 @@ void UiRenderer::DrawProgressBar(
 	if (fillBounds.right > fillBounds.left)
 	{
 		deviceContext->FillSolidRect(fillBounds, fillColor);
+		CRect highlight(fillBounds);
+		highlight.bottom = (std::min)(highlight.bottom, highlight.top + 3);
+		deviceContext->FillSolidRect(
+			highlight,
+			BlendColor(fillColor, RGB(255, 255, 255), 0.28f));
+	}
+
+	CPen dividerPen(PS_SOLID, 1, RGB(28, 35, 42));
+	deviceContext->SelectObject(&dividerPen);
+	for (int segment = 1; segment < 10; ++segment)
+	{
+		const int x = bounds.left + static_cast<int>(std::lround(
+			static_cast<float>(bounds.Width()) * static_cast<float>(segment) / 10.0f));
+		deviceContext->MoveTo(x, bounds.top + 2);
+		deviceContext->LineTo(x, bounds.bottom - 2);
 	}
 
 	CPen borderPen(PS_SOLID, 2, borderColor);
