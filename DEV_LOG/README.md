@@ -113,6 +113,7 @@
 - [Version 9.2 — 키보드·마우스·게임패드 바인딩 편집과 충돌 검사](./Version_9.2.md)
 - [Version 9.3 — XAudio2 다중 효과음과 카테고리별 음악 덕킹](./Version_9.3.md)
 - [Version 9.4 — 재연결 안전 XInput 진동 피드백](./Version_9.4.md)
+- [Version 9.5 — Windows 전용 플랫폼 경로 정리](./Version_9.5.md)
 - [Performance Report 8.7 — Release x64 자원 표본](./Performance_Report_8.7.md)
 - [Content Report 8.8 — Sprint 8 최종 외부 콘텐츠 검증](./Content_Report_8.8.md)
 - [Content Report 8.3 — 현재 외부 콘텐츠 검증·미리보기](./Content_Report_8.3.md)

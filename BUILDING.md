@@ -2,6 +2,8 @@
 
 이 문서는 Sprint 0에서 확인한 Windows 개발 환경과 재현용 빌드 명령을 정리한다.
 
+지원 플랫폼은 Windows 10/11 전용이다. MFC, Win32, XInput과 XAudio2를 직접 사용하며 비-Windows 빌드나 실행 호환성은 제공하지 않는다.
+
 ## 필수 구성요소
 
 - Windows 10 또는 Windows 11 x64

@@ -239,16 +239,10 @@ namespace
 
 	bool ReplaceFile(const std::filesystem::path& temporaryPath, const std::filesystem::path& finalPath)
 	{
-#ifdef _WIN32
 		return ::MoveFileExW(
 			temporaryPath.c_str(),
 			finalPath.c_str(),
 			MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
-#else
-		std::error_code error;
-		std::filesystem::rename(temporaryPath, finalPath, error);
-		return !error;
-#endif
 	}
 }
 
@@ -663,7 +657,6 @@ std::filesystem::path GetDefaultGameSettingsPath() noexcept
 {
 	try
 	{
-#ifdef _WIN32
 		const DWORD requiredLength = ::GetEnvironmentVariableW(L"LOCALAPPDATA", nullptr, 0);
 		if (requiredLength > 1)
 		{
@@ -678,7 +671,6 @@ std::filesystem::path GetDefaultGameSettingsPath() noexcept
 				return std::filesystem::path(value) / L"PeglinMFC" / L"settings.v1.ini";
 			}
 		}
-#endif
 
 		std::error_code tempError;
 		const std::filesystem::path temporary = std::filesystem::temp_directory_path(tempError);

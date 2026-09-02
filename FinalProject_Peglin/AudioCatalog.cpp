@@ -324,14 +324,12 @@ std::filesystem::path GetDefaultAudioCatalogPath() noexcept
 {
 	try
 	{
-#ifdef _WIN32
 		std::array<wchar_t, 32768> modulePath{};
 		const DWORD length = ::GetModuleFileNameW(nullptr, modulePath.data(), static_cast<DWORD>(modulePath.size()));
 		if (length > 0 && length < modulePath.size())
 		{
 			return std::filesystem::path(modulePath.data()).parent_path() / L"content" / L"audio.v1.ini";
 		}
-#endif
 	}
 	catch (...)
 	{
