@@ -28,7 +28,9 @@ enum class EnemyVisualKind
 	EmberBat,
 	MossShaman,
 	ThornbackWolf,
-	AzureWisp
+	AzureWisp,
+	CinderBeetle,
+	RootLancer
 };
 
 struct EnemyDefinition
@@ -121,4 +123,4 @@ StageDefinition CreateBossStageDefinition();
 std::vector<StageDefinition> CreateBuiltInStageDefinitions();
 StageValidationResult ValidateStageDefinition(const StageDefinition& stage) noexcept;
 StageLoadResult LoadStageDefinition(std::string_view stageId);
-const std::array<StageCatalogEntry, 8>& GetStageCatalog() noexcept;
+const std::array<StageCatalogEntry, 10>& GetStageCatalog() noexcept;

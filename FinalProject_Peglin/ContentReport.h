@@ -14,6 +14,8 @@ struct ContentReportResult
 	std::size_t enemyCount = 0;
 	std::size_t orbCount = 0;
 	std::size_t relicCount = 0;
+	bool difficultyCurvePassed = false;
+	std::size_t difficultyIssueCount = 0;
 	std::string message;
 };
 

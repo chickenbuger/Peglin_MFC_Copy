@@ -211,6 +211,8 @@ namespace
 		else if (text == "MossShaman") visual = EnemyVisualKind::MossShaman;
 		else if (text == "ThornbackWolf") visual = EnemyVisualKind::ThornbackWolf;
 		else if (text == "AzureWisp") visual = EnemyVisualKind::AzureWisp;
+		else if (text == "CinderBeetle") visual = EnemyVisualKind::CinderBeetle;
+		else if (text == "RootLancer") visual = EnemyVisualKind::RootLancer;
 		else return false;
 		return true;
 	}

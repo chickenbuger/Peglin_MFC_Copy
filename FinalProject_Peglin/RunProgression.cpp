@@ -434,21 +434,36 @@ bool AdventureRun::HasClearedStage(std::string_view stageId) const noexcept
 void AdventureRun::BuildRewardChoices()
 {
 	_rewardChoices.clear();
-	if (_completedCombatStages % 2 == 1)
+	switch (_completedCombatStages % 4)
 	{
+	case 1:
 		_rewardChoices = {
 			{ RunRewardKind::Orb, "iron-orb", "Iron Orb", 0.0f },
 			{ RunRewardKind::Relic, "combo-lantern", "Combo Lantern", 0.0f },
 			{ RunRewardKind::Heal, {}, "Heal 25 HP", 25.0f }
 		};
-	}
-	else
-	{
+		break;
+	case 2:
 		_rewardChoices = {
 			{ RunRewardKind::Orb, "echo-orb", "Echo Orb", 0.0f },
 			{ RunRewardKind::Relic, "thorn-charm", "Thorn Charm", 0.0f },
 			{ RunRewardKind::Heal, {}, "Heal 35 HP", 35.0f }
 		};
+		break;
+	case 3:
+		_rewardChoices = {
+			{ RunRewardKind::Orb, "cinder-orb", "Cinder Orb", 0.0f },
+			{ RunRewardKind::Relic, "ember-heart", "Ember Heart", 0.0f },
+			{ RunRewardKind::Heal, {}, "Heal 30 HP", 30.0f }
+		};
+		break;
+	default:
+		_rewardChoices = {
+			{ RunRewardKind::Orb, "verdant-orb", "Verdant Orb", 0.0f },
+			{ RunRewardKind::Relic, "wayfinder-compass", "Wayfinder Compass", 0.0f },
+			{ RunRewardKind::Heal, {}, "Heal 40 HP", 40.0f }
+		};
+		break;
 	}
 }
 

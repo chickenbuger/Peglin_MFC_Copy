@@ -12,12 +12,16 @@ namespace
 		{
 			{ "basic-orb", "Traveler Orb", "orb-traveler-v1", 1.0f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
 			{ "iron-orb", "Iron Orb", "orb-iron-v1", 1.5f, 0.75f, AttackDelivery::Melee, AttackTarget::Single },
-			{ "echo-orb", "Echo Orb", "orb-echo-v1", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All }
+			{ "echo-orb", "Echo Orb", "orb-echo-v1", 0.8f, 1.5f, AttackDelivery::Projectile, AttackTarget::All },
+			{ "cinder-orb", "Cinder Orb", "orb-cinder-v1", 1.3f, 1.0f, AttackDelivery::Projectile, AttackTarget::Single },
+			{ "verdant-orb", "Verdant Orb", "orb-verdant-v1", 0.9f, 1.25f, AttackDelivery::Projectile, AttackTarget::All }
 		},
 		{
 			{ "combo-lantern", "Combo Lantern", "relic-combo-lantern-v1", RelicDuplicatePolicy::Unique, 1, 1.0f, 1.25f, 1.0f },
 			{ "thorn-charm", "Thorn Charm", "relic-thorn-charm-v1", RelicDuplicatePolicy::Unique, 1, 1.2f, 1.0f, 1.0f },
-			{ "bark-guard", "Bark Guard", "relic-bark-guard-v1", RelicDuplicatePolicy::Stackable, 2, 1.0f, 1.0f, 0.85f }
+			{ "bark-guard", "Bark Guard", "relic-bark-guard-v1", RelicDuplicatePolicy::Stackable, 2, 1.0f, 1.0f, 0.85f },
+			{ "ember-heart", "Ember Heart", "relic-ember-heart-v1", RelicDuplicatePolicy::Unique, 1, 1.15f, 1.0f, 1.10f },
+			{ "wayfinder-compass", "Wayfinder Compass", "relic-wayfinder-v1", RelicDuplicatePolicy::Unique, 1, 1.0f, 1.10f, 0.95f }
 		}
 	};
 

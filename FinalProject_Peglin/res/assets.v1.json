@@ -137,6 +137,60 @@
       "resourceId": "IDB_RELIC_BARK_GUARD_V1"
     },
     {
+      "source": "FinalProject_Peglin/res/enemy-cinder-beetle-v1-source.png",
+      "output": "FinalProject_Peglin/res/enemy-cinder-beetle-v1.bmp",
+      "width": 112,
+      "height": 92,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_CINDER_BEETLE_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/enemy-root-lancer-v1-source.png",
+      "output": "FinalProject_Peglin/res/enemy-root-lancer-v1.bmp",
+      "width": 96,
+      "height": 112,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ENEMY_ROOT_LANCER_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/orb-cinder-v1-source.png",
+      "output": "FinalProject_Peglin/res/orb-cinder-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ORB_CINDER_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/orb-verdant-v1-source.png",
+      "output": "FinalProject_Peglin/res/orb-verdant-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_ORB_VERDANT_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/relic-ember-heart-v1-source.png",
+      "output": "FinalProject_Peglin/res/relic-ember-heart-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_RELIC_EMBER_HEART_V1"
+    },
+    {
+      "source": "FinalProject_Peglin/res/relic-wayfinder-v1-source.png",
+      "output": "FinalProject_Peglin/res/relic-wayfinder-v1.bmp",
+      "width": 96,
+      "height": 96,
+      "transparent": true,
+      "resourceFile": "FinalProject_Peglin/UiResources.rc",
+      "resourceId": "IDB_RELIC_WAYFINDER_V1"
+    },
+    {
       "source": "FinalProject_Peglin/res/shop-merchant-v1-source.png",
       "output": "FinalProject_Peglin/res/shop-merchant-v1.bmp",
       "width": 260,

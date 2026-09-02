@@ -17,7 +17,7 @@ namespace
 	constexpr float MAX_PEG_MOTION_AMPLITUDE = 64.0f;
 	constexpr float MAX_PEG_MOTION_ANGULAR_SPEED = 6.2831855f;
 	constexpr float PI = 3.1415927f;
-	constexpr std::array<StageCatalogEntry, 8> STAGE_CATALOG = {
+	constexpr std::array<StageCatalogEntry, 10> STAGE_CATALOG = {
 		StageCatalogEntry{ "stage-1", "Forgotten Forest" },
 		StageCatalogEntry{ "stage-2", "Dense Cavern" },
 		StageCatalogEntry{ "stage-4", "Thornwood Thicket" },
@@ -25,6 +25,8 @@ namespace
 		StageCatalogEntry{ "stage-6", "Crystal Grotto" },
 		StageCatalogEntry{ "stage-7", "Ember Roost" },
 		StageCatalogEntry{ "stage-8", "Shaman Mire" },
+		StageCatalogEntry{ "stage-9", "Obsidian Burrow" },
+		StageCatalogEntry{ "stage-10", "Rootspire Crossing" },
 		StageCatalogEntry{ "stage-3", "Rootbound Citadel" }
 	};
 
@@ -109,6 +111,8 @@ namespace
 		case EnemyVisualKind::MossShaman:
 		case EnemyVisualKind::ThornbackWolf:
 		case EnemyVisualKind::AzureWisp:
+		case EnemyVisualKind::CinderBeetle:
+		case EnemyVisualKind::RootLancer:
 			return true;
 		default:
 			return false;
@@ -345,6 +349,41 @@ std::vector<StageDefinition> CreateBuiltInStageDefinitions()
 			{ "thornback-wolf", "Thornback Wolf", EnemyVisualKind::ThornbackWolf, 15.0f, 1.0f, 1 }
 		},
 		{ { 2, PegType::Critical }, { 11, PegType::Refresh }, { 18, PegType::Bomb }, { 26, PegType::Critical }, { 33, PegType::Refresh }, { 40, PegType::Bomb } }));
+	StageDefinition obsidian = CreateRouteStage(
+		"stage-9", "Obsidian Burrow",
+		10, 5, { 185.0f, 355.0f }, 56.0f, 16.0f, 20260906u,
+		44.0f, 28.0f, 4, 32.0f, 0.92f,
+		{
+			{ "cinder-beetle", "Cinder Beetle", EnemyVisualKind::CinderBeetle, 18.0f, 1.0f, 1 },
+			{ "ember-bat-scout", "Ember Bat Scout", EnemyVisualKind::EmberBat, 14.0f, 1.0f, 3 },
+			{ "azure-wisp", "Azure Cave Wisp", EnemyVisualKind::AzureWisp, 12.0f, 1.0f, 4 }
+		},
+		{ { 4, PegType::Critical }, { 13, PegType::Bomb }, { 22, PegType::Refresh }, { 31, PegType::Critical }, { 40, PegType::Bomb }, { 47, PegType::Critical } });
+	ApplyPegMotions(obsidian, {
+		{ 11, PegMotionKind::Horizontal, 18.0f, 1.45f, 0.0f },
+		{ 21, PegMotionKind::Vertical, 16.0f, 1.25f, PI / 2.0f },
+		{ 30, PegMotionKind::Horizontal, 18.0f, 1.45f, PI },
+		{ 39, PegMotionKind::Vertical, 16.0f, 1.25f, 3.0f * PI / 2.0f }
+	});
+	stages.push_back(std::move(obsidian));
+	StageDefinition rootspire = CreateRouteStage(
+		"stage-10", "Rootspire Crossing",
+		11, 4, { 190.0f, 375.0f }, 54.0f, 15.0f, 20260907u,
+		47.0f, 29.0f, 4, 32.0f, 0.93f,
+		{
+			{ "root-lancer", "Root Lancer", EnemyVisualKind::RootLancer, 17.0f, 1.0f, 3 },
+			{ "cinder-beetle-guard", "Cinder Beetle Guard", EnemyVisualKind::CinderBeetle, 16.0f, 1.0f, 1 },
+			{ "moss-shaman-elder", "Moss Shaman Elder", EnemyVisualKind::MossShaman, 14.0f, 1.0f, 2 }
+		},
+		{ { 5, PegType::Critical }, { 12, PegType::Refresh }, { 18, PegType::Bomb }, { 25, PegType::Critical }, { 33, PegType::Bomb }, { 40, PegType::Critical } });
+	ApplyPegMotions(rootspire, {
+		{ 8, PegMotionKind::Horizontal, 20.0f, 1.35f, 0.0f },
+		{ 16, PegMotionKind::Vertical, 17.0f, 1.15f, PI / 2.0f },
+		{ 24, PegMotionKind::Horizontal, 20.0f, 1.35f, PI },
+		{ 32, PegMotionKind::Vertical, 17.0f, 1.15f, 3.0f * PI / 2.0f },
+		{ 40, PegMotionKind::Horizontal, 20.0f, 1.35f, 0.0f }
+	});
+	stages.push_back(std::move(rootspire));
 	stages.push_back(CreateBossStageDefinition());
 	return stages;
 }
@@ -521,7 +560,7 @@ StageLoadResult LoadStageDefinition(std::string_view stageId)
 	return result;
 }
 
-const std::array<StageCatalogEntry, 8>& GetStageCatalog() noexcept
+const std::array<StageCatalogEntry, 10>& GetStageCatalog() noexcept
 {
 	return STAGE_CATALOG;
 }

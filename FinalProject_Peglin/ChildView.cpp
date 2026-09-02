@@ -873,13 +873,19 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	_enemyShamanSprite.LoadBitmap(IDB_ENEMY_MOSS_SHAMAN_V1);
 	_enemyWolfSprite.LoadBitmap(IDB_ENEMY_THORNBACK_WOLF_V1);
 	_enemyWispSprite.LoadBitmap(IDB_ENEMY_AZURE_WISP_V1);
+	_enemyCinderBeetleSprite.LoadBitmap(IDB_ENEMY_CINDER_BEETLE_V1);
+	_enemyRootLancerSprite.LoadBitmap(IDB_ENEMY_ROOT_LANCER_V1);
 	_orbSprite.LoadBitmap(IDB_ORB_AMBER_TEAL_V2);
 	_orbTravelerIcon.LoadBitmap(IDB_ORB_TRAVELER_V1);
 	_orbIronIcon.LoadBitmap(IDB_ORB_IRON_V1);
 	_orbEchoIcon.LoadBitmap(IDB_ORB_ECHO_V1);
+	_orbCinderIcon.LoadBitmap(IDB_ORB_CINDER_V1);
+	_orbVerdantIcon.LoadBitmap(IDB_ORB_VERDANT_V1);
 	_relicComboLanternIcon.LoadBitmap(IDB_RELIC_COMBO_LANTERN_V1);
 	_relicThornCharmIcon.LoadBitmap(IDB_RELIC_THORN_CHARM_V1);
 	_relicBarkGuardIcon.LoadBitmap(IDB_RELIC_BARK_GUARD_V1);
+	_relicEmberHeartIcon.LoadBitmap(IDB_RELIC_EMBER_HEART_V1);
+	_relicWayfinderIcon.LoadBitmap(IDB_RELIC_WAYFINDER_V1);
 	_shopMerchantSprite.LoadBitmap(IDB_SHOP_MERCHANT_V1);
 	_stagePreviewForest.LoadBitmap(IDB_STAGE_PREVIEW_FOREST_V1);
 	_stagePreviewCrystal.LoadBitmap(IDB_STAGE_PREVIEW_CRYSTAL_V1);
@@ -956,6 +962,14 @@ void CChildView::OnDestroy()
 	{
 		_enemyWispSprite.DeleteObject();
 	}
+	if (_enemyCinderBeetleSprite.GetSafeHandle() != nullptr)
+	{
+		_enemyCinderBeetleSprite.DeleteObject();
+	}
+	if (_enemyRootLancerSprite.GetSafeHandle() != nullptr)
+	{
+		_enemyRootLancerSprite.DeleteObject();
+	}
 	if (_orbSprite.GetSafeHandle() != nullptr)
 	{
 		_orbSprite.DeleteObject();
@@ -964,9 +978,13 @@ void CChildView::OnDestroy()
 		&_orbTravelerIcon,
 		&_orbIronIcon,
 		&_orbEchoIcon,
+		&_orbCinderIcon,
+		&_orbVerdantIcon,
 		&_relicComboLanternIcon,
 		&_relicThornCharmIcon,
 		&_relicBarkGuardIcon,
+		&_relicEmberHeartIcon,
+		&_relicWayfinderIcon,
 		&_shopMerchantSprite,
 		&_stagePreviewForest,
 		&_stagePreviewCrystal,
@@ -2466,6 +2484,10 @@ CBitmap* CChildView::GetEnemySprite(EnemyVisualKind visual) noexcept
 		return _enemyWolfSprite.GetSafeHandle() != nullptr ? &_enemyWolfSprite : nullptr;
 	case EnemyVisualKind::AzureWisp:
 		return _enemyWispSprite.GetSafeHandle() != nullptr ? &_enemyWispSprite : nullptr;
+	case EnemyVisualKind::CinderBeetle:
+		return _enemyCinderBeetleSprite.GetSafeHandle() != nullptr ? &_enemyCinderBeetleSprite : nullptr;
+	case EnemyVisualKind::RootLancer:
+		return _enemyRootLancerSprite.GetSafeHandle() != nullptr ? &_enemyRootLancerSprite : nullptr;
 	}
 	return nullptr;
 }
@@ -2484,6 +2506,14 @@ CBitmap* CChildView::GetOrbIcon(std::string_view imageKey) noexcept
 	{
 		return _orbEchoIcon.GetSafeHandle() != nullptr ? &_orbEchoIcon : nullptr;
 	}
+	if (imageKey == "orb-cinder-v1")
+	{
+		return _orbCinderIcon.GetSafeHandle() != nullptr ? &_orbCinderIcon : nullptr;
+	}
+	if (imageKey == "orb-verdant-v1")
+	{
+		return _orbVerdantIcon.GetSafeHandle() != nullptr ? &_orbVerdantIcon : nullptr;
+	}
 	return nullptr;
 }
 
@@ -2501,6 +2531,14 @@ CBitmap* CChildView::GetRelicIcon(std::string_view imageKey) noexcept
 	{
 		return _relicBarkGuardIcon.GetSafeHandle() != nullptr ? &_relicBarkGuardIcon : nullptr;
 	}
+	if (imageKey == "relic-ember-heart-v1")
+	{
+		return _relicEmberHeartIcon.GetSafeHandle() != nullptr ? &_relicEmberHeartIcon : nullptr;
+	}
+	if (imageKey == "relic-wayfinder-v1")
+	{
+		return _relicWayfinderIcon.GetSafeHandle() != nullptr ? &_relicWayfinderIcon : nullptr;
+	}
 	return nullptr;
 }
 
@@ -2515,11 +2553,11 @@ CBitmap* CChildView::GetStagePreview(std::string_view stageId) noexcept
 	{
 		preview = &_stagePreviewFungal;
 	}
-	else if (stageId == "stage-7")
+	else if (stageId == "stage-7" || stageId == "stage-9")
 	{
 		preview = &_stagePreviewEmber;
 	}
-	else if (stageId == "stage-3")
+	else if (stageId == "stage-3" || stageId == "stage-10")
 	{
 		preview = &_stagePreviewCitadel;
 	}

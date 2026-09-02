@@ -15,10 +15,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 8 완료 |
-| 현재 버전 | Version 8.8 |
-| 스프린트 목표 | 다양한 화면 환경의 UI 안정성, 콘텐츠 이해도와 제작 도구, 입력 설정 및 시연 품질 개선 |
-| 상태 | Sprint 8 P0 8/8 및 결합 회귀·접근성·최종 배포 완료 |
+| 현재 스프린트 | Sprint 9 진행 중 |
+| 현재 버전 | Version 9.6 |
+| 스프린트 목표 | 런 중단 복구, 입력·오디오 하드웨어 완성도와 콘텐츠 규모를 제품 수준으로 확장 |
+| 상태 | Sprint 9 P0 5/7 완료 · 추가 유지보수 1개 완료 |
 
 ## 문서
 
@@ -114,6 +114,8 @@
 - [Version 9.3 — XAudio2 다중 효과음과 카테고리별 음악 덕킹](./Version_9.3.md)
 - [Version 9.4 — 재연결 안전 XInput 진동 피드백](./Version_9.4.md)
 - [Version 9.5 — Windows 전용 플랫폼 경로 정리](./Version_9.5.md)
+- [Version 9.6 — 콘텐츠 확장과 난이도 곡선 자동 분석](./Version_9.6.md)
+- [Content Report 9.6 — 확장 콘텐츠와 난이도 곡선 검증](./Content_Report_9.6.md)
 - [Performance Report 8.7 — Release x64 자원 표본](./Performance_Report_8.7.md)
 - [Content Report 8.8 — Sprint 8 최종 외부 콘텐츠 검증](./Content_Report_8.8.md)
 - [Content Report 8.3 — 현재 외부 콘텐츠 검증·미리보기](./Content_Report_8.3.md)

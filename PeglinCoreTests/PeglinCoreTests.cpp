@@ -17,6 +17,7 @@
 #include "ContentCatalog.h"
 #include "CombatLog.h"
 #include "ContentReport.h"
+#include "DifficultyCurve.h"
 #include "DemoRun.h"
 #include "GameLayout.h"
 #include "GameRecordStore.h"
@@ -783,8 +784,10 @@ namespace
 			gameplayPath,
 			reportPath);
 		Check(report.success, "content report accepts the shipped authoritative catalogs");
-		Check(report.stageCount == 8 && report.orbCount == 3 && report.relicCount == 3,
+		Check(report.stageCount == 10 && report.orbCount == 5 && report.relicCount == 5,
 			"content report summarizes stage, orb, and relic totals");
+		Check(report.difficultyCurvePassed && report.difficultyIssueCount == 0,
+			"content report accepts the shipped difficulty curve");
 		Check(report.movingPegCount > 0 && report.refreshPegCount >= report.stageCount,
 			"content report previews moving pegs and refresh coverage");
 		std::ifstream generated(reportPath, std::ios::binary);
@@ -792,13 +795,45 @@ namespace
 			(std::istreambuf_iterator<char>(generated)),
 			std::istreambuf_iterator<char>());
 		Check(markdown.find("## Stage Preview") != std::string::npos
-			&& markdown.find("stage-3") != std::string::npos,
+			&& markdown.find("stage-9") != std::string::npos
+			&& markdown.find("stage-10") != std::string::npos,
 			"content report includes a reviewable stage preview table");
 		Check(markdown.find("## Orb Preview") != std::string::npos
-			&& markdown.find("## Relic Preview") != std::string::npos,
+			&& markdown.find("## Relic Preview") != std::string::npos
+			&& markdown.find("## Difficulty Curve") != std::string::npos,
 			"content report includes exact orb and relic effect previews");
 		std::error_code removeError;
 		std::filesystem::remove(reportPath, removeError);
+	}
+
+	void TestDifficultyCurveAnalysis()
+	{
+		const std::filesystem::path repositoryRoot =
+			std::filesystem::path(__FILE__).parent_path().parent_path();
+		ContentLoadResult content = LoadContentCatalog(
+			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
+		const GameplayCatalogLoadResult gameplay = LoadGameplayCatalog(
+			repositoryRoot / "FinalProject_Peglin" / "content" / "gameplay.v1.ini",
+			content.stages);
+		Check(content.UsedExternalContent() && gameplay.UsedExternalContent(),
+			"difficulty analysis uses validated shipped catalogs");
+		Check(ActivateGameplayCatalog(gameplay, content.stages),
+			"difficulty analysis applies enemy resistance effects first");
+		const DifficultyCurveAnalysis shipped = AnalyzeDifficultyCurve(content.stages);
+		Check(shipped.passed && shipped.issues.empty(),
+			"shipped route satisfies every difficulty-curve gate");
+		Check(shipped.ratings.size() == content.stages.size()
+			&& shipped.ratings.back().stageId == "stage-3",
+			"difficulty analysis rates every stage in route order");
+		Check(shipped.ratings.back().score > shipped.ratings[shipped.ratings.size() - 2].score,
+			"boss difficulty remains above the final regular encounter");
+
+		std::vector<StageDefinition> spike = content.stages;
+		spike[spike.size() - 2].enemies[0].health *= 8.0f;
+		const DifficultyCurveAnalysis rejected = AnalyzeDifficultyCurve(spike);
+		Check(!rejected.passed && !rejected.issues.empty(),
+			"difficulty analysis rejects an accidental late-game health spike");
+		ResetProgressionCatalog();
 	}
 
 	void TestGamepadNavigation()
@@ -931,17 +966,20 @@ namespace
 			{ "stage-6", false },
 			{ "stage-7", false },
 			{ "stage-8", false },
+			{ "stage-9", false },
+			{ "stage-10", false },
 			{ "stage-3", true }
 		};
 		const RunStageLayers route = BuildBranchingStageLayers(stageCatalog);
-		Check(route.size() == 6, "branching route creates four encounters, a shop, and a boss layer");
+		Check(route.size() == 7, "branching route creates five encounters, a shop, and a boss layer");
 		Check(route[0].size() == 1 && route[0][0] == "stage-1", "branching route keeps one fixed opening stage");
 		Check(route[1].size() == 2 && route[1][0] == "stage-2" && route[1][1] == "stage-4",
 			"first cleared stage opens two route choices");
-		Check(route[2].size() == 2 && route[4].size() == 2, "combat route layers each expose two choices");
+		Check(route[2].size() == 2 && route[4].size() == 2 && route[5].size() == 2,
+			"combat route layers each expose two choices");
 		Check(route[3].size() == 1 && IsRunShopStage(route[3][0]),
 			"branching route inserts one fixed shop node before the final branch");
-		Check(route[5].size() == 1 && route[5][0] == "stage-3", "branching route always ends at the boss");
+		Check(route[6].size() == 1 && route[6][0] == "stage-3", "branching route always ends at the boss");
 		Check(BuildBranchingStageLayers({ { "only", false }, { "boss", true } }).empty(),
 			"route builder rejects an undersized catalog");
 		Check(BuildBranchingStageLayers({ { "a", false }, { "b", false }, { "boss-a", true }, { "boss-b", true } }).empty(),
@@ -1037,7 +1075,19 @@ namespace
 		Check(run.SelectNextStage(1), "run accepts a stage from the final branch layer");
 		Check(run.ConfirmSelectedStage(), "final branch selection is confirmed at start");
 		Check(run.GetCurrentStageId() == "stage-8", "final branch selection is retained");
-		Check(run.CompleteCurrentStage(), "fourth encounter victory advances to the boss route");
+		Check(run.CompleteCurrentStage(), "fourth encounter victory advances to the added late-game branch");
+		Check(run.GetRewardChoices()[0].id == "verdant-orb"
+			&& run.GetRewardChoices()[1].id == "wayfinder-compass",
+			"fourth reward rotation exposes the new verdant build choices");
+		Check(run.SelectReward(2).has_value(), "late-game branch reward can be selected");
+		Check(run.GetAvailableStageIds().size() == 2
+			&& run.GetAvailableStageIds()[0] == "stage-9"
+			&& run.GetAvailableStageIds()[1] == "stage-10",
+			"added late-game encounters form an editable route choice");
+		Check(run.SelectNextStage(1) && run.ConfirmSelectedStage(),
+			"new Rootspire branch can be selected and started");
+		Check(run.GetCurrentStageId() == "stage-10", "new branch selection becomes the current stage");
+		Check(run.CompleteCurrentStage(), "fifth regular encounter advances to the boss route");
 		Check(run.SelectReward(2).has_value(), "pre-boss reward can be selected");
 		Check(run.GetAvailableStageIds().size() == 1 && run.GetAvailableStageIds()[0] == "stage-3",
 			"pre-boss route exposes only the boss");
@@ -1050,9 +1100,9 @@ namespace
 		Check(run.GetStatus() == RunStatus::StageReady, "retry restores stage-ready state");
 		Check(run.CompleteCurrentStage(), "boss victory completes the final stage");
 		Check(run.GetStatus() == RunStatus::Complete, "final victory completes the run");
-		Check(run.GetClearedStageCount() == 6, "completed run records combat and shop visits");
-		Check(run.GetCompletedCombatStageCount() == 5, "shop visit is excluded from combat clear totals");
-		Check(run.GetGold() == 130, "only combat victories add gold after shop spending");
+		Check(run.GetClearedStageCount() == 7, "completed run records combat and shop visits");
+		Check(run.GetCompletedCombatStageCount() == 6, "shop visit is excluded from combat clear totals");
+		Check(run.GetGold() == 155, "only combat victories add gold after shop spending");
 		Check(run.HasClearedStage(RunShopStageId), "run history records the visited shop node");
 		Check(run.HasClearedStage("stage-4") && !run.HasClearedStage("stage-2"),
 			"run history records the chosen branch without marking skipped stages");
@@ -1539,12 +1589,14 @@ namespace
 	void TestStageCatalogAndValidation()
 	{
 		const auto& catalog = GetStageCatalog();
-		Check(catalog.size() == 8, "stage catalog exposes eight route stages");
+		Check(catalog.size() == 10, "stage catalog exposes ten route stages");
 		Check(
 			catalog[0].id == "stage-1"
 			&& catalog[1].id == "stage-2"
 			&& catalog[2].id == "stage-4"
-			&& catalog[7].id == "stage-3",
+			&& catalog[7].id == "stage-9"
+			&& catalog[8].id == "stage-10"
+			&& catalog[9].id == "stage-3",
 			"stage catalog keeps stable selection ids");
 
 		const StageLoadResult defaultResult = LoadStageDefinition("stage-1");
@@ -1562,7 +1614,7 @@ namespace
 			"opening stage keeps a static introductory peg board");
 		Check(CountMovingPegs(*challengeResult.stage) == 3,
 			"dense cavern introduces three moving pegs");
-		for (std::string_view stageId : { "stage-4", "stage-5", "stage-6", "stage-7", "stage-8" })
+		for (std::string_view stageId : { "stage-4", "stage-5", "stage-6", "stage-7", "stage-8", "stage-9", "stage-10" })
 		{
 			const StageLoadResult added = LoadStageDefinition(stageId);
 			Check(added.IsSuccess(), "added route stage loads and validates");
@@ -1579,6 +1631,16 @@ namespace
 			fungal.stage.has_value()
 			&& fungal.stage->enemies[1].visual == EnemyVisualKind::AzureWisp,
 			"built-in route includes the azure wisp visual");
+		const StageLoadResult obsidian = LoadStageDefinition("stage-9");
+		Check(
+			obsidian.stage.has_value()
+			&& obsidian.stage->enemies[0].visual == EnemyVisualKind::CinderBeetle,
+			"built-in route includes the cinder beetle visual");
+		const StageLoadResult rootspire = LoadStageDefinition("stage-10");
+		Check(
+			rootspire.stage.has_value()
+			&& rootspire.stage->enemies[0].visual == EnemyVisualKind::RootLancer,
+			"built-in route includes the root lancer visual");
 
 		const StageLoadResult bossResult = LoadStageDefinition("stage-3");
 		Check(bossResult.IsSuccess(), "stage catalog loads stage-3");
@@ -2752,11 +2814,13 @@ namespace
 		const ContentLoadResult shipped = LoadContentCatalog(
 			repositoryRoot / "FinalProject_Peglin" / "content" / "stages.v1.ini");
 		Check(shipped.UsedExternalContent(), "shipped versioned stage catalog validates");
-		Check(shipped.stages.size() == 8, "shipped external catalog exposes eight route stages");
+		Check(shipped.stages.size() == 10, "shipped external catalog exposes ten route stages");
 		const StageDefinition* shippedForest = FindContentStage(shipped.stages, "stage-1");
 		const StageDefinition* shippedCavern = FindContentStage(shipped.stages, "stage-2");
 		const StageDefinition* shippedThornwood = FindContentStage(shipped.stages, "stage-4");
 		const StageDefinition* shippedFungal = FindContentStage(shipped.stages, "stage-5");
+		const StageDefinition* shippedObsidian = FindContentStage(shipped.stages, "stage-9");
+		const StageDefinition* shippedRootspire = FindContentStage(shipped.stages, "stage-10");
 		Check(shippedForest != nullptr && shippedForest->enemies.size() == 3, "shipped forest exposes a three-monster roster");
 		Check(shippedCavern != nullptr && shippedCavern->enemies.size() == 3, "shipped cavern exposes a three-monster roster");
 		Check(
@@ -2776,6 +2840,14 @@ namespace
 			shippedFungal != nullptr
 			&& shippedFungal->enemies[1].visual == EnemyVisualKind::AzureWisp,
 			"shipped catalog parses the azure wisp visual");
+		Check(
+			shippedObsidian != nullptr
+			&& shippedObsidian->enemies[0].visual == EnemyVisualKind::CinderBeetle,
+			"shipped catalog parses the cinder beetle visual");
+		Check(
+			shippedRootspire != nullptr
+			&& shippedRootspire->enemies[0].visual == EnemyVisualKind::RootLancer,
+			"shipped catalog parses the root lancer visual");
 		const StageDefinition* shippedBoss = FindContentStage(shipped.stages, "stage-3");
 		Check(shippedBoss != nullptr && shippedBoss->enemies.size() == 1, "shipped boss exposes one named boss");
 		Check(shippedBoss != nullptr && shippedBoss->enemyPattern.size() == 4, "shipped external catalog includes the boss pattern");
@@ -2785,7 +2857,7 @@ namespace
 			shippedEntries.push_back({ stage.id, stage.isBoss });
 		}
 		const RunStageLayers shippedRoute = BuildBranchingStageLayers(shippedEntries);
-		Check(shippedRoute.size() == 6, "shipped content supports a shop-inclusive six-layer boss route");
+		Check(shippedRoute.size() == 7, "shipped content supports a shop-inclusive seven-layer boss route");
 
 		const std::filesystem::path testDirectory =
 			std::filesystem::temp_directory_path()
@@ -2864,13 +2936,13 @@ namespace
 		const ContentLoadResult missing = LoadContentCatalog(testDirectory / "missing.ini");
 		Check(missing.state == ContentLoadState::BuiltInFallback, "missing content uses built-in fallback");
 		Check(missing.error == ContentLoadError::MissingFile, "missing content reports its cause");
-		Check(missing.stages.size() == 8, "missing content recovers the complete built-in route catalog");
+		Check(missing.stages.size() == 10, "missing content recovers the complete built-in route catalog");
 		Check(FindContentStage(missing.stages, "stage-3") != nullptr, "fallback includes the boss stage");
 
 		WriteContent("version=99\n");
 		const ContentLoadResult unsupported = LoadContentCatalog(contentPath);
 		Check(unsupported.error == ContentLoadError::UnsupportedVersion, "unsupported content version is rejected");
-		Check(unsupported.stages.size() == 8, "unsupported version exposes no partial external data");
+		Check(unsupported.stages.size() == 10, "unsupported version exposes no partial external data");
 
 		WriteContent(validContent + validContent.substr(validContent.find("[stage]")));
 		const ContentLoadResult duplicateId = LoadContentCatalog(contentPath);
@@ -2931,9 +3003,9 @@ namespace
 			shippedPath,
 			stageCatalog.stages);
 		Check(shipped.UsedExternalContent(), "shipped gameplay definition catalog validates");
-		Check(shipped.catalog.progression.orbs.size() == 3, "external gameplay catalog provides three orbs");
-		Check(shipped.catalog.progression.relics.size() == 3, "external gameplay catalog provides three relics");
-		Check(shipped.catalog.enemies.size() == 9, "external gameplay catalog covers every shipped enemy id");
+		Check(shipped.catalog.progression.orbs.size() == 5, "external gameplay catalog provides five orbs");
+		Check(shipped.catalog.progression.relics.size() == 5, "external gameplay catalog provides five relics");
+		Check(shipped.catalog.enemies.size() == 12, "external gameplay catalog covers every shipped enemy id");
 
 		std::vector<StageDefinition> activatedStages = stageCatalog.stages;
 		Check(ActivateGameplayCatalog(shipped, activatedStages), "validated gameplay catalog activates atomically");
@@ -2943,6 +3015,14 @@ namespace
 		const RelicDefinition* bark = FindRelicDefinition("bark-guard");
 		Check(bark != nullptr && Near(bark->incomingDamageMultiplier, 0.85f), "external relic effect resolves by stable id");
 		Check(bark != nullptr && bark->imageKey == "relic-bark-guard-v1", "external relic catalog retains its image key");
+		const OrbDefinition* cinder = FindOrbDefinition("cinder-orb");
+		Check(cinder != nullptr && cinder->imageKey == "orb-cinder-v1"
+			&& Near(cinder->pegDamageMultiplier, 1.3f),
+			"new cinder orb resolves its image and damage effect");
+		const RelicDefinition* wayfinder = FindRelicDefinition("wayfinder-compass");
+		Check(wayfinder != nullptr && wayfinder->imageKey == "relic-wayfinder-v1"
+			&& Near(wayfinder->incomingDamageMultiplier, 0.95f),
+			"new wayfinder relic resolves its image and guard effect");
 		const StageDefinition* forest = FindContentStage(activatedStages, "stage-1");
 		const StageDefinition* boss = FindContentStage(activatedStages, "stage-3");
 		Check(forest != nullptr && Near(forest->enemies[0].damageTakenMultiplier, 0.9f), "enemy effect is applied through the stage enemy id");
@@ -3379,8 +3459,8 @@ namespace
 
 	void TestOrbAndRelicProgression()
 	{
-		Check(GetOrbDefinitions().size() == 3, "orb catalog exposes three stable definitions");
-		Check(GetRelicDefinitions().size() == 3, "relic catalog exposes three stable definitions");
+		Check(GetOrbDefinitions().size() == 5, "orb catalog exposes five stable definitions");
+		Check(GetRelicDefinitions().size() == 5, "relic catalog exposes five stable definitions");
 		Check(FindOrbDefinition("basic-orb") != nullptr, "basic orb has a stable id");
 		Check(FindOrbDefinition("unknown-orb") == nullptr, "unknown orb id is rejected");
 		Check(FindRelicDefinition("combo-lantern") != nullptr, "combo lantern has a stable id");
@@ -3388,9 +3468,13 @@ namespace
 		Check(FindOrbDefinition("basic-orb")->imageKey == "orb-traveler-v1", "traveler orb exposes a stable image key");
 		Check(FindOrbDefinition("iron-orb")->imageKey == "orb-iron-v1", "iron orb exposes a stable image key");
 		Check(FindOrbDefinition("echo-orb")->imageKey == "orb-echo-v1", "echo orb exposes a stable image key");
+		Check(FindOrbDefinition("cinder-orb")->imageKey == "orb-cinder-v1", "cinder orb exposes a stable image key");
+		Check(FindOrbDefinition("verdant-orb")->imageKey == "orb-verdant-v1", "verdant orb exposes a stable image key");
 		Check(FindRelicDefinition("combo-lantern")->imageKey == "relic-combo-lantern-v1", "combo lantern exposes a stable image key");
 		Check(FindRelicDefinition("thorn-charm")->imageKey == "relic-thorn-charm-v1", "thorn charm exposes a stable image key");
 		Check(FindRelicDefinition("bark-guard")->imageKey == "relic-bark-guard-v1", "bark guard exposes a stable image key");
+		Check(FindRelicDefinition("ember-heart")->imageKey == "relic-ember-heart-v1", "ember heart exposes a stable image key");
+		Check(FindRelicDefinition("wayfinder-compass")->imageKey == "relic-wayfinder-v1", "wayfinder compass exposes a stable image key");
 
 		const std::string ironDescription = DescribeOrbEffect(*FindOrbDefinition("iron-orb"));
 		Check(ironDescription.find("페그 피해 ×1.50 (+50%)") != std::string::npos,
@@ -3628,6 +3712,7 @@ int main(int argc, char* argv[])
 	TestUiViewportScaling();
 	TestCombatLogRetention();
 	TestContentReportGeneration();
+	TestDifficultyCurveAnalysis();
 	TestGamepadNavigation();
 	TestAdventureRunProgression();
 	TestRunCheckpointPersistence();

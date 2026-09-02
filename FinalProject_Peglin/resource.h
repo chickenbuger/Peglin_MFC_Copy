@@ -31,6 +31,12 @@
 #define IDB_STAGE_PREVIEW_FUNGAL_V1       334
 #define IDB_STAGE_PREVIEW_EMBER_V1        335
 #define IDB_STAGE_PREVIEW_CITADEL_V1      336
+#define IDB_ENEMY_CINDER_BEETLE_V1        337
+#define IDB_ENEMY_ROOT_LANCER_V1          338
+#define IDB_ORB_CINDER_V1                 339
+#define IDB_ORB_VERDANT_V1                340
+#define IDB_RELIC_EMBER_HEART_V1          341
+#define IDB_RELIC_WAYFINDER_V1            342
 #define ID_32771                        32771
 #define ID_GAMEPLAY_INFO                32772
 
@@ -38,7 +44,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        337
+#define _APS_NEXT_RESOURCE_VALUE        343
 #define _APS_NEXT_COMMAND_VALUE         32773
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310
