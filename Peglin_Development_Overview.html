@@ -1,0 +1,2133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MFC와 C++20으로 제작한 Windows 전용 로그라이크 게임의 플레이 경험과 Sprint 9 개발 성과를 소개하는 포트폴리오">
+  <title>Peglin MFC — Gameplay Engineering Portfolio</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5eedf;
+      --ink-soft: #c9c0ad;
+      --ink-dim: #8e8a80;
+      --bg: #080b0d;
+      --bg-deep: #050708;
+      --surface: #10171a;
+      --surface-2: #151d20;
+      --line: #2b3536;
+      --line-bright: #45504d;
+      --amber: #f3ae3d;
+      --amber-soft: #ffd585;
+      --ember: #d96831;
+      --moss: #87a96b;
+      --cyan: #77bfc6;
+      --danger: #d47968;
+      --sidebar: 248px;
+      --max: 1180px;
+      --radius: 18px;
+      --shadow: 0 22px 70px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 24px;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 92% 4%, rgba(119, 191, 198, .09), transparent 28rem),
+        radial-gradient(circle at 58% 28%, rgba(243, 174, 61, .055), transparent 34rem),
+        var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+      line-height: 1.65;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: .17;
+      background-image: url("FinalProject_Peglin/res/gameplay-cave-v3-source.png");
+      background-size: cover;
+      background-position: center;
+      filter: saturate(.65) contrast(1.06);
+      mask-image: linear-gradient(to bottom, black 0, transparent 74vh);
+    }
+
+    a { color: inherit; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+
+    .skip-link {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 100;
+      padding: 10px 14px;
+      color: #151009;
+      background: var(--amber-soft);
+      border-radius: 8px;
+      transform: translateY(-160%);
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .rail {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      border-right: 1px solid rgba(255,255,255,.08);
+      background: rgba(6, 9, 10, .88);
+      backdrop-filter: blur(18px);
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 2px 7px 21px;
+      border-bottom: 1px solid var(--line);
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      color: #1b1307;
+      background: var(--amber);
+      border-radius: 50%;
+      font: 900 14px/1 ui-monospace, "Cascadia Code", monospace;
+      box-shadow: 0 0 28px rgba(243,174,61,.22);
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 14px;
+      letter-spacing: .08em;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 2px;
+      color: var(--ink-dim);
+      font-size: 11px;
+      letter-spacing: .05em;
+    }
+
+    .rail-label {
+      margin: 24px 8px 9px;
+      color: var(--ink-dim);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .rail nav { display: grid; gap: 4px; }
+
+    .rail nav a {
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 8px 10px;
+      color: var(--ink-soft);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-size: 13px;
+      text-decoration: none;
+      transition: .18s ease;
+    }
+
+    .rail nav a:hover,
+    .rail nav a[aria-current="true"] {
+      color: var(--ink);
+      background: rgba(243,174,61,.09);
+      border-color: rgba(243,174,61,.2);
+    }
+
+    .rail nav a[aria-current="true"]::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      margin-right: 9px;
+      background: var(--amber);
+      border-radius: 50%;
+      box-shadow: 0 0 9px var(--amber);
+    }
+
+    .rail-foot {
+      position: absolute;
+      right: 18px;
+      bottom: 22px;
+      left: 18px;
+      padding: 13px;
+      color: var(--ink-dim);
+      background: rgba(255,255,255,.025);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      font-size: 11px;
+    }
+
+    .rail-foot strong { color: var(--amber-soft); }
+
+    main {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 680px;
+      isolation: isolate;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .hero-art {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 43%;
+      filter: saturate(.72) contrast(1.05) brightness(.54);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(90deg, rgba(6,8,9,.96) 0, rgba(6,8,9,.78) 44%, rgba(6,8,9,.3) 100%),
+        linear-gradient(0deg, var(--bg) 0, transparent 42%);
+    }
+
+    .hero-inner {
+      width: min(var(--max), calc(100% - 64px));
+      margin: 0 auto;
+      padding: 92px 0 58px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 20px;
+      color: var(--amber-soft);
+      font: 800 11px/1.4 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 28px;
+      height: 1px;
+      background: currentColor;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { white-space: nowrap; }
+
+    h1 {
+      max-width: 780px;
+      margin-bottom: 20px;
+      font-size: clamp(48px, 7vw, 92px);
+      line-height: .97;
+      letter-spacing: -.065em;
+    }
+
+    h1 span {
+      display: block;
+      margin-top: 13px;
+      color: var(--amber);
+      font-size: .29em;
+      line-height: 1.2;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .hero-copy {
+      max-width: 690px;
+      margin-bottom: 32px;
+      color: #ddd4c3;
+      font-size: clamp(16px, 2vw, 20px);
+      line-height: 1.75;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 50px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 17px;
+      color: #1b1307;
+      background: var(--amber);
+      border: 1px solid var(--amber);
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 850;
+      text-decoration: none;
+      transition: transform .18s ease, filter .18s ease;
+    }
+
+    .button:hover { transform: translateY(-2px); filter: brightness(1.08); }
+
+    .button.secondary {
+      color: var(--ink);
+      background: rgba(8,11,13,.54);
+      border-color: rgba(255,255,255,.2);
+      backdrop-filter: blur(8px);
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      max-width: 870px;
+      overflow: hidden;
+      background: rgba(255,255,255,.11);
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .fact {
+      padding: 17px 18px;
+      background: rgba(8,11,13,.83);
+      backdrop-filter: blur(15px);
+    }
+
+    .fact b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+      font: 800 clamp(18px, 2.2vw, 25px)/1.1 ui-monospace, "Cascadia Code", monospace;
+    }
+
+    .fact span { color: var(--ink-dim); font-size: 11px; }
+
+    .section {
+      width: min(var(--max), calc(100% - 64px));
+      margin: 0 auto;
+      padding: 100px 0;
+      border-bottom: 1px solid rgba(255,255,255,.075);
+    }
+
+    .section:last-child { border-bottom: 0; }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 44px;
+    }
+
+    .section-index {
+      display: block;
+      margin-bottom: 11px;
+      color: var(--amber);
+      font: 800 11px/1 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .14em;
+    }
+
+    h2 {
+      margin-bottom: 0;
+      font-size: clamp(28px, 3.5vw, 48px);
+      line-height: 1.08;
+      letter-spacing: -.055em;
+    }
+
+    .section-head > p {
+      margin: 0;
+      max-width: 800px;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .lede-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 22px;
+    }
+
+    .panel {
+      position: relative;
+      padding: 27px;
+      background: rgba(16,23,26,.91);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel h3 {
+      margin-bottom: 12px;
+      font-size: 19px;
+      letter-spacing: -.02em;
+    }
+
+    .panel p:last-child { margin-bottom: 0; }
+
+    .intro-card {
+      min-height: 330px;
+      padding: 34px;
+      overflow: hidden;
+      background:
+        linear-gradient(100deg, rgba(12,17,19,.98), rgba(12,17,19,.74)),
+        url("FinalProject_Peglin/res/stage-preview-forest-v1-source.png") center/cover;
+    }
+
+    .intro-card p {
+      max-width: 600px;
+      color: var(--ink-soft);
+      font-size: 15px;
+    }
+
+    .loop-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 25px;
+    }
+
+    .loop-line span {
+      padding: 7px 10px;
+      color: var(--amber-soft);
+      background: rgba(243,174,61,.08);
+      border: 1px solid rgba(243,174,61,.21);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .loop-line i {
+      align-self: center;
+      color: var(--line-bright);
+      font-style: normal;
+    }
+
+    .status-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .status-pill,
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 5px 8px;
+      border: 1px solid;
+      border-radius: 999px;
+      font: 800 10px/1 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .06em;
+    }
+
+    .status-pill.progress,
+    .tag.progress { color: var(--amber-soft); background: rgba(243,174,61,.08); border-color: rgba(243,174,61,.28); }
+    .status-pill.done,
+    .tag.done { color: #badba7; background: rgba(135,169,107,.09); border-color: rgba(135,169,107,.28); }
+    .status-pill.wait,
+    .tag.wait { color: #9ed2d7; background: rgba(119,191,198,.08); border-color: rgba(119,191,198,.28); }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 24px 0 8px;
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    .progress-track {
+      height: 8px;
+      overflow: hidden;
+      background: #090d0f;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+    }
+
+    .progress-track > span {
+      display: block;
+      width: 42.86%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--ember), var(--amber));
+    }
+
+    .tiny-note {
+      margin-top: 14px;
+      color: var(--ink-dim);
+      font-size: 11px;
+    }
+
+    .portfolio-scope {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .portfolio-scope div {
+      padding: 12px;
+      color: var(--ink-soft);
+      background: rgba(255,255,255,.025);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      font-size: 10px;
+    }
+
+    .portfolio-scope b {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--amber-soft);
+      font: 800 10px/1.2 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .06em;
+    }
+
+    .gameplay-model {
+      overflow: hidden;
+      background: rgba(12, 18, 20, .94);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .model-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 22px;
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .model-head h3 { margin-bottom: 4px; font-size: 17px; }
+    .model-head p { margin: 0; color: var(--ink-dim); font-size: 11px; }
+
+    .model-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 13px;
+      color: var(--ink-soft);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .model-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .model-legend i { width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; }
+    .model-legend .legend-shop { background: var(--moss); border-radius: 2px; }
+    .model-legend .legend-boss { background: var(--ember); transform: rotate(45deg); border-radius: 1px; }
+
+    .run-map-wrap { padding: 28px 24px 22px; }
+
+    .run-map {
+      position: relative;
+      display: grid;
+      grid-template-columns: .78fr 1fr 1fr .84fr 1fr 1fr .88fr;
+      gap: 12px;
+      align-items: stretch;
+      min-height: 232px;
+    }
+
+    .run-map::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: 5%;
+      left: 5%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--amber), var(--line-bright) 20%, var(--line-bright) 80%, var(--ember));
+    }
+
+    .run-layer {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: 22px minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+    }
+
+    .run-layer-label {
+      color: var(--ink-dim);
+      font: 800 9px/1 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .09em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .run-node-stack {
+      position: relative;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      min-height: 178px;
+    }
+
+    .run-layer.branch .run-node-stack::before {
+      content: "";
+      position: absolute;
+      top: 32px;
+      bottom: 32px;
+      left: 50%;
+      width: 1px;
+      background: var(--line-bright);
+    }
+
+    .run-node {
+      position: relative;
+      display: grid;
+      width: 100%;
+      min-height: 72px;
+      padding: 11px 11px 10px;
+      color: var(--ink);
+      text-align: left;
+      background: #101719;
+      border: 1px solid var(--line-bright);
+      border-radius: 11px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      transition: transform .18s ease, border-color .18s ease, opacity .18s ease, background .18s ease;
+    }
+
+    .run-node:hover { transform: translateY(-2px); border-color: var(--amber); }
+    .run-node[aria-pressed="true"] { background: rgba(243,174,61,.12); border-color: var(--amber); box-shadow: 0 0 0 2px rgba(243,174,61,.1), 0 10px 30px rgba(0,0,0,.3); }
+    .run-node.is-dimmed { opacity: .38; }
+    .run-node.kind-shop { border-color: rgba(135,169,107,.65); }
+    .run-node.kind-shop[aria-pressed="true"] { background: rgba(135,169,107,.12); border-color: var(--moss); }
+    .run-node.kind-boss { border-color: rgba(217,104,49,.72); }
+    .run-node.kind-boss[aria-pressed="true"] { background: rgba(217,104,49,.14); border-color: var(--ember); }
+
+    .node-type {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--amber);
+      font: 800 8px/1 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .08em;
+    }
+
+    .kind-shop .node-type { color: #b9d7a7; }
+    .kind-boss .node-type { color: #efa27d; }
+    .run-node strong { display: block; font-size: 11px; line-height: 1.28; }
+    .run-node small { display: block; margin-top: 5px; color: var(--ink-dim); font-size: 9px; line-height: 1.25; }
+
+    .route-output {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-top: 21px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .route-path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink-soft);
+      font-size: 10px;
+    }
+
+    .route-path span {
+      padding: 5px 7px;
+      background: rgba(255,255,255,.035);
+      border-radius: 6px;
+    }
+
+    .route-path b { color: var(--amber); font-weight: 800; }
+
+    .route-reset {
+      min-height: 38px;
+      padding: 7px 11px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 1px solid var(--line-bright);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 10px;
+    }
+
+    .route-reset:hover { color: var(--ink); border-color: var(--amber); }
+
+    .stage-inspector {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr) auto;
+      min-height: 150px;
+      background: #0a0f11;
+      border-top: 1px solid var(--line);
+    }
+
+    .stage-inspector img {
+      width: 100%;
+      height: 100%;
+      min-height: 150px;
+      object-fit: cover;
+      filter: saturate(.76) brightness(.72);
+    }
+
+    .stage-inspector-copy { padding: 21px 22px; }
+    .stage-inspector-copy span { color: var(--amber); font: 800 9px/1 ui-monospace, "Cascadia Code", monospace; letter-spacing: .1em; }
+    .stage-inspector-copy h3 { margin: 7px 0 5px; font-size: 17px; }
+    .stage-inspector-copy p { margin: 0; color: var(--ink-soft); font-size: 11px; }
+
+    .stage-inspector-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 72px);
+      gap: 1px;
+      align-self: stretch;
+      background: var(--line);
+    }
+
+    .stage-inspector-stats div { display: grid; place-content: center; padding: 10px; background: #0e1416; text-align: center; }
+    .stage-inspector-stats b { color: var(--amber-soft); font: 800 14px/1 ui-monospace, "Cascadia Code", monospace; }
+    .stage-inspector-stats small { margin-top: 5px; color: var(--ink-dim); font-size: 8px; text-transform: uppercase; }
+
+    .turn-model { padding: 27px 24px 24px; border-top: 1px solid var(--line); }
+
+    .turn-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .turn-title h3 { margin-bottom: 3px; font-size: 16px; }
+    .turn-title p { margin: 0; color: var(--ink-dim); font-size: 10px; }
+    .turn-title code { color: var(--cyan); font-size: 10px; }
+
+    .turn-rail {
+      --turn-progress: 0%;
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 9px;
+      padding-top: 16px;
+    }
+
+    .turn-rail::before {
+      content: "";
+      position: absolute;
+      top: 4px;
+      right: 6.5%;
+      left: 6.5%;
+      height: 2px;
+      background: var(--line);
+      border-radius: 999px;
+    }
+
+    .turn-progress-line {
+      position: absolute;
+      top: 4px;
+      left: 6.5%;
+      width: calc(var(--turn-progress) * .87);
+      height: 2px;
+      background: var(--amber);
+      border-radius: 999px;
+      transition: width .25s ease;
+    }
+
+    .turn-marker {
+      position: absolute;
+      top: -2px;
+      left: calc(6.5% + var(--turn-progress) * .87);
+      width: 13px;
+      height: 13px;
+      background: var(--amber);
+      border: 3px solid #161e20;
+      border-radius: 50%;
+      box-shadow: 0 0 14px rgba(243,174,61,.58);
+      transform: translateX(-50%);
+      transition: left .25s ease;
+    }
+
+    .turn-step {
+      min-height: 82px;
+      padding: 10px 8px;
+      color: var(--ink-soft);
+      background: rgba(255,255,255,.025);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      cursor: pointer;
+      text-align: left;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+
+    .turn-step:hover { transform: translateY(-2px); border-color: var(--line-bright); }
+    .turn-step[aria-pressed="true"] { color: var(--ink); background: rgba(243,174,61,.09); border-color: var(--amber); }
+    .turn-step b { display: block; margin-bottom: 6px; color: var(--amber); font: 800 9px/1 ui-monospace, "Cascadia Code", monospace; }
+    .turn-step strong { display: block; font-size: 10px; line-height: 1.3; }
+    .turn-step small { display: block; margin-top: 5px; color: var(--ink-dim); font-size: 8px; line-height: 1.3; }
+
+    .turn-output {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 17px;
+      align-items: center;
+      margin-top: 14px;
+      padding: 15px 17px;
+      background: rgba(119,191,198,.045);
+      border-left: 2px solid var(--cyan);
+    }
+
+    .turn-output code { color: var(--cyan); font-size: 10px; }
+    .turn-output p { margin: 0; color: var(--ink-soft); font-size: 11px; }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .arch-layer {
+      display: grid;
+      grid-template-columns: 68px minmax(0, 1fr);
+      gap: 16px;
+      padding: 22px;
+      background: rgba(16,23,26,.86);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+    }
+
+    .arch-layer.featured {
+      border-color: rgba(243,174,61,.34);
+      box-shadow: inset 3px 0 var(--amber);
+    }
+
+    .arch-number {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      color: var(--amber-soft);
+      background: rgba(243,174,61,.075);
+      border: 1px solid rgba(243,174,61,.22);
+      border-radius: 13px;
+      font: 900 15px/1 ui-monospace, "Cascadia Code", monospace;
+    }
+
+    .arch-layer h3 { margin-bottom: 4px; font-size: 15px; }
+    .arch-layer p { margin-bottom: 8px; color: var(--ink-dim); font-size: 12px; }
+    .arch-layer code { color: var(--cyan); font-size: 11px; }
+
+    .architecture-foot {
+      margin-top: 14px;
+      padding: 15px 18px;
+      color: var(--ink-soft);
+      background: rgba(119,191,198,.055);
+      border: 1px solid rgba(119,191,198,.22);
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-bottom: 20px;
+    }
+
+    .search {
+      flex: 1 1 260px;
+      min-height: 42px;
+      padding: 9px 13px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .search:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(243,174,61,.11); }
+    .search::placeholder { color: #706f69; }
+
+    .filter {
+      min-height: 42px;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .filter:hover,
+    .filter.active { color: var(--amber-soft); border-color: rgba(243,174,61,.45); background: rgba(243,174,61,.08); }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .feature-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 310px;
+      padding: 25px;
+      background: rgba(16,23,26,.9);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .feature-card:hover { transform: translateY(-3px); border-color: var(--line-bright); }
+    .feature-card[hidden] { display: none; }
+
+    .feature-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .feature-kicker {
+      margin: 0 0 4px;
+      color: var(--amber);
+      font: 800 10px/1.3 ui-monospace, "Cascadia Code", monospace;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .feature-card h3 { margin: 0; font-size: clamp(15px, 1.45vw, 18px); }
+    .feature-card > p { color: var(--ink-soft); font-size: 13px; }
+
+    .micro-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 7px 0 20px;
+    }
+
+    .micro-flow span {
+      padding: 5px 7px;
+      color: #d6d0c4;
+      background: #0b1012;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: 700 10px/1.25 ui-monospace, "Cascadia Code", monospace;
+    }
+
+    .micro-flow i { color: var(--line-bright); font-style: normal; font-size: 11px; }
+
+    .feature-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .feature-meta code {
+      padding: 5px 7px;
+      color: var(--cyan);
+      background: rgba(119,191,198,.055);
+      border: 1px solid rgba(119,191,198,.15);
+      border-radius: 6px;
+      font-size: 10px;
+    }
+
+    .empty-state {
+      padding: 30px;
+      color: var(--ink-dim);
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+    }
+
+    .code-shell {
+      overflow: hidden;
+      background: #080c0e;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .code-tabs {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding: 10px;
+      background: #0e1416;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .code-tab {
+      flex: 0 0 auto;
+      padding: 8px 11px;
+      color: var(--ink-dim);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .code-tab:hover,
+    .code-tab[aria-selected="true"] { color: var(--ink); background: rgba(243,174,61,.08); border-color: rgba(243,174,61,.23); }
+
+    .code-panel { display: none; grid-template-columns: minmax(0, 1fr) 290px; }
+    .code-panel.active { display: grid; }
+
+    pre {
+      margin: 0;
+      padding: 29px;
+      overflow-x: auto;
+      color: #d8d5cb;
+      font: 12px/1.8 ui-monospace, "Cascadia Code", Consolas, monospace;
+      tab-size: 2;
+    }
+
+    .kw { color: #e29a6e; }
+    .fn { color: #8ed1d7; }
+    .str { color: #d8c783; }
+    .com { color: #6f7b77; }
+    .num { color: #c4a5df; }
+
+    .code-notes {
+      padding: 25px;
+      color: var(--ink-soft);
+      background: #0e1416;
+      border-left: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    .code-notes h3 { color: var(--ink); font-size: 14px; }
+    .code-notes ul { margin: 0; padding-left: 17px; }
+    .code-notes li + li { margin-top: 8px; }
+
+    .stage-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 26px;
+    }
+
+    .stage-card {
+      position: relative;
+      min-height: 230px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      isolation: isolate;
+    }
+
+    .stage-card img {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .35s ease;
+    }
+
+    .stage-card:hover img { transform: scale(1.035); }
+
+    .stage-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(0deg, rgba(3,5,6,.98), rgba(3,5,6,.04) 78%);
+    }
+
+    .stage-card div { position: absolute; right: 15px; bottom: 14px; left: 15px; }
+    .stage-card small { color: var(--amber); font: 800 9px/1 ui-monospace, "Cascadia Code", monospace; }
+    .stage-card h3 { margin: 5px 0 0; font-size: 14px; }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 14px;
+    }
+
+    .metric-list { display: grid; gap: 12px; }
+    .metric-row { display: grid; grid-template-columns: 138px minmax(0, 1fr) 48px; gap: 10px; align-items: center; }
+    .metric-row span { color: var(--ink-soft); font-size: 11px; }
+    .metric-row b { text-align: right; font: 800 11px/1 ui-monospace, "Cascadia Code", monospace; }
+
+    .bar {
+      height: 7px;
+      overflow: hidden;
+      background: #090d0f;
+      border-radius: 999px;
+    }
+
+    .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--amber)); border-radius: inherit; }
+
+    .data-callout {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .data-callout > div { padding: 18px; background: #0c1113; }
+    .data-callout b { display: block; color: var(--amber-soft); font: 900 23px/1 ui-monospace, "Cascadia Code", monospace; }
+    .data-callout span { color: var(--ink-dim); font-size: 10px; }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      margin-left: 9px;
+      padding-left: 30px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      top: 9px;
+      bottom: 9px;
+      left: 5px;
+      width: 1px;
+      background: var(--line);
+    }
+
+    .milestone {
+      position: relative;
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 20px;
+      padding: 20px 22px;
+      background: rgba(16,23,26,.72);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+
+    .milestone::before {
+      content: "";
+      position: absolute;
+      top: 28px;
+      left: -30px;
+      width: 9px;
+      height: 9px;
+      background: var(--surface-2);
+      border: 2px solid var(--line-bright);
+      border-radius: 50%;
+    }
+
+    .milestone.current { border-color: rgba(243,174,61,.31); background: rgba(243,174,61,.045); }
+    .milestone.current::before { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 14px rgba(243,174,61,.48); }
+
+    .milestone-label b { display: block; color: var(--amber-soft); font: 800 13px/1.2 ui-monospace, "Cascadia Code", monospace; }
+    .milestone-label span { color: var(--ink-dim); font-size: 10px; }
+    .milestone h3 { margin-bottom: 4px; font-size: 15px; }
+    .milestone p { margin: 0; color: var(--ink-soft); font-size: 12px; }
+
+    .release-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .release-card {
+      padding: 18px;
+      background: rgba(16,23,26,.9);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+    }
+
+    .release-card strong { display: block; margin-bottom: 4px; color: var(--amber-soft); font: 800 13px/1.3 ui-monospace, "Cascadia Code", monospace; }
+    .release-card p { margin: 0; color: var(--ink-soft); font-size: 11px; }
+
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .roadmap-card {
+      position: relative;
+      min-height: 230px;
+      padding: 25px;
+      background: rgba(16,23,26,.9);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .roadmap-card h3 { margin-top: 17px; margin-bottom: 8px; font-size: 18px; }
+    .roadmap-card p { color: var(--ink-soft); font-size: 12px; }
+
+    .acceptance {
+      margin: 15px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .acceptance li {
+      position: relative;
+      padding-left: 19px;
+      color: var(--ink-dim);
+      font-size: 11px;
+    }
+
+    .acceptance li + li { margin-top: 5px; }
+    .acceptance li::before { content: "◇"; position: absolute; left: 0; color: var(--amber); }
+
+    .direction {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .principles { display: grid; gap: 11px; }
+
+    .principle {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 13px;
+      padding: 17px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .principle b:first-child { color: var(--amber); font: 900 13px/1 ui-monospace, "Cascadia Code", monospace; }
+    .principle strong { display: block; margin-bottom: 3px; font-size: 13px; }
+    .principle span { color: var(--ink-dim); font-size: 11px; }
+
+    .validation {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      margin-top: 16px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .validation > div { padding: 19px; background: #0d1315; }
+    .validation b { display: block; color: var(--amber-soft); font: 900 20px/1.1 ui-monospace, "Cascadia Code", monospace; }
+    .validation span { color: var(--ink-dim); font-size: 10px; }
+
+    .source-list { display: grid; gap: 9px; margin-top: 20px; }
+
+    .source-list a {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 13px;
+      color: var(--ink-soft);
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 11px;
+      text-decoration: none;
+    }
+
+    .source-list a:hover { border-color: var(--line-bright); color: var(--ink); }
+    .source-list code { color: var(--cyan); }
+
+    footer {
+      width: min(var(--max), calc(100% - 64px));
+      margin: 0 auto;
+      padding: 35px 0 55px;
+      color: var(--ink-dim);
+      font-size: 11px;
+    }
+
+    .reveal { opacity: 0; transform: translateY(14px); transition: opacity .45s ease, transform .45s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+    @media (max-width: 1080px) {
+      :root { --sidebar: 210px; }
+      .facts { grid-template-columns: repeat(2, 1fr); }
+      .run-map { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .run-map::before, .run-layer.branch .run-node-stack::before { display: none; }
+      .turn-rail { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .turn-rail::before, .turn-progress-line, .turn-marker { display: none; }
+      .stage-grid { grid-template-columns: repeat(3, 1fr); }
+      .release-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 780px) {
+      .layout { display: block; }
+      .rail {
+        height: auto;
+        padding: 10px 16px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .brand { display: none; }
+      .rail-label, .rail-foot { display: none; }
+      .rail nav { display: flex; overflow-x: auto; }
+      .rail nav a { flex: 0 0 auto; min-height: 36px; }
+      .hero { min-height: 650px; }
+      .hero-inner, .section, footer { width: min(100% - 34px, var(--max)); }
+      .hero-inner { padding-top: 80px; }
+      .section { padding: 75px 0; }
+      .section-head, .lede-grid, .architecture, .feature-grid, .data-grid, .roadmap-grid, .direction { grid-template-columns: 1fr; }
+      .section-head { gap: 11px; }
+      .model-head { display: grid; }
+      .model-legend { justify-content: flex-start; }
+      .run-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stage-inspector { grid-template-columns: 130px minmax(0, 1fr); }
+      .stage-inspector-stats { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }
+      .turn-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .code-panel.active { grid-template-columns: 1fr; }
+      .code-notes { border-top: 1px solid var(--line); border-left: 0; }
+      .stage-grid { grid-template-columns: 1fr 1fr; }
+      .milestone { grid-template-columns: 1fr; gap: 8px; }
+    }
+
+    @media (max-width: 500px) {
+      h1 { font-size: 46px; }
+      h1 span { font-size: .22em; letter-spacing: .08em; }
+      h2 { font-size: clamp(18px, 5.7vw, 26px); letter-spacing: -.065em; }
+      h3 { font-size: 14px; letter-spacing: -.045em; }
+      .panel h3 { font-size: 13px; }
+      .feature-card h3, .roadmap-card h3 { font-size: 13px; }
+      .facts, .stage-grid, .release-grid { grid-template-columns: 1fr; }
+      .intro-card { padding: 24px; }
+      .panel { padding: 22px; }
+      .arch-layer { grid-template-columns: 48px minmax(0,1fr); }
+      .arch-number { width: 42px; height: 42px; }
+      .run-map-wrap, .turn-model { padding-right: 16px; padding-left: 16px; }
+      .run-map, .turn-rail { grid-template-columns: 1fr; }
+      .run-layer { grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: auto; }
+      .run-layer-label { text-align: left; }
+      .run-node-stack { min-height: 0; }
+      .route-output, .turn-output { grid-template-columns: 1fr; }
+      .route-reset { width: 100%; }
+      .stage-inspector { grid-template-columns: 1fr; }
+      .stage-inspector img { height: 132px; min-height: 0; }
+      .stage-inspector-stats { grid-template-columns: repeat(2, 1fr); }
+      .turn-title { display: grid; }
+      .metric-row { grid-template-columns: 108px minmax(0,1fr) 42px; }
+      .data-callout { grid-template-columns: 1fr; }
+      .timeline { padding-left: 24px; }
+      .milestone::before { left: -24px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+
+    @media print {
+      :root { color-scheme: light; --ink: #151515; --ink-soft: #333; --ink-dim: #555; --bg: white; --surface: white; --surface-2: #f5f5f5; --line: #ccc; }
+      body { background: white; }
+      body::before, .rail, .hero-art, .hero::after, .hero-actions, .toolbar { display: none; }
+      .layout { display: block; }
+      .hero { min-height: 0; }
+      .hero-inner { padding: 30px 0; }
+      .section { padding: 45px 0; break-inside: avoid; }
+      .panel, .feature-card, .flow-step, .arch-layer, .milestone, .release-card, .roadmap-card { background: white; box-shadow: none; }
+      .reveal { opacity: 1; transform: none; }
+      .code-shell, pre, .code-notes { color: #222; background: #f4f4f4; }
+      .code-panel { display: grid !important; break-inside: avoid; border-bottom: 1px solid #ccc; }
+      .code-tabs { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <div class="layout">
+    <aside class="rail" aria-label="문서 탐색">
+      <a class="brand" href="#overview">
+        <span class="brand-mark">P</span>
+        <span><strong>PEGLIN MFC</strong><small>PORTFOLIO CASE STUDY</small></span>
+      </a>
+      <p class="rail-label">Contents</p>
+      <nav>
+        <a href="#overview">작품 소개</a>
+        <a href="#game-flow">플레이 경험</a>
+        <a href="#architecture">게임 아키텍처</a>
+        <a href="#features">핵심 시스템</a>
+        <a href="#pseudocode">문제 해결 방식</a>
+        <a href="#content">콘텐츠 디자인</a>
+        <a href="#history">프로젝트 여정</a>
+        <a href="#roadmap">Sprint 9 결과</a>
+      </nav>
+      <div class="rail-foot">
+        <strong>C++20 · MFC</strong><br>
+        Windows-only Native Game<br>
+        Gameplay &amp; Systems
+      </div>
+    </aside>
+
+    <main id="main">
+      <header class="hero" id="overview">
+        <img class="hero-art" src="FinalProject_Peglin/res/stage-preview-citadel-v1-source.png" alt="나무뿌리와 호박색 조명으로 둘러싸인 Rootbound Citadel 입구">
+        <div class="hero-inner">
+          <p class="eyebrow">Gameplay engineering portfolio</p>
+          <h1>Peglin MFC<span>Gameplay Systems Portfolio</span></h1>
+          <p class="hero-copy">공 하나를 발사하는 직관적인 조작에서 연쇄 충돌, 콤보 피해, 적의 거리 전투, 분기형 모험과 빌드 선택까지 이어지는 Windows 전용 네이티브 로그라이크 게임. 핵심 재미를 직접 설계하고 데이터·도구·플랫폼 기능까지 완결된 플레이 경험으로 연결했다.</p>
+          <div class="hero-actions">
+            <a class="button" href="#game-flow">플레이 경험 보기</a>
+            <a class="button secondary" href="#features">핵심 기술 살펴보기</a>
+          </div>
+          <div class="facts" aria-label="프로젝트 핵심 수치">
+            <div class="fact"><b>C++20</b><span>게임 코어와 도구</span></div>
+            <div class="fact"><b>10 + 1</b><span>전투 스테이지 + 상점</span></div>
+            <div class="fact"><b>3</b><span>마우스·키보드·게임패드</span></div>
+            <div class="fact"><b>2</b><span>한국어·영어 UI</span></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="section" aria-labelledby="identity-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">00 / IDENTITY</span><h2 id="identity-title">게임을 한 문장으로</h2></div>
+          <p>공의 궤적이 전투와 다음 선택을 바꾸는 물리 기반 로그라이크다.</p>
+        </div>
+        <div class="lede-grid">
+          <article class="panel intro-card reveal">
+            <p class="eyebrow">Core fantasy</p>
+            <h3>조준은 짧고, 결과는 연쇄적이다.</h3>
+            <p>플레이어는 드래그 또는 게임패드로 공을 발사한다. 페그 종류와 충돌 순서가 콤보·점수·피해량을 만들고, 턴 정산 뒤 사거리 안의 적이 공격하거나 전진한다. 전투가 끝나면 오브·유물·회복 보상을 고르고 다음 경로를 선택한다.</p>
+            <div class="loop-line" aria-label="핵심 플레이 루프">
+              <span>조준</span><i>›</i><span>충돌</span><i>›</i><span>피해 정산</span><i>›</i><span>보상</span><i>›</i><span>경로 선택</span>
+            </div>
+          </article>
+          <article class="panel status-card reveal">
+            <div>
+              <span class="status-pill done">PORTFOLIO HIGHLIGHT</span>
+              <h3 style="margin-top:18px">핵심 제작 범위</h3>
+              <p style="color:var(--ink-soft);font-size:13px">단순한 기능 프로토타입에 머무르지 않고 게임 규칙, 화면 연출, 콘텐츠 데이터, 입력·오디오, 저장 복구와 Windows 배포까지 실제 플레이 가능한 하나의 제품 흐름으로 연결했다.</p>
+            </div>
+            <div class="portfolio-scope" aria-label="포트폴리오 핵심 제작 영역">
+              <div><b>GAMEPLAY</b>물리 · 전투 · 적 AI</div>
+              <div><b>ROGUELITE</b>분기 · 보상 · 상점</div>
+              <div><b>UX / INPUT</b>반응형 UI · 접근성</div>
+              <div><b>PIPELINE</b>콘텐츠 · 검증 · 배포</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="game-flow" aria-labelledby="flow-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">01 / PLAYER FLOW</span><h2 id="flow-title">한 번의 런이 굴러가는 방식</h2></div>
+          <p>일반 전투 5회와 상점, 최종 보스로 이어지는 7계층 런이다.</p>
+        </div>
+        <div class="gameplay-model reveal">
+          <div class="model-head">
+            <div><h3>런 경로 모델</h3><p>전투 노드를 눌러 경로를 조합하고 스테이지 정보를 비교할 수 있다.</p></div>
+            <div class="model-legend" aria-label="노드 범례">
+              <span><i aria-hidden="true"></i> 전투</span>
+              <span><i class="legend-shop" aria-hidden="true"></i> 상점</span>
+              <span><i class="legend-boss" aria-hidden="true"></i> 보스</span>
+            </div>
+          </div>
+
+          <div class="run-map-wrap">
+            <div class="run-map" aria-label="기본 모험 런의 7개 경로 계층">
+              <div class="run-layer">
+                <span class="run-layer-label">01 · 시작</span>
+                <div class="run-node-stack">
+                  <button class="run-node" type="button" aria-pressed="true"
+                    data-stage="Forgotten Forest" data-kind="START BATTLE" data-layer="fixed"
+                    data-image="FinalProject_Peglin/res/stage-preview-forest-v1-source.png"
+                    data-pegs="48" data-moving="0" data-enemies="3" data-threat="6.74"
+                    data-copy="고정 시작 노드. 기본 덱과 선택 난이도를 적용하고 첫 전투를 시작한다. 승리 시 25 Gold와 보상 선택 화면으로 이동한다.">
+                    <span class="node-type">◆ FIXED</span><strong>Forgotten<br>Forest</strong><small>3 enemies · T 6.74</small>
+                  </button>
+                </div>
+              </div>
+
+              <div class="run-layer branch">
+                <span class="run-layer-label">02 · 분기 A</span>
+                <div class="run-node-stack">
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Dense Cavern" data-kind="BRANCH BATTLE" data-layer="route-1"
+                    data-image="FinalProject_Peglin/res/gameplay-cave-v3-source.png"
+                    data-pegs="40" data-moving="3" data-enemies="3" data-threat="9.13"
+                    data-copy="수평 이동 페그 3개와 높은 반발계수로 궤적 변화가 큰 전투. 원거리 박쥐와 근거리 두꺼비의 사거리 차이를 함께 관리한다.">
+                    <span class="node-type">◆ ROUTE 1A</span><strong>Dense Cavern</strong><small>3 moving · T 9.13</small>
+                  </button>
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Thornwood Thicket" data-kind="BRANCH BATTLE" data-layer="route-1"
+                    data-image="FinalProject_Peglin/res/stage-preview-forest-v1-source.png"
+                    data-pegs="44" data-moving="0" data-enemies="3" data-threat="7.57"
+                    data-copy="고정 페그 중심의 안정적인 대안 경로. 늑대와 두꺼비의 근거리 압박 사이에서 박쥐를 먼저 정리하는 타깃 선택이 중요하다.">
+                    <span class="node-type">◆ ROUTE 1B</span><strong>Thornwood<br>Thicket</strong><small>static · T 7.57</small>
+                  </button>
+                </div>
+              </div>
+
+              <div class="run-layer branch">
+                <span class="run-layer-label">03 · 분기 B</span>
+                <div class="run-node-stack">
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Fungal Hollow" data-kind="BRANCH BATTLE" data-layer="route-2"
+                    data-image="FinalProject_Peglin/res/stage-preview-fungal-v1-source.png"
+                    data-pegs="45" data-moving="3" data-enemies="3" data-threat="8.89"
+                    data-copy="수직 이동 페그가 조준 타이밍을 바꾸는 전투. 4칸 사거리 Azure Wisp가 있어 초반부터 적 공격이 빠르게 시작될 수 있다.">
+                    <span class="node-type">◆ ROUTE 2A</span><strong>Fungal Hollow</strong><small>3 moving · T 8.89</small>
+                  </button>
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Crystal Grotto" data-kind="BRANCH BATTLE" data-layer="route-2"
+                    data-image="FinalProject_Peglin/res/stage-preview-crystal-v1-source.png"
+                    data-pegs="40" data-moving="0" data-enemies="3" data-threat="9.10"
+                    data-copy="고정 배치지만 적 체력이 높고 반발계수가 0.91인 경로. 긴 연쇄 충돌을 만들면 방어적인 적 구성을 효율적으로 돌파할 수 있다.">
+                    <span class="node-type">◆ ROUTE 2B</span><strong>Crystal Grotto</strong><small>40 pegs · T 9.10</small>
+                  </button>
+                </div>
+              </div>
+
+              <div class="run-layer">
+                <span class="run-layer-label">04 · 정비</span>
+                <div class="run-node-stack">
+                  <button class="run-node kind-shop" type="button" aria-pressed="false"
+                    data-stage="Goblin Market" data-kind="SHOP · FIXED" data-layer="fixed"
+                    data-image="FinalProject_Peglin/res/shop-merchant-v1-source.png"
+                    data-pegs="—" data-moving="—" data-enemies="3" data-threat="—"
+                    data-copy="세 번째 계층 뒤에 고정 삽입되는 비전투 노드. Iron Orb 45G, Bark Guard 70G, Heal 30 HP 30G 중 필요한 선택에 Gold를 사용한다.">
+                    <span class="node-type">■ SHOP</span><strong>Goblin Market</strong><small>3 offers · no combat</small>
+                  </button>
+                </div>
+              </div>
+
+              <div class="run-layer branch">
+                <span class="run-layer-label">05 · 분기 C</span>
+                <div class="run-node-stack">
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Ember Roost" data-kind="BRANCH BATTLE" data-layer="route-3"
+                    data-image="FinalProject_Peglin/res/stage-preview-ember-v1-source.png"
+                    data-pegs="44" data-moving="4" data-enemies="3" data-threat="10.45"
+                    data-copy="가로·세로 이동 페그 4개와 짧은 시작 거리로 구성된 가장 위협적인 일반 전투. 상점에서 정비한 빌드의 첫 검증 구간이다.">
+                    <span class="node-type">◆ ROUTE 3A</span><strong>Ember Roost</strong><small>4 moving · T 10.45</small>
+                  </button>
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Shaman Mire" data-kind="BRANCH BATTLE" data-layer="route-3"
+                    data-image="FinalProject_Peglin/res/stage-preview-fungal-v1-source.png"
+                    data-pegs="45" data-moving="0" data-enemies="3" data-threat="10.10"
+                    data-copy="Refresh 페그가 2개인 복구 중심 대안 경로. 높은 적 체력과 4칸 사거리 위습을 안정적인 보드 복원으로 상대한다.">
+                    <span class="node-type">◆ ROUTE 3B</span><strong>Shaman Mire</strong><small>2 refresh · T 10.10</small>
+                  </button>
+                </div>
+              </div>
+
+              <div class="run-layer branch">
+                <span class="run-layer-label">06 · 분기 D</span>
+                <div class="run-node-stack">
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Obsidian Burrow" data-kind="BRANCH BATTLE" data-layer="route-4"
+                    data-image="FinalProject_Peglin/res/gameplay-cave-v3-source.png"
+                    data-pegs="50" data-moving="4" data-enemies="3" data-threat="11.99"
+                    data-copy="Cinder Beetle이 근거리에서 압박하고 가로·세로 이동 페그가 조준 타이밍을 흔드는 후반 전투. Cinder Orb와 Ember Heart 조합의 화력 검증 구간이다.">
+                    <span class="node-type">◆ ROUTE 4A</span><strong>Obsidian<br>Burrow</strong><small>4 moving · T 11.99</small>
+                  </button>
+                  <button class="run-node" type="button" aria-pressed="false"
+                    data-stage="Rootspire Crossing" data-kind="BRANCH BATTLE" data-layer="route-4"
+                    data-image="FinalProject_Peglin/res/stage-preview-forest-v1-source.png"
+                    data-pegs="44" data-moving="5" data-enemies="3" data-threat="12.60"
+                    data-copy="가장 많은 이동 페그와 3칸 사거리 Root Lancer가 결합된 최종 일반 전투. 회복과 경로 보정을 활용해 보스 진입 전 체력을 관리한다.">
+                    <span class="node-type">◆ ROUTE 4B</span><strong>Rootspire<br>Crossing</strong><small>5 moving · T 12.60</small>
+                  </button>
+                </div>
+              </div>
+
+              <div class="run-layer">
+                <span class="run-layer-label">07 · 보스</span>
+                <div class="run-node-stack">
+                  <button class="run-node kind-boss" type="button" aria-pressed="false"
+                    data-stage="Rootbound Citadel" data-kind="FINAL BOSS" data-layer="fixed"
+                    data-image="FinalProject_Peglin/res/stage-preview-citadel-v1-source.png"
+                    data-pegs="36" data-moving="4" data-enemies="1" data-threat="24.68"
+                    data-copy="60 HP, 피해 배율 ×0.81의 Rootbound Titan 보스전. Strike와 Fortify 패턴을 예고하며, 승리하면 런을 완료하고 체크포인트를 제거한다.">
+                    <span class="node-type">◆ BOSS</span><strong>Rootbound<br>Citadel</strong><small>Titan · T 24.68</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="route-output">
+              <div id="route-path" class="route-path" aria-live="polite">
+                <span>Forgotten Forest</span><b>→</b><span>경로 선택</span><b>→</b><span>경로 선택</span><b>→</b><span>Goblin Market</span><b>→</b><span>경로 선택</span><b>→</b><span>경로 선택</span><b>→</b><span>Rootbound Citadel</span>
+              </div>
+              <button class="route-reset" id="route-reset" type="button">경로 선택 초기화</button>
+            </div>
+          </div>
+
+          <div class="stage-inspector" aria-live="polite">
+            <img id="stage-inspector-image" src="FinalProject_Peglin/res/stage-preview-forest-v1-source.png" alt="선택한 스테이지 미리보기">
+            <div class="stage-inspector-copy">
+              <span id="stage-inspector-kind">START BATTLE</span>
+              <h3 id="stage-inspector-name">Forgotten Forest</h3>
+              <p id="stage-inspector-description">고정 시작 노드. 기본 덱과 선택 난이도를 적용하고 첫 전투를 시작한다. 승리 시 25 Gold와 보상 선택 화면으로 이동한다.</p>
+            </div>
+            <div class="stage-inspector-stats" aria-label="선택한 스테이지 수치">
+              <div><b id="stage-stat-pegs">48</b><small>페그</small></div>
+              <div><b id="stage-stat-moving">0</b><small>이동</small></div>
+              <div><b id="stage-stat-enemies">3</b><small>적 / 상품</small></div>
+              <div><b id="stage-stat-threat">6.74</b><small>위협</small></div>
+            </div>
+          </div>
+
+          <div class="turn-model">
+            <div class="turn-title">
+              <div><h3>전투 1턴 모델</h3><p>각 단계를 누르면 입력이 게임 상태와 결과로 이어지는 과정을 확인할 수 있다.</p></div>
+              <code>Aiming → BallInFlight → ResolvingTurn</code>
+            </div>
+            <div class="turn-rail" id="turn-rail" style="--turn-progress:0%" aria-label="전투 한 턴의 7단계">
+              <span class="turn-progress-line" aria-hidden="true"></span><span class="turn-marker" aria-hidden="true"></span>
+              <button class="turn-step" type="button" aria-pressed="true" data-turn="0" data-state="AIMING" data-detail="마우스 드래그나 게임패드 스틱으로 방향과 세기를 정한다. 24개 점으로 첫 페그 반사까지 미리 본다."><b>01</b><strong>조준</strong><small>입력 수집</small></button>
+              <button class="turn-step" type="button" aria-pressed="false" data-turn="1" data-state="BALL IN FLIGHT" data-detail="길이가 0인 조준은 안전하게 취소한다. 유효한 방향이면 속도를 설정하고 공 비행 상태로 전이한다."><b>02</b><strong>발사</strong><small>상태 전이</small></button>
+              <button class="turn-step" type="button" aria-pressed="false" data-turn="2" data-state="FIXED STEP" data-detail="렌더 프레임과 분리된 1/120초 고정 스텝으로 이동 페그와 공 위치를 갱신해 장치별 결과 차이를 줄인다."><b>03</b><strong>시뮬레이션</strong><small>1 / 120초</small></button>
+              <button class="turn-step" type="button" aria-pressed="false" data-turn="3" data-state="COLLISION" data-detail="가장 가까운 충돌을 찾고 법선·반발계수로 속도를 반사한다. 페그 종류에 따라 Critical, Bomb, Refresh 효과를 실행한다."><b>04</b><strong>페그 충돌</strong><small>반사 · 효과</small></button>
+              <button class="turn-step" type="button" aria-pressed="false" data-turn="4" data-state="ACCUMULATE" data-detail="충돌 순서에 따라 콤보를 높이고 오브·유물 배율을 적용해 이번 발사의 점수와 대기 피해를 누적한다."><b>05</b><strong>점수 · 피해</strong><small>콤보 누적</small></button>
+              <button class="turn-step" type="button" aria-pressed="false" data-turn="5" data-state="RESOLVING TURN" data-detail="공이 필드를 벗어나면 플레이어 공격을 먼저 적용한다. 살아남은 적은 사거리 안에서 공격하고, 밖에서는 정확히 한 칸 전진한다."><b>06</b><strong>턴 정산</strong><small>공격 · 적 행동</small></button>
+              <button class="turn-step" type="button" aria-pressed="false" data-turn="6" data-state="NEXT STATE" data-detail="Refresh 수와 위치를 보정하고 다음 오브를 준비한다. 체력 결과에 따라 조준 복귀, 승리 또는 패배 상태로 전이한다."><b>07</b><strong>다음 상태</strong><small>계속 · 승패</small></button>
+            </div>
+            <div class="turn-output" aria-live="polite"><code id="turn-state">GAME STATE · AIMING</code><p id="turn-description">마우스 드래그나 게임패드 스틱으로 방향과 세기를 정한다. 24개 점으로 첫 페그 반사까지 미리 본다.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="architecture" aria-labelledby="arch-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">02 / ARCHITECTURE</span><h2 id="arch-title">구조와 책임 경계</h2></div>
+          <p>게임 규칙과 화면·플랫폼 책임을 분리해 확장성과 검증 가능성을 확보했다.</p>
+        </div>
+        <div class="architecture reveal">
+          <article class="arch-layer"><span class="arch-number">01</span><div><h3>Windows Presentation</h3><p>MFC 메시지, 8개 화면 모드, GDI 렌더링, 1000×700 논리 좌표와 입력 변환.</p><code>CChildView · UiRenderer · UiViewport · UiNavigation</code></div></article>
+          <article class="arch-layer featured"><span class="arch-number">02</span><div><h3>Core Simulation</h3><p>명시적 상태 전이, 고정 시간 간격, 공·페그 충돌, 점수·피해·적 행동 이벤트.</p><code>GameWorld · GameState · Physics · PegLayout</code></div></article>
+          <article class="arch-layer"><span class="arch-number">03</span><div><h3>Run &amp; Progression</h3><p>분기형 맵, 보상, 상점, 골드, 오브 덱, 유물과 난이도 수식.</p><code>AdventureRun · PlayerLoadout · Progression</code></div></article>
+          <article class="arch-layer"><span class="arch-number">04</span><div><h3>Validated Content</h3><p>스테이지·효과·오디오·문자열을 각각 검증하고 실패한 카탈로그만 내장 정의로 복구.</p><code>ContentCatalog · GameplayCatalog · AudioCatalog · Localization</code></div></article>
+          <article class="arch-layer"><span class="arch-number">05</span><div><h3>Durable State</h3><p>사용자 설정과 진행 중인 모험을 버전 포맷, 원자 교체와 백업 복구로 안전하게 보존.</p><code>GameSettingsStore · RunCheckpointStore</code></div></article>
+          <article class="arch-layer"><span class="arch-number">06</span><div><h3>Windows Platform</h3><p>XAudio2 다중 보이스·덕킹, Win32 자원 관리와 실행 성능 계측.</p><code>AudioPlayer · PerformanceMonitor · ResourceMonitor</code></div></article>
+        </div>
+        <p class="architecture-foot reveal"><b>핵심 설계 원칙:</b> 입력·렌더링은 플랫폼 종속이어도 규칙·상태·검증 로직은 가능한 한 순수 C++ 값과 함수로 유지한다. 이 경계 덕분에 x86/x64, Debug/Release 네 구성에서 같은 핵심 테스트를 반복할 수 있다.</p>
+      </section>
+
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">03 / FEATURE MAP</span><h2 id="features-title">기능별 구현 지도</h2></div>
+          <p>설계 의도, 처리 순서, 대표 코드를 기능별로 압축했다.</p>
+        </div>
+        <div class="toolbar reveal" aria-label="기능 필터">
+          <input id="feature-search" class="search" type="search" placeholder="예: 저장, XAudio2, Refresh, GameWorld" aria-label="기능 검색">
+          <button class="filter active" type="button" data-filter="all">전체</button>
+          <button class="filter" type="button" data-filter="done">완료</button>
+        </div>
+        <div class="feature-grid" id="feature-grid">
+          <article class="feature-card reveal" data-status="done" data-search="전투 물리 gameworld physics peg refresh collision score combo">
+            <div class="feature-top"><div><p class="feature-kicker">Simulation</p><h3>물리 · 페그 · 턴 전투</h3></div><span class="tag done">완료</span></div>
+            <p>고정 시간 간격으로 공을 이동시키고, 법선·반발계수로 벽과 페그를 반사한다. Normal·Critical·Bomb·Refresh 페그가 점수와 피해를 누적하며, 사거리별 적 행동까지 한 턴 안에서 결정한다.</p>
+            <div class="micro-flow"><span>Aiming</span><i>→</i><span>BallInFlight</span><i>→</i><span>ResolvingTurn</span><i>→</i><span>Victory / Defeat</span></div>
+            <div class="feature-meta"><code>GameWorld.cpp</code><code>Physics.h</code><code>PegLayout.cpp</code><code>GameState.h</code></div>
+          </article>
+
+          <article class="feature-card reveal" data-status="done" data-search="런 진행 분기 맵 보상 상점 골드 orb relic adventure progression">
+            <div class="feature-top"><div><p class="feature-kicker">Roguelite loop</p><h3>분기형 런 · 보상 · 상점</h3></div><span class="tag done">완료</span></div>
+            <p>10개 전투 정의를 7개 계층의 경로로 만들고, 전투 후 세 가지 보상과 최대 두 개의 다음 경로를 제시한다. Goblin Market에서는 런 골드로 오브·유물·회복을 구매한다.</p>
+            <div class="micro-flow"><span>StageReady</span><i>→</i><span>RewardSelection</span><i>→</i><span>StageChoice</span><i>→</i><span>Complete</span></div>
+            <div class="feature-meta"><code>RunProgression.cpp</code><code>Progression.cpp</code><code>ChildView.cpp</code></div>
+          </article>
+
+          <article class="feature-card reveal" data-status="done" data-search="콘텐츠 데이터 ini validation catalog fallback hot reload preview difficulty stage gameplay localization audio utf8">
+            <div class="feature-top"><div><p class="feature-kicker">Content pipeline</p><h3>콘텐츠 미리보기 · 핫 리로드</h3></div><span class="tag done">완료</span></div>
+            <p>F8 미리보기에서 배경·적·페그·이동 경로를 실제 자산으로 확인한다. 임시 카탈로그의 교차 참조와 난이도 곡선, 현재 런 호환성을 모두 통과한 경우에만 새 콘텐츠를 한 번에 활성화한다.</p>
+            <div class="micro-flow"><span>Temporary load</span><i>→</i><span>Cross-check</span><i>→</i><span>Difficulty</span><i>→</i><span>Atomic apply</span></div>
+            <div class="feature-meta"><code>ContentCatalog.cpp</code><code>GameplayCatalog.cpp</code><code>DifficultyCurve.cpp</code><code>ChildView.cpp</code></div>
+          </article>
+
+          <article class="feature-card reveal" data-status="done" data-search="ui ux dpi 접근성 한국어 영어 툴팁 로그 게임패드 마우스 키보드 rebinding">
+            <div class="feature-top"><div><p class="feature-kicker">Interface</p><h3>UI · 접근성 · 입력 동등성</h3></div><span class="tag done">완료</span></div>
+            <p>DPI와 창 크기에 맞춰 1000×700 논리 화면을 종횡비 고정 스케일링한다. 마우스·키보드·게임패드로 전체 런을 진행하며, 한국어/영어, 고대비 페그, 상세 툴팁, 전투 로그와 충돌 없는 리바인딩을 제공한다.</p>
+            <div class="micro-flow"><span>Device event</span><i>→</i><span>Logical point / command</span><i>→</i><span>UiAction</span><i>→</i><span>State mutation</span></div>
+            <div class="feature-meta"><code>UiViewport.h</code><code>UiNavigation.cpp</code><code>GamepadNavigation.cpp</code><code>GameOptions.h</code></div>
+          </article>
+
+          <article class="feature-card reveal" data-status="done" data-search="저장 체크포인트 backup recovery atomic settings checkpoint resume save">
+            <div class="feature-top"><div><p class="feature-kicker">Persistence</p><h3>런 저장 · 중단 복구</h3></div><span class="tag done">완료</span></div>
+            <p>사용자 설정과 진행 중인 런을 버전 포맷으로 분리하고 임시 파일 작성 뒤 write-through 원자 교체를 수행한다. 주 파일이 손상되면 백업을 recovery 경로에서 검증한 뒤 복원하며, 더 새로운 스키마는 덮어쓰지 않는다.</p>
+            <div class="micro-flow"><span>Validate model</span><i>→</i><span>.tmp write</span><i>→</i><span>.bak</span><i>→</i><span>atomic replace</span></div>
+            <div class="feature-meta"><code>RunCheckpointStore.cpp</code><code>GameSettingsStore.cpp</code></div>
+          </article>
+
+          <article class="feature-card reveal" data-status="done" data-search="오디오 xaudio2 voice music ducking fade sound effect 8 voices">
+            <div class="feature-top"><div><p class="feature-kicker">Audio</p><h3>XAudio2 다중 효과음 · 덕킹</h3></div><span class="tag done">완료</span></div>
+            <p>PCM WAV를 직접 검증하고 최대 8개 효과음 보이스를 동시에 재생한다. 일반 효과음은 폭주 시 생략하고 중요한 전투·승패음은 오래된 보이스를 교체하며, 음악을 각각 58%·35%로 낮췄다가 복귀시킨다.</p>
+            <div class="micro-flow"><span>Gate</span><i>→</i><span>Voice limit</span><i>→</i><span>Play</span><i>→</i><span>Ducking</span><i>→</i><span>Reclaim</span></div>
+            <div class="feature-meta"><code>AudioPlayer.cpp</code><code>AudioMixing.h</code><code>AudioCatalog.cpp</code></div>
+          </article>
+
+          <article class="feature-card reveal" data-status="done" data-search="qa test packaging performance demo content report build release x64 x86">
+            <div class="feature-top"><div><p class="feature-kicker">Quality system</p><h3>자동 회귀 · 제작 도구 · 배포</h3></div><span class="tag done">완료</span></div>
+            <p>네 빌드 구성에서 총 4,976개 회귀를 통과한다. 콘텐츠·이미지 파이프라인, 결정적 데모와 자원 회귀를 자동화했으며 Release ZIP에는 앱 로컬 MFC/CRT, 해시와 사전 검사 스크립트를 포함한다.</p>
+            <div class="micro-flow"><span>Build ×4</span><i>→</i><span>Core tests</span><i>→</i><span>Asset/content check</span><i>→</i><span>Package</span></div>
+            <div class="feature-meta"><code>PeglinCoreTests.cpp</code><code>tools/Package-Release.ps1</code><code>tools/Test-LongRun.ps1</code></div>
+          </article>
+        </div>
+        <p id="feature-empty" class="empty-state" hidden>조건에 맞는 기능이 없습니다. 검색어 또는 상태 필터를 바꿔 보세요.</p>
+      </section>
+
+      <section class="section" id="pseudocode" aria-labelledby="pseudo-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">04 / PSEUDOCODE</span><h2 id="pseudo-title">기능 개발 플로우</h2></div>
+          <p>핵심 기능의 처리 순서와 실패 정책을 의사 코드로 정리했다.</p>
+        </div>
+        <div class="code-shell reveal">
+          <div class="code-tabs" role="tablist" aria-label="의사 코드 주제">
+            <button class="code-tab" role="tab" aria-selected="true" aria-controls="code-combat" id="tab-combat" data-code="combat">발사 &amp; 턴 정산</button>
+            <button class="code-tab" role="tab" aria-selected="false" aria-controls="code-checkpoint" id="tab-checkpoint" data-code="checkpoint">체크포인트</button>
+            <button class="code-tab" role="tab" aria-selected="false" aria-controls="code-content" id="tab-content" data-code="content">콘텐츠 로딩</button>
+            <button class="code-tab" role="tab" aria-selected="false" aria-controls="code-input" id="tab-input" data-code="input">입력 충돌</button>
+            <button class="code-tab" role="tab" aria-selected="false" aria-controls="code-audio" id="tab-audio" data-code="audio">오디오 믹싱</button>
+          </div>
+
+          <div class="code-panel active" id="code-combat" role="tabpanel" aria-labelledby="tab-combat" data-panel="combat">
+            <pre><code><span class="kw">function</span> <span class="fn">releaseShot</span>(pointer):
+  <span class="kw">if</span> state != AIMING <span class="kw">or</span> dragLength == <span class="num">0</span>:
+    cancelAim()                    <span class="com">// 오발·NaN 방지</span>
+    <span class="kw">return</span> false
+
+  velocity = normalize(aimStart - pointer) * strength
+  state = BALL_IN_FLIGHT
+
+<span class="kw">every</span> fixedStep(<span class="num">1 / 120</span> sec):
+  moveDynamicPegs()
+  <span class="kw">if</span> state == BALL_IN_FLIGHT:
+    hit = detectNextPegCollision()
+    <span class="kw">if</span> hit:
+      reflect(ball.velocity, hit.normal, restitution)
+      awardScoreAndDamage(hit.peg.type, combo)
+      applyBombOrRefreshEffect(hit.peg)
+    integrateBall()
+    <span class="kw">if</span> ballExitedField: state = RESOLVING_TURN
+
+  <span class="kw">if</span> state == RESOLVING_TURN:
+    applyPlayerAttack(pendingDamage, orb.target)
+    <span class="kw">for each</span> livingEnemy:
+      <span class="kw">if</span> enemy.inRange: executePatternOrStrike()
+      <span class="kw">else</span>: enemy.advanceExactlyOneCell()
+    ensureAndRelocateRefreshPegs()
+    advanceOrbDeck()
+    transitionTo(AIMING | VICTORY | DEFEAT)</code></pre>
+            <aside class="code-notes"><h3>개발 포인트</h3><ul><li>렌더 프레임과 물리 스텝을 분리해 장치 속도에 따른 결과 차이를 줄인다.</li><li>한 충돌은 점수·피해·이벤트를 만들고 UI와 오디오는 이벤트를 소비한다.</li><li>이동으로 사거리에 들어온 적은 같은 턴에 공격하지 않는다.</li></ul></aside>
+          </div>
+
+          <div class="code-panel" id="code-checkpoint" role="tabpanel" aria-labelledby="tab-checkpoint" data-panel="checkpoint">
+            <pre><code><span class="kw">function</span> <span class="fn">saveCheckpoint</span>(stableRunState):
+  snapshot = {
+    routeLayers, currentNode, clearedNodes,
+    difficulty, hp, gold, orbDeck, relics, shopState
+  }
+  <span class="kw">if not</span> validate(snapshot): <span class="kw">return</span> ERROR
+
+  writeUtf8(<span class="str">"run.tmp"</span>, version=<span class="num">1</span>, snapshot)
+  flush(<span class="str">"run.tmp"</span>)
+  <span class="kw">if</span> exists(<span class="str">"run.dat"</span>): copy(<span class="str">"run.dat"</span>, <span class="str">"run.dat.bak"</span>)
+  atomicReplaceWriteThrough(<span class="str">"run.tmp"</span>, <span class="str">"run.dat"</span>)
+
+<span class="kw">function</span> <span class="fn">loadWithRecovery</span>():
+  primary = parseAndValidate(<span class="str">"run.dat"</span>)
+  <span class="kw">if</span> primary.valid: <span class="kw">return</span> primary
+  <span class="kw">if</span> primary.version &gt; supportedVersion:
+    disableAutoSaveForThisRun()   <span class="com">// 미래 저장 보호</span>
+    <span class="kw">return</span> INCOMPATIBLE
+  recovery = copyToRecoveryThenValidate(<span class="str">"run.dat.bak"</span>)
+  <span class="kw">return</span> recovery.valid ? RECOVERED : INVALID</code></pre>
+            <aside class="code-notes"><h3>저장 경계</h3><ul><li>보상·경로·상점·장비 변경처럼 상태가 완결된 시점에 저장한다.</li><li>물리 프레임은 저장하지 않는다. 전투 중 종료는 스테이지 시작 상태로 재개한다.</li><li>알 수 없는 콘텐츠 ID와 신규 스키마는 원본을 보존한다.</li></ul></aside>
+          </div>
+
+          <div class="code-panel" id="code-content" role="tabpanel" aria-labelledby="tab-content" data-panel="content">
+            <pre><code><span class="kw">function</span> <span class="fn">hotReloadCatalogs</span>(activeCatalogs, currentRun):
+  candidate = loadIntoTemporaryObjects(
+    stagesIni, gameplayIni, localizationIni, audioIni
+  )
+  <span class="kw">if not</span> candidate.utf8AndSchemaValid:
+    showReloadReason(candidate.error)
+    <span class="kw">return</span> KEEP(activeCatalogs)
+
+  <span class="kw">if not</span> resolveAllReferences(candidate):
+    showReloadReason(<span class="str">"unresolved ID or effect cycle"</span>)
+    <span class="kw">return</span> KEEP(activeCatalogs)
+
+  report = analyzeDifficultyCurve(candidate.stages)
+  <span class="kw">if not</span> report.passesThresholds:
+    showReloadReason(report.firstFailure)
+    <span class="kw">return</span> KEEP(activeCatalogs)
+
+  <span class="kw">if not</span> compatible(candidate, currentRun, currentLoadout):
+    showReloadReason(<span class="str">"active run compatibility failed"</span>)
+    <span class="kw">return</span> KEEP(activeCatalogs)
+
+  activateAtomically(candidate)
+  preserveCurrentRouteUntilNewRun()
+  <span class="kw">return</span> RELOADED</code></pre>
+            <aside class="code-notes"><h3>원자적 적용 원칙</h3><ul><li>후보 카탈로그는 임시 객체에서 전부 검증한 뒤 한 번에 교체한다.</li><li>실패하면 기존 상태를 유지하고 핵심 원인을 표시한다.</li><li>새 경로 구조는 진행 중인 런이 아니라 다음 새 게임부터 적용한다.</li></ul></aside>
+          </div>
+
+          <div class="code-panel" id="code-input" role="tabpanel" aria-labelledby="tab-input" data-panel="input">
+            <pre><code><span class="kw">function</span> <span class="fn">tryBindKeyboard</span>(action, candidate):
+  <span class="kw">if</span> virtualKey(candidate) == NONE: <span class="kw">return</span> false
+  otherAction = action == PAUSE ? COMBAT_LOG : PAUSE
+  <span class="kw">if</span> binding[otherAction] == candidate:
+    show(<span class="str">"입력 충돌 — 기존 설정 유지"</span>)
+    <span class="kw">return</span> false
+  binding[action] = candidate
+  atomicSave(settingsVersion=<span class="num">4</span>)
+  <span class="kw">return</span> true
+
+<span class="kw">function</span> <span class="fn">cycleBinding</span>(action):
+  <span class="kw">for</span> candidate <span class="kw">in</span> nextOf([SPACE, P, H, C]):
+    <span class="kw">if</span> tryBindKeyboard(action, candidate):
+      <span class="kw">return</span> changed
+  <span class="kw">return</span> unchanged</code></pre>
+            <aside class="code-notes"><h3>입력 안전성</h3><ul><li>충돌한 변경은 원본 바인딩을 훼손하지 않는다.</li><li>마우스 캡처는 포커스·버튼 해제·CaptureChanged에서 정리한다.</li><li>설정 저장은 검증을 통과한 변경에만 수행한다.</li></ul></aside>
+          </div>
+
+          <div class="code-panel" id="code-audio" role="tabpanel" aria-labelledby="tab-audio" data-panel="audio">
+            <pre><code><span class="kw">function</span> <span class="fn">playEffect</span>(cue):
+  <span class="kw">if not</span> effectGate.accept(cue): <span class="kw">return</span> false
+  category = classify(cue)   <span class="com">// Interface / Peg / Combat / Terminal</span>
+  reclaimFinishedVoices()
+
+  <span class="kw">if</span> activeVoices &gt;= <span class="num">8</span>:
+    <span class="kw">if</span> category <span class="kw">in</span> [INTERFACE, PEG]: <span class="kw">return</span> false
+    removeOldestVoice()      <span class="com">// 중요한 소리는 자리 확보</span>
+
+  wave = readAndValidatePcmWave(cue.file)
+  voice = xaudio.createSourceVoice(wave.format)
+  voice.volume = effectsVolume
+  voice.start(wave.data)
+  ducking.trigger(category)
+
+<span class="kw">every</span> fixedStep(dt):
+  fade.update(dt)
+  ducking.update(dt)         <span class="com">// Combat 58%, Terminal 35%</span>
+  musicGain = optionVolume * fade.gain * ducking.gain
+  applyOnlyWhenChanged(musicGain)
+  reclaimFinishedVoices()</code></pre>
+            <aside class="code-notes"><h3>믹싱 정책</h3><ul><li>페그 연속 충돌은 쿨다운과 구간별 밀도 제한으로 제어한다.</li><li>장면 전환 페이드와 중요 효과음 덕킹은 곱해 적용한다.</li><li>종료 시 소스 → 마스터링 보이스 → 엔진 역순으로 정리한다.</li></ul></aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="content" aria-labelledby="content-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">05 / CONTENT DESIGN</span><h2 id="content-title">반복 플레이를 만드는 콘텐츠</h2></div>
+          <p>데이터 조합과 자동 분석으로 7계층 런의 난이도 곡선을 검증했다.</p>
+        </div>
+        <div class="stage-grid reveal" aria-label="대표 스테이지 이미지">
+          <article class="stage-card"><img src="FinalProject_Peglin/res/stage-preview-forest-v1-source.png" alt="Forgotten Forest 스테이지 이미지"><div><small>START · THREAT 6.74</small><h3>Forgotten Forest</h3></div></article>
+          <article class="stage-card"><img src="FinalProject_Peglin/res/stage-preview-crystal-v1-source.png" alt="Crystal Grotto 스테이지 이미지"><div><small>BATTLE · THREAT 9.10</small><h3>Crystal Grotto</h3></div></article>
+          <article class="stage-card"><img src="FinalProject_Peglin/res/stage-preview-fungal-v1-source.png" alt="Fungal Hollow 스테이지 이미지"><div><small>MOVING · THREAT 8.89</small><h3>Fungal Hollow</h3></div></article>
+          <article class="stage-card"><img src="FinalProject_Peglin/res/stage-preview-ember-v1-source.png" alt="Ember Roost 스테이지 이미지"><div><small>MOVING · THREAT 10.45</small><h3>Ember Roost</h3></div></article>
+          <article class="stage-card"><img src="FinalProject_Peglin/res/gameplay-cave-v3-source.png" alt="Obsidian Burrow 전투 연출 이미지"><div><small>NEW · THREAT 11.99</small><h3>Obsidian Burrow</h3></div></article>
+          <article class="stage-card"><img src="FinalProject_Peglin/res/stage-preview-forest-v1-source.png" alt="Rootspire Crossing 스테이지 이미지"><div><small>NEW · THREAT 12.60</small><h3>Rootspire Crossing</h3></div></article>
+          <article class="stage-card"><img src="FinalProject_Peglin/res/stage-preview-citadel-v1-source.png" alt="Rootbound Citadel 보스 스테이지 이미지"><div><small>BOSS · THREAT 24.68</small><h3>Rootbound Citadel</h3></div></article>
+        </div>
+        <div class="data-grid">
+          <article class="panel reveal">
+            <h3>스테이지 위협 비교</h3>
+            <p style="color:var(--ink-dim);font-size:11px;margin-bottom:20px">실효 체력·피해·적 수·사거리·이동 페그·접근 압력을 반영한 계층별 분석</p>
+            <div class="metric-list">
+              <div class="metric-row"><span>시작 전투</span><div class="bar"><i style="width:27.3%"></i></div><b>6.74</b></div>
+              <div class="metric-row"><span>분기 A 평균</span><div class="bar"><i style="width:33.8%"></i></div><b>8.35</b></div>
+              <div class="metric-row"><span>분기 B 평균</span><div class="bar"><i style="width:36.5%"></i></div><b>9.00</b></div>
+              <div class="metric-row"><span>분기 C 평균</span><div class="bar"><i style="width:41.7%"></i></div><b>10.28</b></div>
+              <div class="metric-row"><span>분기 D 평균</span><div class="bar"><i style="width:49.8%"></i></div><b>12.30</b></div>
+              <div class="metric-row"><span>최종 보스</span><div class="bar"><i style="width:100%"></i></div><b>24.68</b></div>
+            </div>
+          </article>
+          <article class="panel reveal">
+            <h3>카탈로그 규모</h3>
+            <p style="color:var(--ink-soft);font-size:12px">일반 스테이지 9개와 보스 1개, 고유 적 안정 ID 12개, 오브 5종, 유물 5종을 제공한다. 인접 구간의 난이도 급등과 분기 불균형, 보스 비율을 자동 검사한다.</p>
+            <div class="data-callout">
+              <div><b>436</b><span>전체 페그</span></div>
+              <div><b>23</b><span>이동 페그</span></div>
+              <div><b>11</b><span>Refresh 페그</span></div>
+            </div>
+            <p style="margin:18px 0 0;color:var(--ink-dim);font-size:11px">신규 콘텐츠: Cinder Orb · Verdant Orb · Ember Heart · Wayfinder Compass · Cinder Beetle · Root Lancer</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="history" aria-labelledby="history-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">06 / PROJECT JOURNEY</span><h2 id="history-title">프로토타입에서 완성된 런까지</h2></div>
+          <p>코어 개발부터 제작 도구와 배포 검증까지의 성장을 정리했다.</p>
+        </div>
+        <div class="timeline reveal">
+          <article class="milestone"><div class="milestone-label"><b>PHASE 01</b><span>Stable foundation</span></div><div><h3>게임 감각을 지키는 실행 기반</h3><p>길이가 0인 발사, 공 상태 누수, GDI 객체 수명, 포커스와 마우스 캡처 문제를 해결하고 고정 시간 루프로 재현 가능한 물리 기반을 확립했다.</p></div></article>
+          <article class="milestone"><div class="milestone-label"><b>PHASE 02</b><span>Testable core</span></div><div><h3>화면에서 게임 규칙 분리</h3><p>GameWorld와 MFC 뷰의 책임을 나누고 Vector2, 법선 반사, 명시적 상태 전이를 도입했다. 점수·콤보·페그 효과를 자동 검증 가능한 순수 C++ 코어로 옮겼다.</p></div></article>
+          <article class="milestone"><div class="milestone-label"><b>PHASE 03</b><span>Player feedback</span></div><div><h3>결과를 예측하고 이해하는 UI</h3><p>조준 예상선, 첫 페그 반사, 공격·피해 애니메이션, 난이도와 접근성 옵션을 추가해 물리 결과가 운이 아니라 읽고 선택할 수 있는 정보가 되도록 했다.</p></div></article>
+          <article class="milestone"><div class="milestone-label"><b>PHASE 04</b><span>Complete game loop</span></div><div><h3>전투를 로그라이크 모험으로 확장</h3><p>오브·유물, 보스 패턴, 멀티 몬스터, 보상과 덱 순환을 연결해 한 판의 전투가 다음 선택을 바꾸는 연속 플레이 구조를 완성했다.</p></div></article>
+          <article class="milestone"><div class="milestone-label"><b>PHASE 05</b><span>Replayability</span></div><div><h3>분기 경로와 상점, 다양한 조우</h3><p>이동·Refresh 페그, 적 거리·사거리, 분기형 스테이지 맵과 Goblin Market을 더해 매 런의 조준 조건과 빌드 선택이 달라지도록 만들었다.</p></div></article>
+          <article class="milestone"><div class="milestone-label"><b>PHASE 06</b><span>Production quality</span></div><div><h3>시연 가능한 제품 완성도</h3><p>DPI 대응, 한국어·영어, 게임패드 전체 진행, 장면 음악, 콘텐츠 리포트, 결정적 데모와 장시간 성능 회귀를 통해 포트폴리오 시연 품질을 높였다.</p></div></article>
+          <article class="milestone current"><div class="milestone-label"><b>PHASE 07</b><span>Sprint 9 complete</span></div><div><h3>콘텐츠 확장과 제작 도구</h3><p>7계층 런, 10개 스테이지, 오브·유물 5종을 구축하고 난이도 곡선 분석, F8 미리보기와 원자적 핫 리로드로 데이터 제작과 검증을 하나의 흐름으로 연결했다.</p></div></article>
+        </div>
+        <div class="release-grid reveal" aria-label="최근 기술적 문제 해결">
+          <article class="release-card"><strong>WINDOWS-ONLY RUNTIME</strong><p>플랫폼 경로와 파일 교체를 Windows 전용 구현으로 통일해 유지보수 범위를 명확화.</p></article>
+          <article class="release-card"><strong>DIFFICULTY CURVE</strong><p>인접 급등·분기 불균형·보스 비율을 빌드 단계에서 자동 검증.</p></article>
+          <article class="release-card"><strong>ATOMIC HOT RELOAD</strong><p>전체 검증 성공 시에만 후보 콘텐츠를 활성 상태와 원자적으로 교체.</p></article>
+          <article class="release-card"><strong>RELEASE PACKAGE</strong><p>리소스·런타임·해시·사전 검사를 포함한 Windows x64 배포 패키지 완성.</p></article>
+        </div>
+      </section>
+
+      <section class="section" id="roadmap" aria-labelledby="roadmap-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">07 / SPRINT 9 RESULT</span><h2 id="roadmap-title">Sprint 9에서 완성한 범위</h2></div>
+          <p>Windows 전용 정리부터 콘텐츠 제작 도구와 최종 배포 검증까지 마친 결과다.</p>
+        </div>
+        <div class="roadmap-grid">
+          <article class="roadmap-card reveal"><span class="tag done">9.5 COMPLETE</span><h3>1. Windows 전용 구조 정리</h3><p>사용하지 않는 비 Windows 분기를 제거하고 저장 경로와 파일 교체 방식을 Windows API 기준으로 통일했다.</p><ul class="acceptance"><li>LOCALAPPDATA 경로 사용</li><li>MoveFileExW 원자 교체</li><li>네 빌드 구성 검증</li></ul></article>
+          <article class="roadmap-card reveal"><span class="tag done">9.6 COMPLETE</span><h3>2. 콘텐츠 · 난이도 확장</h3><p>후반 스테이지와 적·오브·유물을 추가하고 경로별 난이도 상승과 분기 균형을 자동 분석하는 지표를 구축했다.</p><ul class="acceptance"><li>전투 스테이지 10개</li><li>오브·유물 각 5종</li><li>난이도 곡선 검사 통과</li></ul></article>
+          <article class="roadmap-card reveal"><span class="tag done">9.7 COMPLETE</span><h3>3. 미리보기 · 핫 리로드</h3><p>F8 전체 화면 미리보기에서 실제 배경·적·페그·이동 경로를 확인하고, 검증된 콘텐츠만 원자적으로 다시 불러오게 했다.</p><ul class="acceptance"><li>키보드·마우스 조작</li><li>실패 시 기존 상태 유지</li><li>현재 런 호환성 검사</li></ul></article>
+          <article class="roadmap-card reveal"><span class="tag done">9.8 COMPLETE</span><h3>4. 최종 회귀 · 배포</h3><p>콘텐츠·자산·저장 호환성과 장시간 자원 안정성을 다시 검증하고 실행 가능한 Windows x64 패키지를 완성했다.</p><ul class="acceptance"><li>총 4,976개 자동 회귀</li><li>120초 자원 회귀 통과</li><li>25개 파일 배포 패키지</li></ul></article>
+        </div>
+
+        <div class="direction">
+          <article class="panel reveal">
+            <h3>지속할 개발 원칙</h3>
+            <div class="principles">
+              <div class="principle"><b>01</b><div><strong>규칙은 데이터로, 실패는 안전하게</strong><span>콘텐츠 확장 속도를 높이되 교차 참조 오류가 런타임 상태에 섞이지 않게 한다.</span></div></div>
+              <div class="principle"><b>02</b><div><strong>프레임보다 상태 경계를 저장</strong><span>재개 가능성과 호환성을 물리 내부 직렬화보다 우선한다.</span></div></div>
+              <div class="principle"><b>03</b><div><strong>입력 장치 간 플레이 동등성</strong><span>마우스·키보드·게임패드 모두 메뉴부터 보스 결산까지 완주할 수 있어야 한다.</span></div></div>
+              <div class="principle"><b>04</b><div><strong>도구와 회귀를 기능의 일부로</strong><span>새 콘텐츠·자산·플랫폼 기능마다 검증과 제작자 피드백 경로를 함께 만든다.</span></div></div>
+            </div>
+          </article>
+          <article class="panel reveal">
+            <span class="status-pill done">VERIFIED BASELINE</span>
+            <h3 style="margin-top:18px">검증된 완성도</h3>
+            <div class="validation">
+              <div><b>4,976</b><span>자동 회귀</span></div>
+              <div><b>28</b><span>검증 리소스</span></div>
+              <div><b>4</b><span>빌드 구성</span></div>
+              <div><b>0</b><span>자체 코드 경고</span></div>
+            </div>
+            <p class="tiny-note">Sprint 9 최종 기준으로 Debug·Release, x86·x64 네 구성에서 각각 1,244개, 총 4,976개 자동 회귀를 통과했다. 120초 Release x64 계측도 GDI +0, USER +0, 핸들 -5로 통과했다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="sources-title">
+        <div class="section-head reveal">
+          <div><span class="section-index">08 / ENGINEERING EVIDENCE</span><h2 id="sources-title">구현을 뒷받침하는 산출물</h2></div>
+          <p>핵심 코드, 최신 개발 기록, 자동 검증 결과를 근거 자료로 연결했다.</p>
+        </div>
+        <div class="panel reveal">
+          <h3>빠른 참조</h3>
+          <div class="source-list">
+            <a href="README.md"><span>프로젝트 개요와 실행 정보</span><code>README.md</code></a>
+            <a href="BUILDING.md"><span>빌드·테스트·패키징 기준</span><code>BUILDING.md</code></a>
+            <a href="CONTENT.md"><span>외부 콘텐츠 작성·검증 규칙</span><code>CONTENT.md</code></a>
+            <a href="DEV_LOG/README.md"><span>기능 확장과 문제 해결 과정</span><code>DEV_LOG/README.md</code></a>
+            <a href="DEV_LOG/Version_9.5.md"><span>Windows 전용 구조 정리</span><code>DEV_LOG/Version_9.5.md</code></a>
+            <a href="DEV_LOG/Version_9.6.md"><span>콘텐츠·난이도 확장 기록</span><code>DEV_LOG/Version_9.6.md</code></a>
+            <a href="DEV_LOG/Version_9.7.md"><span>미리보기·핫 리로드 기록</span><code>DEV_LOG/Version_9.7.md</code></a>
+            <a href="DEV_LOG/Version_9.8.md"><span>Sprint 9 최종 검증·배포</span><code>DEV_LOG/Version_9.8.md</code></a>
+            <a href="DEV_LOG/Content_Report_9.8.md"><span>최종 콘텐츠·난이도 검증</span><code>DEV_LOG/Content_Report_9.8.md</code></a>
+            <a href="FinalProject_Peglin/GameWorld.cpp"><span>게임 규칙과 턴 정산</span><code>FinalProject_Peglin/GameWorld.cpp</code></a>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Peglin MFC · Sprint 9 Portfolio · MFC와 C++20으로 완성한 Windows 전용 로그라이크 게임 프로젝트.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const sections = [...document.querySelectorAll('main [id]')].filter((node) =>
+        document.querySelector(`.rail nav a[href="#${node.id}"]`)
+      );
+      const navLinks = [...document.querySelectorAll('.rail nav a')];
+      const setCurrent = (id) => navLinks.forEach((link) => {
+        link.setAttribute('aria-current', link.getAttribute('href') === `#${id}` ? 'true' : 'false');
+      });
+      if (sections.length) setCurrent(sections[0].id);
+
+      const sectionObserver = new IntersectionObserver((entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setCurrent(visible.target.id);
+      }, { rootMargin: '-18% 0px -66% 0px', threshold: [0, .2, .5] });
+      sections.forEach((section) => sectionObserver.observe(section));
+
+      const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .08 });
+      document.querySelectorAll('.reveal').forEach((item) => revealObserver.observe(item));
+
+      const search = document.querySelector('#feature-search');
+      const filters = [...document.querySelectorAll('.filter')];
+      const cards = [...document.querySelectorAll('.feature-card')];
+      const empty = document.querySelector('#feature-empty');
+      let activeFilter = 'all';
+
+      const applyFeatureFilter = () => {
+        const term = search.value.trim().toLocaleLowerCase('ko');
+        let count = 0;
+        cards.forEach((card) => {
+          const matchesStatus = activeFilter === 'all' || card.dataset.status === activeFilter;
+          const haystack = `${card.dataset.search} ${card.textContent}`.toLocaleLowerCase('ko');
+          const matchesTerm = !term || haystack.includes(term);
+          card.hidden = !(matchesStatus && matchesTerm);
+          if (!card.hidden) count += 1;
+        });
+        empty.hidden = count !== 0;
+      };
+
+      search.addEventListener('input', applyFeatureFilter);
+      filters.forEach((button) => button.addEventListener('click', () => {
+        activeFilter = button.dataset.filter;
+        filters.forEach((candidate) => candidate.classList.toggle('active', candidate === button));
+        applyFeatureFilter();
+      }));
+
+      const routeNodes = [...document.querySelectorAll('.run-node')];
+      const routePath = document.querySelector('#route-path');
+      const routeReset = document.querySelector('#route-reset');
+      const routeChoices = { 'route-1': null, 'route-2': null, 'route-3': null, 'route-4': null };
+      const inspector = {
+        image: document.querySelector('#stage-inspector-image'),
+        kind: document.querySelector('#stage-inspector-kind'),
+        name: document.querySelector('#stage-inspector-name'),
+        description: document.querySelector('#stage-inspector-description'),
+        pegs: document.querySelector('#stage-stat-pegs'),
+        moving: document.querySelector('#stage-stat-moving'),
+        enemies: document.querySelector('#stage-stat-enemies'),
+        threat: document.querySelector('#stage-stat-threat')
+      };
+
+      const inspectStage = (node) => {
+        inspector.image.src = node.dataset.image;
+        inspector.image.alt = `${node.dataset.stage} 스테이지 미리보기`;
+        inspector.kind.textContent = node.dataset.kind;
+        inspector.name.textContent = node.dataset.stage;
+        inspector.description.textContent = node.dataset.copy;
+        inspector.pegs.textContent = node.dataset.pegs;
+        inspector.moving.textContent = node.dataset.moving;
+        inspector.enemies.textContent = node.dataset.enemies;
+        inspector.threat.textContent = node.dataset.threat;
+      };
+
+      const renderRoutePath = () => {
+        const stages = [
+          'Forgotten Forest',
+          routeChoices['route-1'] || '경로 선택',
+          routeChoices['route-2'] || '경로 선택',
+          'Goblin Market',
+          routeChoices['route-3'] || '경로 선택',
+          routeChoices['route-4'] || '경로 선택',
+          'Rootbound Citadel'
+        ];
+        routePath.replaceChildren();
+        stages.forEach((stage, index) => {
+          const label = document.createElement('span');
+          label.textContent = stage;
+          routePath.append(label);
+          if (index < stages.length - 1) {
+            const arrow = document.createElement('b');
+            arrow.textContent = '→';
+            routePath.append(arrow);
+          }
+        });
+      };
+
+      routeNodes.forEach((node) => node.addEventListener('click', () => {
+        const layer = node.dataset.layer;
+        if (layer !== 'fixed') {
+          routeChoices[layer] = node.dataset.stage;
+          routeNodes.filter((candidate) => candidate.dataset.layer === layer).forEach((candidate) => {
+            const selected = candidate === node;
+            candidate.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            candidate.classList.toggle('is-dimmed', !selected);
+          });
+          renderRoutePath();
+        } else {
+          node.setAttribute('aria-pressed', 'true');
+        }
+        inspectStage(node);
+      }));
+
+      routeReset.addEventListener('click', () => {
+        Object.keys(routeChoices).forEach((key) => { routeChoices[key] = null; });
+        routeNodes.forEach((node, index) => {
+          node.setAttribute('aria-pressed', index === 0 ? 'true' : 'false');
+          node.classList.remove('is-dimmed');
+        });
+        inspectStage(routeNodes[0]);
+        renderRoutePath();
+      });
+
+      const turnRail = document.querySelector('#turn-rail');
+      const turnSteps = [...document.querySelectorAll('.turn-step')];
+      const turnState = document.querySelector('#turn-state');
+      const turnDescription = document.querySelector('#turn-description');
+      turnSteps.forEach((step) => step.addEventListener('click', () => {
+        const turnIndex = Number(step.dataset.turn);
+        turnSteps.forEach((candidate) => candidate.setAttribute('aria-pressed', candidate === step ? 'true' : 'false'));
+        turnRail.style.setProperty('--turn-progress', `${turnIndex / (turnSteps.length - 1) * 100}%`);
+        turnState.textContent = `GAME STATE · ${step.dataset.state}`;
+        turnDescription.textContent = step.dataset.detail;
+      }));
+
+      const codeTabs = [...document.querySelectorAll('.code-tab')];
+      const codePanels = [...document.querySelectorAll('.code-panel')];
+      const selectCodeTab = (selected) => {
+        codeTabs.forEach((tab) => tab.setAttribute('aria-selected', tab === selected ? 'true' : 'false'));
+        codePanels.forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === selected.dataset.code));
+      };
+      codeTabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectCodeTab(tab));
+        tab.addEventListener('keydown', (event) => {
+          if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+          event.preventDefault();
+          const offset = event.key === 'ArrowRight' ? 1 : -1;
+          const next = codeTabs[(index + offset + codeTabs.length) % codeTabs.length];
+          selectCodeTab(next);
+          next.focus();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

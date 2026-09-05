@@ -15,10 +15,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 현재 스프린트 | Sprint 10 진행 중 |
-| 현재 버전 | Version 10.1 |
-| 스프린트 목표 | 포트폴리오 플레이 감각, 배포 진단, 결정적 재현과 콘텐츠 제작 품질 확장 |
-| 상태 | Sprint 10 P0 1/7 완료 |
+| 현재 스프린트 | Sprint 10에서 1차 마감 · 잔여 계획 보류 |
+| 현재 버전 | Version 10.2 |
+| 마감 범위 | Sprint 0~9 전체와 Version 10.1 전투 UI·연출 개선 |
+| 상태 | main 통합 · 1차 마감, Sprint 10 원계획 P0 1/7 완료 |
+
+2026-09-06 사용자 요청에 따라 현재 구현 범위를 1차 마감 기준으로 확정했다. Sprint 10 원계획의 미구현 기능과 해당 기능의 통합 검증은 후속 과제로 남긴다. 다음 스프린트로 전환하거나 Sprint 10 전체를 완료한 것으로 처리하지 않는다.
 
 ## 문서
 
@@ -118,6 +120,9 @@
 - [Version 9.7 — 인게임 콘텐츠 미리보기와 원자적 핫 리로드](./Version_9.7.md)
 - [Version 9.8 — Sprint 9 결합 회귀·저장 호환성·최종 배포](./Version_9.8.md)
 - [Version 10.1 — 공식 플레이 흐름 참고 전투 UI·영상 프레젠테이션 개선](./Version_10.1.md)
+- [Version 10.2 — main 통합과 프로젝트 1차 마감](./Version_10.2.md)
+- [Content Report 10.2 — 1차 마감 외부 콘텐츠 검증](./Content_Report_10.2.md)
+- [Performance Report 10.2 — 1차 마감 Release x64 자원 표본](./Performance_Report_10.2.md)
 - [Content Report 9.8 — Sprint 9 최종 외부 콘텐츠 검증](./Content_Report_9.8.md)
 - [Performance Report 9.8 — Sprint 9 Release x64 자원 표본](./Performance_Report_9.8.md)
 - [Content Report 9.6 — 확장 콘텐츠와 난이도 곡선 검증](./Content_Report_9.6.md)
@@ -134,7 +139,7 @@
 - [Next Version Plan 7 — Sprint 7 완료 기록](./Next_Version_Plan_7.md)
 - [Next Version Plan 8 — Sprint 8 완료 기록](./Next_Version_Plan_8.md)
 - [Next Version Plan 9 — Sprint 9 완료 기록](./Next_Version_Plan_9.md)
-- [Next Version Plan 10 — Sprint 10 후보 계획](./Next_Version_Plan_10.md)
+- [Next Version Plan 10 — Sprint 10 후속 과제](./Next_Version_Plan_10.md)
 - [빌드 환경 및 명령](../BUILDING.md)
 
 ## 스프린트 전환 절차

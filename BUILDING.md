@@ -66,7 +66,7 @@ Universal CRT와 Windows 시스템 DLL은 지원 대상 Windows 10/11이 제공�
 저장소 루트에서 다음 명령으로 Release x64를 빌드하고 `dist/PeglinMFC-[버전]-win-x64` 폴더와 ZIP을 생성한다.
 
 ```powershell
-& '.\tools\Package-Release.ps1' -Version '9.8'
+& '.\tools\Package-Release.ps1' -Version '10.2'
 ```
 
 패키징 스크립트는 Windows PowerShell 5와 PowerShell 7에서 실행할 수 있다. Visual Studio 설치 위치와 최신 v143 Redist를 자동 탐색하고, 이미지 변환·크기·색심도와 외부 스테이지·게임플레이·한국어·영어 카탈로그를 먼저 검증한다. 결과물에 `Preflight.ps1`, `SHA256SUMS.txt`, `README.txt`를 포함하며, `Preflight.ps1`은 Windows x64, 필수 파일, PE 아키텍처와 SHA-256 무결성을 검사한다. ZIP 생성 후에는 경로 탈출, 파일 변조, MFC 런타임·외부 카탈로그 누락을 자동 탐지한다.
@@ -110,7 +110,9 @@ Version 8.7부터 Release 데모 프로세스의 GDI, USER, 핸들, Working Set�
 
 ## 현재 검증 상태
 
-2026-09-02 Version 10.1 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 모두 오류 0개, 자체 코드 경고 0개다. 구성별 1,251개·총 5,004개 자동 검증과 진행 중 런 체크포인트, Version 8 설정 이관, 사용자 입력 바인딩, XAudio2 다중 효과음, 자동화된 XInput 연결·진동 상태, 10개 스테이지·7종 몬스터 시각 타입·12개 적 안정 ID, 5개 오브·5개 유물, Refresh Peg 보장·재배치, 이동 페그, 상점, 난이도 곡선, 원자적 콘텐츠 핫 리로드, 전투 단계 프레젠테이션과 비행 중 누적 피해 HUD를 검증했다. Version 10.1의 35초 Release 자원 회귀는 GDI +0, USER +0, 핸들 +2로 통과했다. 자산 파이프라인은 29개 리소스와 28개 PNG→24-bit BMP 변환을 검증한다. 실제 XInput 물리 장비 체감 QA는 사용자 결정에 따라 완료 조건에서 제외한다.
+2026-09-06 Version 10.2 1차 마감 기준 Windows SDK `10.0.26100.0`, `/W4`, `/utf-8`로 네 구성 전체 재빌드를 수행했으며 각각 오류 0개, 경고 0개다. 구성별 1,251개·총 5,004개 자동 검증과 진행 중 런 체크포인트, Version 8 설정 이관, 사용자 입력 바인딩, XAudio2 다중 효과음, 자동화된 XInput 연결·진동 상태, 10개 스테이지·7종 몬스터 시각 타입·12개 적 안정 ID, 5개 오브·5개 유물, Refresh Peg 보장·재배치, 이동 페그, 상점, 난이도 곡선, 원자적 콘텐츠 핫 리로드, 전투 단계 프레젠테이션과 비행 중 누적 피해 HUD를 검증했다. 120초 Release 자원 회귀는 24개 표본에서 GDI +0, USER -1, 핸들 -11로 통과했다. 자산 파이프라인은 29개 리소스와 28개 PNG→24-bit BMP 변환을 검증한다. 실제 XInput 물리 장비 체감 QA는 기존 사용자 결정에 따라 완료 조건에서 제외한다. 마감 범위와 검증의 상세 내용은 [Version 10.2](./DEV_LOG/Version_10.2.md)에 기록했다.
+
+현재 배포본은 `dist/PeglinMFC-10.2-win-x64.zip`이며 크기는 10,486,018 bytes, SHA-256은 `1229C52AC68E45752EF1F8BB66EB4996C685CA9FC7DC719619C49F46C208A172`다. 앱 로컬 MFC/CRT, 외부 콘텐츠·오디오 등 25개 파일을 포함하며 패키지의 콘텐츠 미리보기 `Reload OK`, 정상 종료, 무결성 및 변조·누락 검사를 통과했다. 아래 이전 버전 패키지 정보는 개발 이력으로 보존한다.
 
 Version 7.4 Release x64 ZIP은 `dist/PeglinMFC-7.4-win-x64.zip`에 생성되며 크기는 7,054,453 bytes, SHA-256은 `62D7B57F5D7DD058785EE8717488EFA7FBE3636102C41F3F73247A878DB811FF`다.
 
